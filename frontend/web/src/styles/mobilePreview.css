@@ -1,0 +1,41 @@
+html.chaplin-mobile-preview,
+body.chaplin-mobile-preview {
+  background: radial-gradient(circle at top, rgba(22, 34, 56, 0.85), #04070d 62%);
+}
+
+body.chaplin-mobile-preview {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+body.chaplin-mobile-preview #root {
+  width: min(430px, 100vw);
+  min-height: 100dvh;
+  margin: 0 auto;
+  position: relative;
+  overflow-x: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 20px 60px rgba(0, 0, 0, 0.52);
+}
+
+body.chaplin-mobile-preview .chaplin-page-frame {
+  padding:
+    calc(106px + var(--safe-top))
+    calc(10px + var(--safe-right))
+    calc(122px + var(--safe-bottom))
+    calc(10px + var(--safe-left));
+}
+
+body.chaplin-mobile-preview .chaplin-page-shell {
+  width: 100%;
+  max-width: 100%;
+}
+
+body.chaplin-mobile-preview .chaplin-mobile-preview-app {
+  overflow-x: clip;
+}
+
+body.chaplin-mobile-preview .chaplin-theme-panel {
+  border-radius: 16px;
+}

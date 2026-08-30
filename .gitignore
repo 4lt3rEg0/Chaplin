@@ -1,0 +1,27 @@
+node_modules
+
+# Python virtual environments and caches
+backend/venv/
+.venv/
+.venv-1/
+__pycache__/
+*.py[cod]
+
+# Frontend build output
+frontend/web/dist/
+
+# Local env files and logs
+.env
+.chaplin_dev_secret
+*.log
+
+# User data: databases, uploaded media, and DB backups must never be committed
+*.db
+*.db-journal
+media/
+backend/media/
+backups/
+
+# Large binary background-visualizer assets (some >100MB, over GitHub's hard
+# limit) — not source, just large local assets. Keep them on disk, never in git.
+frontend/web/public/visualizers/
