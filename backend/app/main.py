@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey, text, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey, text, UniqueConstraint, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.sql import func
@@ -123,6 +123,15 @@ class User(Base):
     profile_public = Column(Boolean, default=True)
     radio_public = Column(Boolean, default=False)
     bio = Column(Text, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    # Cosmetic distinction only — no permission is gated on this (uploading
+    # music/video/images already works for every authenticated user). It just
+    # lets the profile UI show an "artist" identity/badge.
+    role = Column(String, default="user", nullable=False)
+    # Touched (throttled) on authenticated requests — powers a simple
+    # "online now" indicator without a WebSocket presence system.
+    last_seen = Column(DateTime(timezone=True), nullable=True)
+    presence_status = Column(String, default="online", nullable=False)  # "online" | "away" | "invisible"
     social_goal = Column(Text, nullable=False)
     # JSON-encoded blob (theme/skin/background/visualizer settings). Kept as a single
     # column instead of one-per-field so the client's preference shape can evolve
@@ -154,6 +163,11 @@ class Post(Base):
 
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="posts")
+
+    # Optional soundtrack chosen in the editor before publishing — always one
+    # of the owner's own Tracks, never a duplicated/moved media file.
+    track_id = Column(Integer, ForeignKey("tracks.id"), nullable=True)
+    track = relationship("Track", foreign_keys=[track_id])
 
     translations = Column(Text, nullable=True)  # JSON como string
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -199,7 +213,7 @@ class Track(Base):
     # Preserves the historical link to the audio Post it was backfilled from, if any.
     # Never used to duplicate or move the underlying media file.
     source_post_id = Column(Integer, ForeignKey("posts.id"), nullable=True)
-    source_post = relationship("Post")
+    source_post = relationship("Post", foreign_keys=[source_post_id])
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -241,6 +255,94 @@ class PlaylistItem(Base):
     added_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+# ========== LIKES (Post / Comment) ==========
+class PostLike(Base):
+    __tablename__ = "post_likes"
+    __table_args__ = (UniqueConstraint("post_id", "user_id", name="uq_post_like"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class CommentLike(Base):
+    __tablename__ = "comment_likes"
+    __table_args__ = (UniqueConstraint("comment_id", "user_id", name="uq_comment_like"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ========== SEGUIR USUARIOS (Follow) ==========
+# Deliberately a simple, one-directional follow (like Twitter/Instagram) —
+# no accept/reject request state machine, which is a much bigger feature
+# (pending state, notifications) than what was actually asked for here.
+class Follow(Base):
+    __tablename__ = "follows"
+    __table_args__ = (UniqueConstraint("follower_id", "followed_id", name="uq_follow_pair"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    follower_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    followed_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ========== MENSAJERÍA DIRECTA (DM) ==========
+# Deliberately minimal: one Conversation per unique pair of users (no group
+# chats), plain-text Messages, no real-time transport (frontend polls) — a
+# real, working baseline rather than the previous "Bandeja DM en construccion"
+# placeholder alert, not a full messaging platform.
+class Conversation(Base):
+    __tablename__ = "conversations"
+    __table_args__ = (UniqueConstraint("user_a_id", "user_b_id", name="uq_conversation_pair"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    # Canonical ordering (user_a_id < user_b_id) enforced at creation time so
+    # A-then-B and B-then-A never create two separate conversations.
+    user_a_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_b_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_a = relationship("User", foreign_keys=[user_a_id])
+    user_b = relationship("User", foreign_keys=[user_b_id])
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    messages = relationship(
+        "Message", back_populates="conversation",
+        order_by="Message.id", cascade="all, delete-orphan"
+    )
+
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    conversation = relationship("Conversation", back_populates="messages")
+
+    sender_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    sender = relationship("User")
+
+    content = Column(Text, nullable=False)
+    message_type = Column(String, default="text", nullable=False)  # "text" | "nudge"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    read_at = Column(DateTime(timezone=True), nullable=True)
+
+    reactions = relationship("MessageReaction", cascade="all, delete-orphan")
+
+
+class MessageReaction(Base):
+    __tablename__ = "message_reactions"
+    __table_args__ = (UniqueConstraint("message_id", "user_id", name="uq_message_reaction_user"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    emoji = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # ========== ESQUEMAS PYDANTIC ==========
 class UserBase(BaseModel):
     email: EmailStr
@@ -261,7 +363,13 @@ class UserResponse(UserBase):
     profile_public: bool
     radio_public: bool
     bio: Optional[str]
+    avatar_url: Optional[str] = None
+    role: str = "user"
     preferences: Optional[str] = None
+    follower_count: int = 0
+    following_count: int = 0
+    post_count: int = 0
+    status: str = "offline"
 
     class Config:
         from_attributes = True
@@ -282,9 +390,27 @@ class PublicUserResponse(BaseModel):
     profile_public: bool
     radio_public: bool
     bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    role: str = "user"
+    follower_count: int = 0
+    following_count: int = 0
+    post_count: int = 0
+    is_following: bool = False
+    is_online: bool = False
+    status: str = "offline"
 
     class Config:
         from_attributes = True
+
+
+class FollowUserResponse(BaseModel):
+    """Compact user summary for followers/following list rows."""
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    avatar_url: Optional[str] = None
+    is_online: bool = False
 
 
 class UserLogin(BaseModel):
@@ -307,7 +433,13 @@ class PostResponse(PostBase):
     media_url: Optional[str]
     media_type: Optional[str]
     owner_id: int
+    owner_username: Optional[str] = None
     created_at: datetime
+    like_count: int = 0
+    liked_by_me: bool = False
+    track_id: Optional[int] = None
+    track_title: Optional[str] = None
+    track_media_url: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -322,11 +454,56 @@ class CommentCreate(BaseModel):
 class CommentResponse(CommentCreate):
     id: int
     owner_id: int
+    owner_username: Optional[str] = None
     post_id: int
     created_at: datetime
+    like_count: int = 0
+    liked_by_me: bool = False
 
     class Config:
         from_attributes = True
+
+
+class MessageCreate(BaseModel):
+    content: str
+
+
+class MessageReactionSummary(BaseModel):
+    emoji: str
+    count: int
+    reacted_by_me: bool = False
+
+
+class MessageResponse(BaseModel):
+    id: int
+    conversation_id: int
+    sender_id: int
+    content: str
+    message_type: str = "text"
+    created_at: datetime
+    read_at: Optional[datetime] = None
+    reactions: List[MessageReactionSummary] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ReactionCreate(BaseModel):
+    emoji: str
+
+
+class ConversationCreate(BaseModel):
+    username: str
+
+
+class ConversationResponse(BaseModel):
+    id: int
+    other_user_id: int
+    other_username: str
+    other_avatar_url: Optional[str] = None
+    last_message: Optional[str] = None
+    last_message_at: Optional[datetime] = None
+    unread_count: int = 0
 
 
 class TrackResponse(BaseModel):
@@ -442,7 +619,19 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise credentials_exception
+
+    _touch_last_seen(db, user)
     return user
+
+
+def _touch_last_seen(db: Session, user: "User") -> None:
+    """Throttled last_seen bump shared by both auth dependencies — a write on
+    every single request would be wasteful, so only bump if stale by more
+    than a minute (see ONLINE_WINDOW_SECONDS for the "online now" cutoff)."""
+    now = datetime.utcnow()
+    if user.last_seen is None or (now - user.last_seen).total_seconds() > 60:
+        user.last_seen = now
+        db.commit()
 
 
 def get_optional_current_user(db: Session = Depends(get_db), token: Optional[str] = Depends(optional_oauth2_scheme)):
@@ -458,7 +647,10 @@ def get_optional_current_user(db: Session = Depends(get_db), token: Optional[str
             return None
     except JWTError:
         return None
-    return db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(User).filter(User.id == int(user_id)).first()
+    if user is not None:
+        _touch_last_seen(db, user)
+    return user
 
 
 # ========== UTILIDADES ==========
@@ -474,10 +666,202 @@ def extract_tags(text: str) -> str:
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".mp4", ".mp3", ".wav"}
 MAX_UPLOAD_SIZE_BYTES = int(os.getenv("CHAPLIN_MAX_UPLOAD_MB", "50")) * 1024 * 1024
 MAX_PREFERENCES_BYTES = 32 * 1024
+ONLINE_WINDOW_SECONDS = 120
+AWAY_WINDOW_SECONDS = 900
+VALID_PRESENCE_STATUSES = ("online", "away", "invisible")
 
 
 def allowed_file(filename: str) -> bool:
     return any(filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS)
+
+
+async def _save_uploaded_file(file: UploadFile, owner_id: int) -> str:
+    """Shared upload path for post media and avatar uploads: validates the
+    extension, sniffs magic bytes against a spoofed extension, streams to disk
+    with a size cap, and never trusts the client-supplied filename for the
+    stored path. Returns the public /media/... URL. Raises HTTPException on
+    any validation failure, cleaning up any partial file first."""
+    if not allowed_file(file.filename):
+        raise HTTPException(status_code=400, detail="Tipo de archivo no permitido")
+
+    safe_ext = Path(file.filename).suffix.lower()
+    stored_filename = f"{owner_id}_{uuid.uuid4().hex}{safe_ext}"
+
+    MEDIA_FOLDER.mkdir(parents=True, exist_ok=True)
+    file_location = MEDIA_FOLDER / stored_filename
+    bytes_written = 0
+    try:
+        with open(file_location, "wb") as buffer:
+            first_chunk = True
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                if first_chunk:
+                    if not _content_matches_extension(chunk, safe_ext):
+                        raise HTTPException(
+                            status_code=400,
+                            detail="El contenido del archivo no coincide con su extensión"
+                        )
+                    first_chunk = False
+                bytes_written += len(chunk)
+                if bytes_written > MAX_UPLOAD_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"Archivo demasiado grande (máx. {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB)"
+                    )
+                buffer.write(chunk)
+        if bytes_written == 0:
+            raise HTTPException(status_code=400, detail="El archivo esta vacio")
+    except HTTPException:
+        file_location.unlink(missing_ok=True)
+        raise
+    except Exception:
+        file_location.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="No se pudo procesar el archivo subido")
+
+    return f"/media/{stored_filename}"
+
+
+def _media_type_for_ext(ext: str) -> Optional[str]:
+    if ext in ('.jpg', '.jpeg', '.png', '.gif'):
+        return 'image'
+    if ext in ('.mp4', '.avi', '.mov'):
+        return 'video'
+    if ext in ('.mp3', '.wav'):
+        return 'audio'
+    return None
+
+
+def _effective_status(user: "User") -> str:
+    """Combines the user's manual presence preference with real activity:
+    'invisible'/'away' preferences always win; the default 'online'
+    preference is auto-derived from last_seen (online -> away -> offline as
+    it goes stale), matching how Discord/WhatsApp-style presence behaves."""
+    preference = user.presence_status or "online"
+    if preference == "invisible":
+        return "offline"
+    if preference == "away":
+        return "away"
+    if not user.last_seen:
+        return "offline"
+    elapsed = (datetime.utcnow() - user.last_seen).total_seconds()
+    if elapsed < ONLINE_WINDOW_SECONDS:
+        return "online"
+    if elapsed < AWAY_WINDOW_SECONDS:
+        return "away"
+    return "offline"
+
+
+def _is_online(user: "User") -> bool:
+    return _effective_status(user) == "online"
+
+
+def _follower_count(db: Session, user_id: int) -> int:
+    return db.query(Follow).filter(Follow.followed_id == user_id).count()
+
+
+def _following_count(db: Session, user_id: int) -> int:
+    return db.query(Follow).filter(Follow.follower_id == user_id).count()
+
+
+def _post_count(db: Session, user_id: int, public_only: bool) -> int:
+    query = db.query(Post).filter(Post.owner_id == user_id)
+    if public_only:
+        query = query.filter(Post.is_public == True)
+    return query.count()
+
+
+def _serialize_user(user: "User", db: Session) -> UserResponse:
+    """For the authenticated owner's own view (/users/me, register, login,
+    avatar upload, profile update) — includes email/preferences, which is
+    correct here because it's always the owner looking at their own record."""
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        birth_date=user.birth_date,
+        profile_public=user.profile_public,
+        radio_public=user.radio_public,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
+        role=user.role,
+        preferences=user.preferences,
+        follower_count=_follower_count(db, user.id),
+        following_count=_following_count(db, user.id),
+        post_count=_post_count(db, user.id, public_only=False),
+        status=_effective_status(user),
+    )
+
+
+def _serialize_public_user(user: "User", viewer: Optional["User"], db: Session) -> PublicUserResponse:
+    is_following = (
+        viewer is not None
+        and db.query(Follow).filter(Follow.follower_id == viewer.id, Follow.followed_id == user.id).first() is not None
+    )
+    return PublicUserResponse(
+        id=user.id,
+        username=user.username,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        profile_public=user.profile_public,
+        radio_public=user.radio_public,
+        bio=user.bio,
+        avatar_url=user.avatar_url,
+        role=user.role,
+        follower_count=_follower_count(db, user.id),
+        following_count=_following_count(db, user.id),
+        post_count=_post_count(db, user.id, public_only=True),
+        is_following=is_following,
+        is_online=_is_online(user),
+        status=_effective_status(user),
+    )
+
+
+def _serialize_post(post: "Post", current_user: Optional["User"], db: Session) -> PostResponse:
+    like_count = db.query(PostLike).filter(PostLike.post_id == post.id).count()
+    liked_by_me = (
+        current_user is not None
+        and db.query(PostLike).filter(PostLike.post_id == post.id, PostLike.user_id == current_user.id).first() is not None
+    )
+    return PostResponse(
+        id=post.id,
+        content=post.content,
+        tags=post.tags,
+        is_public=post.is_public,
+        media_url=post.media_url,
+        media_type=post.media_type,
+        owner_id=post.owner_id,
+        owner_username=post.owner.username if post.owner else None,
+        created_at=post.created_at,
+        like_count=like_count,
+        liked_by_me=liked_by_me,
+        track_id=post.track_id,
+        track_title=post.track.title if post.track else None,
+        track_media_url=post.track.media_url if post.track else None,
+    )
+
+
+def _serialize_comment(comment: "Comment", current_user: Optional["User"], db: Session) -> CommentResponse:
+    like_count = db.query(CommentLike).filter(CommentLike.comment_id == comment.id).count()
+    liked_by_me = (
+        current_user is not None
+        and db.query(CommentLike).filter(CommentLike.comment_id == comment.id, CommentLike.user_id == current_user.id).first() is not None
+    )
+    return CommentResponse(
+        id=comment.id,
+        content=comment.content,
+        gif_url=comment.gif_url,
+        sticker_url=comment.sticker_url,
+        owner_id=comment.owner_id,
+        owner_username=comment.owner.username if comment.owner else None,
+        post_id=comment.post_id,
+        created_at=comment.created_at,
+        like_count=like_count,
+        liked_by_me=liked_by_me,
+    )
 
 
 def _content_matches_extension(head: bytes, ext: str) -> bool:
@@ -569,7 +953,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+    return _serialize_user(db_user, db)
 
 
 @api_router.post("/auth/login")
@@ -589,102 +973,53 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": UserResponse.model_validate(user)
+        "user": _serialize_user(user, db)
     }
 
 
 # ========== ENDPOINTS DE POSTS ==========
+def _resolve_owned_track(db: Session, current_user: "User", track_id: Optional[int]) -> Optional["Track"]:
+    if track_id is None:
+        return None
+    track = db.query(Track).filter(Track.id == track_id, Track.owner_id == current_user.id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Cancion no encontrada")
+    return track
+
+
 @api_router.post("/posts/", response_model=PostResponse)
 async def create_post(
         content: Optional[str] = Form(None),
         file: Optional[UploadFile] = File(None),
         is_public: bool = Form(True),
+        track_id: Optional[int] = Form(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    # Extraer tags
     tags = extract_tags(content) if content else ""
 
-    # Manejar archivo
     media_url = None
     media_type = None
-
     if file and file.filename:
-        if not allowed_file(file.filename):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Tipo de archivo no permitido"
-            )
+        media_url = await _save_uploaded_file(file, current_user.id)
+        media_type = _media_type_for_ext(Path(file.filename).suffix.lower())
 
-        # SECURITY: never trust the client-supplied filename for the on-disk path.
-        # `Path(...).name` strips any directory components (e.g. "../../evil.sh"
-        # becomes "evil.sh"), and the stored name is rebuilt entirely from safe,
-        # server-controlled parts (user id + a random token + the validated
-        # extension) — this also fixes silent overwrites when the same user
-        # uploads two files that happen to share a filename.
-        safe_ext = Path(file.filename).suffix.lower()
-        stored_filename = f"{current_user.id}_{uuid.uuid4().hex}{safe_ext}"
+    track = _resolve_owned_track(db, current_user, track_id)
 
-        # Crear directorio media si no existe
-        MEDIA_FOLDER.mkdir(parents=True, exist_ok=True)
-
-        file_location = MEDIA_FOLDER / stored_filename
-        bytes_written = 0
-        try:
-            with open(file_location, "wb") as buffer:
-                first_chunk = True
-                while True:
-                    chunk = await file.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    if first_chunk:
-                        if not _content_matches_extension(chunk, safe_ext):
-                            raise HTTPException(
-                                status_code=400,
-                                detail="El contenido del archivo no coincide con su extensión"
-                            )
-                        first_chunk = False
-                    bytes_written += len(chunk)
-                    if bytes_written > MAX_UPLOAD_SIZE_BYTES:
-                        raise HTTPException(
-                            status_code=413,
-                            detail=f"Archivo demasiado grande (máx. {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB)"
-                        )
-                    buffer.write(chunk)
-            if bytes_written == 0:
-                raise HTTPException(status_code=400, detail="El archivo esta vacio")
-        except HTTPException:
-            # Partial file cleanup — never leave a half-written upload on disk.
-            file_location.unlink(missing_ok=True)
-            raise
-        except Exception:
-            file_location.unlink(missing_ok=True)
-            raise HTTPException(status_code=400, detail="No se pudo procesar el archivo subido")
-
-        media_url = f"/media/{stored_filename}"
-
-        # Determinar tipo
-        if safe_ext in ['.jpg', '.jpeg', '.png', '.gif']:
-            media_type = 'image'
-        elif safe_ext in ['.mp4', '.avi', '.mov']:
-            media_type = 'video'
-        elif safe_ext in ['.mp3', '.wav']:
-            media_type = 'audio'
-
-    # Crear post
     db_post = Post(
         content=content,
         media_url=media_url,
         media_type=media_type,
         tags=tags,
         is_public=is_public,
-        owner_id=current_user.id
+        owner_id=current_user.id,
+        track_id=track.id if track else None
     )
 
     db.add(db_post)
     db.commit()
     db.refresh(db_post)
-    return db_post
+    return _serialize_post(db_post, current_user, db)
 
 
 @api_router.get("/posts/", response_model=List[PostResponse])
@@ -692,7 +1027,8 @@ async def get_posts(
         skip: int = 0,
         limit: int = 50,
         tag: Optional[str] = None,
-    db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
 ):
     # Feed VANILLA: sin algoritmos, solo cronológico
     query = db.query(Post).filter(Post.is_public == True)
@@ -701,7 +1037,69 @@ async def get_posts(
         query = query.filter(Post.tags.contains(f"#{tag}#"))
 
     posts = query.order_by(Post.created_at.desc()).offset(skip).limit(limit).all()
-    return posts
+    return [_serialize_post(p, current_user, db) for p in posts]
+
+
+@api_router.get("/posts/by-user/{username}", response_model=List[PostResponse])
+async def list_user_posts(
+        username: str,
+        media: Optional[str] = None,  # "media" -> image/video only, "text" -> text-only (bitacora), None -> all
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    owner = db.query(User).filter(User.username == username).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    is_owner = current_user is not None and current_user.id == owner.id
+    if not is_owner and not owner.profile_public:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    query = db.query(Post).filter(Post.owner_id == owner.id)
+    if not is_owner:
+        query = query.filter(Post.is_public == True)
+    if media == "media":
+        query = query.filter(Post.media_type.in_(["image", "video"]))
+    elif media == "text":
+        query = query.filter(Post.media_type.is_(None))
+
+    posts = query.order_by(Post.created_at.desc()).all()
+    return [_serialize_post(p, current_user, db) for p in posts]
+
+
+@api_router.get("/posts/search", response_model=List[PostResponse])
+async def search_posts(
+        q: str = Query(..., min_length=1, max_length=100),
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    # Registered before /posts/{post_id} — same int-coercion reasoning as
+    # /posts/by-user/{username} above.
+    like = f"%{q.strip()}%"
+    posts = (
+        db.query(Post)
+        .filter(Post.is_public == True, Post.content.ilike(like))
+        .order_by(Post.created_at.desc())
+        .limit(30)
+        .all()
+    )
+    return [_serialize_post(p, current_user, db) for p in posts]
+
+
+@api_router.get("/tags/search")
+async def search_tags(q: str = Query(..., min_length=1, max_length=50), db: Session = Depends(get_db)):
+    like = f"%{q.strip()}%"
+    rows = db.query(Post.tags).filter(Post.is_public == True, Post.tags.ilike(like)).all()
+    counts = {}
+    needle = q.strip().lower()
+    for (tags_str,) in rows:
+        if not tags_str:
+            continue
+        for tag in re.findall(r'#([^#]+)#', tags_str):
+            if needle in tag.lower():
+                counts[tag] = counts.get(tag, 0) + 1
+    top = sorted(counts.items(), key=lambda kv: -kv[1])[:20]
+    return [{"tag": tag, "count": count} for tag, count in top]
 
 
 @api_router.get("/posts/{post_id}", response_model=PostResponse)
@@ -714,7 +1112,94 @@ async def get_post(
     is_owner = current_user is not None and post is not None and post.owner_id == current_user.id
     if not post or (not post.is_public and not is_owner):
         raise HTTPException(status_code=404, detail="Post no encontrado")
-    return post
+    return _serialize_post(post, current_user, db)
+
+
+@api_router.put("/posts/{post_id}", response_model=PostResponse)
+async def update_post(
+        post_id: int,
+        content: Optional[str] = Form(None),
+        is_public: Optional[bool] = Form(None),
+        remove_media: bool = Form(False),
+        file: Optional[UploadFile] = File(None),
+        track_id: Optional[int] = Form(None),
+        remove_track: bool = Form(False),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post no encontrado")
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    if content is not None:
+        post.content = content
+        post.tags = extract_tags(content)
+    if is_public is not None:
+        post.is_public = is_public
+
+    if track_id is not None:
+        track = _resolve_owned_track(db, current_user, track_id)
+        post.track_id = track.id if track else None
+    elif remove_track:
+        post.track_id = None
+
+    # Editing the attached media itself — replace it with a new upload, or
+    # drop it entirely. The old file on disk is left alone (same reasoning as
+    # delete_post: an orphaned file is harmless, deleting real media on a
+    # code path with edge cases is not worth the risk).
+    if file and file.filename:
+        post.media_url = await _save_uploaded_file(file, current_user.id)
+        post.media_type = _media_type_for_ext(Path(file.filename).suffix.lower())
+    elif remove_media:
+        post.media_url = None
+        post.media_type = None
+
+    db.commit()
+    db.refresh(post)
+    return _serialize_post(post, current_user, db)
+
+
+@api_router.delete("/posts/{post_id}")
+async def delete_post(
+        post_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post no encontrado")
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    # Deliberately does not delete the underlying media file — an orphaned
+    # file on disk is harmless; deleting real user media on a code path that
+    # could have edge-case bugs is not an acceptable trade-off.
+    db.query(PostLike).filter(PostLike.post_id == post_id).delete()
+    db.delete(post)
+    db.commit()
+    return {"deleted": True}
+
+
+@api_router.post("/posts/{post_id}/like", response_model=PostResponse)
+async def toggle_post_like(
+        post_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    is_owner = post is not None and post.owner_id == current_user.id
+    if not post or (not post.is_public and not is_owner):
+        raise HTTPException(status_code=404, detail="Post no encontrado")
+
+    existing = db.query(PostLike).filter(PostLike.post_id == post_id, PostLike.user_id == current_user.id).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(PostLike(post_id=post_id, user_id=current_user.id))
+    db.commit()
+    return _serialize_post(post, current_user, db)
 
 
 # ========== ENDPOINTS DE COMENTARIOS ==========
@@ -744,7 +1229,7 @@ async def create_comment(
     db.add(db_comment)
     db.commit()
     db.refresh(db_comment)
-    return db_comment
+    return _serialize_comment(db_comment, current_user, db)
 
 
 @api_router.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
@@ -761,7 +1246,30 @@ async def get_comments(
     if not post or (not post.is_public and not is_owner):
         raise HTTPException(status_code=404, detail="Post no encontrado")
     comments = db.query(Comment).filter(Comment.post_id == post_id).order_by(Comment.created_at.desc()).all()
-    return comments
+    return [_serialize_comment(c, current_user, db) for c in comments]
+
+
+@api_router.post("/comments/{comment_id}/like", response_model=CommentResponse)
+async def toggle_comment_like(
+        comment_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comentario no encontrado")
+    post = db.query(Post).filter(Post.id == comment.post_id).first()
+    is_owner = post is not None and post.owner_id == current_user.id
+    if not post or (not post.is_public and not is_owner):
+        raise HTTPException(status_code=404, detail="Comentario no encontrado")
+
+    existing = db.query(CommentLike).filter(CommentLike.comment_id == comment_id, CommentLike.user_id == current_user.id).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(CommentLike(comment_id=comment_id, user_id=current_user.id))
+    db.commit()
+    return _serialize_comment(comment, current_user, db)
 
 
 # ========== ENDPOINTS DE MÚSICA (Track / Playlist) ==========
@@ -827,6 +1335,21 @@ async def list_user_public_tracks(username: str, db: Session = Depends(get_db)):
         db.query(Track)
         .filter(Track.owner_id == owner.id, Track.visibility == "public")
         .order_by(Track.created_at.desc())
+        .all()
+    )
+    return [_serialize_track(t) for t in tracks]
+
+
+@api_router.get("/tracks/search", response_model=List[TrackResponse])
+async def search_tracks(q: str = Query(..., min_length=1, max_length=100), db: Session = Depends(get_db)):
+    # Registered before /tracks/{track_id} — same int-coercion reasoning as
+    # /posts/search above.
+    like = f"%{q.strip()}%"
+    tracks = (
+        db.query(Track)
+        .filter(Track.visibility == "public", Track.title.ilike(like))
+        .order_by(Track.created_at.desc())
+        .limit(30)
         .all()
     )
     return [_serialize_track(t) for t in tracks]
@@ -1090,29 +1613,335 @@ async def reorder_playlist(
     return _serialize_playlist(playlist)
 
 
+# ========== MENSAJERÍA DIRECTA (DM) ==========
+def _get_or_create_conversation(db: Session, user_id_a: int, user_id_b: int) -> Conversation:
+    lo, hi = sorted((user_id_a, user_id_b))
+    convo = db.query(Conversation).filter(Conversation.user_a_id == lo, Conversation.user_b_id == hi).first()
+    if not convo:
+        convo = Conversation(user_a_id=lo, user_b_id=hi)
+        db.add(convo)
+        db.commit()
+        db.refresh(convo)
+    return convo
+
+
+def _serialize_conversation(convo: Conversation, current_user: User, db: Session) -> ConversationResponse:
+    other = convo.user_b if convo.user_a_id == current_user.id else convo.user_a
+    last = (
+        db.query(Message)
+        .filter(Message.conversation_id == convo.id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    unread = (
+        db.query(Message)
+        .filter(
+            Message.conversation_id == convo.id,
+            Message.sender_id != current_user.id,
+            Message.read_at.is_(None),
+        )
+        .count()
+    )
+    return ConversationResponse(
+        id=convo.id,
+        other_user_id=other.id,
+        other_username=other.username,
+        other_avatar_url=other.avatar_url,
+        last_message=last.content if last else None,
+        last_message_at=last.created_at if last else None,
+        unread_count=unread,
+    )
+
+
+@api_router.get("/conversations/", response_model=List[ConversationResponse])
+async def list_conversations(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    convos = (
+        db.query(Conversation)
+        .filter((Conversation.user_a_id == current_user.id) | (Conversation.user_b_id == current_user.id))
+        .all()
+    )
+    serialized = [_serialize_conversation(c, current_user, db) for c in convos]
+    serialized.sort(key=lambda c: c.last_message_at or datetime.min, reverse=True)
+    return serialized
+
+
+@api_router.post("/conversations/", response_model=ConversationResponse)
+async def start_conversation(
+        payload: ConversationCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    other = db.query(User).filter(User.username == payload.username).first()
+    if not other:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if other.id == current_user.id:
+        raise HTTPException(status_code=400, detail="No puedes iniciar una conversación contigo mismo")
+
+    convo = _get_or_create_conversation(db, current_user.id, other.id)
+    return _serialize_conversation(convo, current_user, db)
+
+
+def _authorize_conversation_participant(db: Session, conversation_id: int, current_user: User) -> Conversation:
+    convo = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not convo or current_user.id not in (convo.user_a_id, convo.user_b_id):
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+    return convo
+
+
+def _serialize_message(message: "Message", current_user: "User", db: Session) -> MessageResponse:
+    rows = db.query(MessageReaction).filter(MessageReaction.message_id == message.id).all()
+    grouped: dict = {}
+    for row in rows:
+        entry = grouped.setdefault(row.emoji, {"emoji": row.emoji, "count": 0, "reacted_by_me": False})
+        entry["count"] += 1
+        if row.user_id == current_user.id:
+            entry["reacted_by_me"] = True
+    return MessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_id=message.sender_id,
+        content=message.content,
+        message_type=message.message_type,
+        created_at=message.created_at,
+        read_at=message.read_at,
+        reactions=[MessageReactionSummary(**entry) for entry in grouped.values()],
+    )
+
+
+@api_router.get("/conversations/{conversation_id}/messages", response_model=List[MessageResponse])
+async def list_messages(
+        conversation_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    convo = _authorize_conversation_participant(db, conversation_id, current_user)
+    messages = (
+        db.query(Message)
+        .filter(Message.conversation_id == convo.id)
+        .order_by(Message.id.asc())
+        .all()
+    )
+    # Mark messages from the other participant as read now that this user has
+    # fetched them.
+    unread_ids = [m.id for m in messages if m.sender_id != current_user.id and m.read_at is None]
+    if unread_ids:
+        db.query(Message).filter(Message.id.in_(unread_ids)).update(
+            {"read_at": datetime.utcnow()}, synchronize_session=False
+        )
+        db.commit()
+    return [_serialize_message(m, current_user, db) for m in messages]
+
+
+@api_router.post("/conversations/{conversation_id}/messages", response_model=MessageResponse)
+async def send_message(
+        conversation_id: int,
+        payload: MessageCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    convo = _authorize_conversation_participant(db, conversation_id, current_user)
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="El mensaje no puede estar vacío")
+    if len(content) > 4000:
+        raise HTTPException(status_code=413, detail="Mensaje demasiado largo")
+
+    message = Message(conversation_id=convo.id, sender_id=current_user.id, content=content)
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return _serialize_message(message, current_user, db)
+
+
+@api_router.post("/conversations/{conversation_id}/nudge", response_model=MessageResponse)
+async def send_nudge(
+        conversation_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """A Messenger-style "buzz" — the other side's chat shakes/vibrates when
+    this arrives via their normal message poll. Rate-limited per sender so a
+    held-down button can't spam the conversation."""
+    convo = _authorize_conversation_participant(db, conversation_id, current_user)
+
+    cooldown_cutoff = datetime.utcnow() - timedelta(seconds=3)
+    recent = (
+        db.query(Message)
+        .filter(
+            Message.conversation_id == convo.id,
+            Message.sender_id == current_user.id,
+            Message.message_type == "nudge",
+            Message.created_at > cooldown_cutoff,
+        )
+        .first()
+    )
+    if recent:
+        raise HTTPException(status_code=429, detail="Espera unos segundos antes de volver a enviar un toque")
+
+    message = Message(conversation_id=convo.id, sender_id=current_user.id, content="👋", message_type="nudge")
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return _serialize_message(message, current_user, db)
+
+
+@api_router.post("/messages/{message_id}/react", response_model=MessageResponse)
+async def react_to_message(
+        message_id: int,
+        payload: ReactionCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    message = db.query(Message).filter(Message.id == message_id).first()
+    if not message:
+        raise HTTPException(status_code=404, detail="Mensaje no encontrado")
+    _authorize_conversation_participant(db, message.conversation_id, current_user)
+
+    emoji = payload.emoji.strip()
+    if not emoji:
+        raise HTTPException(status_code=422, detail="Emoji vacío")
+    if len(emoji) > 8:
+        raise HTTPException(status_code=422, detail="Emoji inválido")
+
+    existing = (
+        db.query(MessageReaction)
+        .filter(MessageReaction.message_id == message_id, MessageReaction.user_id == current_user.id)
+        .first()
+    )
+    if existing and existing.emoji == emoji:
+        db.delete(existing)
+    else:
+        if existing:
+            db.delete(existing)
+            db.flush()
+        db.add(MessageReaction(message_id=message_id, user_id=current_user.id, emoji=emoji))
+    db.commit()
+    db.refresh(message)
+    return _serialize_message(message, current_user, db)
+
+
 # ========== ENDPOINTS DE USUARIOS ==========
 @api_router.get("/users/me", response_model=UserResponse)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    return current_user
+async def get_current_user_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return _serialize_user(current_user, db)
 
 
 @api_router.get("/users/by-username/{username}", response_model=PublicUserResponse)
-async def get_user_by_username(username: str, db: Session = Depends(get_db)):
+async def get_user_by_username(
+        username: str,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
     # Registered before /users/{user_id} on purpose: FastAPI/Starlette match routes
     # in declaration order, and {user_id} has no `:int` path-converter, so it would
     # otherwise swallow this request first and fail Pydantic int coercion on "by-username".
     user = db.query(User).filter(User.username == username, User.profile_public == True).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return user
+    return _serialize_public_user(user, current_user, db)
+
+
+@api_router.get("/users/search", response_model=List[PublicUserResponse])
+async def search_users(
+        q: str = Query(..., min_length=1, max_length=50),
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    # Registered before /users/{user_id} on purpose: {user_id} has no `:int`
+    # path-converter, so it would otherwise swallow "/users/search" first and
+    # fail Pydantic int coercion on "search" (same reasoning as by-username).
+    like = f"%{q.strip()}%"
+    query = db.query(User).filter(
+        User.profile_public == True,
+        or_(User.username.ilike(like), User.first_name.ilike(like), User.last_name.ilike(like))
+    )
+    if current_user:
+        query = query.filter(User.id != current_user.id)
+    results = query.order_by(User.username).limit(20).all()
+    return [_serialize_public_user(u, current_user, db) for u in results]
 
 
 @api_router.get("/users/{user_id}", response_model=PublicUserResponse)
-async def get_user(user_id: int, db: Session = Depends(get_db)):
+async def get_user(
+        user_id: int,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
     user = db.query(User).filter(User.id == user_id, User.profile_public == True).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return user
+    return _serialize_public_user(user, current_user, db)
+
+
+@api_router.post("/users/{username}/follow", response_model=PublicUserResponse)
+async def toggle_follow(
+        username: str,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    target = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="No puedes seguirte a ti mismo")
+
+    existing = db.query(Follow).filter(Follow.follower_id == current_user.id, Follow.followed_id == target.id).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(Follow(follower_id=current_user.id, followed_id=target.id))
+    db.commit()
+    return _serialize_public_user(target, current_user, db)
+
+
+@api_router.get("/users/{username}/followers", response_model=List[FollowUserResponse])
+async def list_followers(
+        username: str,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    target = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    followers = (
+        db.query(User)
+        .join(Follow, Follow.follower_id == User.id)
+        .filter(Follow.followed_id == target.id)
+        .all()
+    )
+    return [
+        FollowUserResponse(
+            id=u.id, username=u.username, first_name=u.first_name, last_name=u.last_name,
+            avatar_url=u.avatar_url, is_online=_is_online(u)
+        )
+        for u in followers
+    ]
+
+
+@api_router.get("/users/{username}/following", response_model=List[FollowUserResponse])
+async def list_following(
+        username: str,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    target = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    following = (
+        db.query(User)
+        .join(Follow, Follow.followed_id == User.id)
+        .filter(Follow.follower_id == target.id)
+        .all()
+    )
+    return [
+        FollowUserResponse(
+            id=u.id, username=u.username, first_name=u.first_name, last_name=u.last_name,
+            avatar_url=u.avatar_url, is_online=_is_online(u)
+        )
+        for u in following
+    ]
 
 
 class PublicThemeEnvironment(BaseModel):
@@ -1237,6 +2066,8 @@ async def update_user(
         profile_public: Optional[bool] = Form(None),
         radio_public: Optional[bool] = Form(None),
         preferences: Optional[str] = Form(None),
+        role: Optional[str] = Form(None),
+        presence_status: Optional[str] = Form(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
@@ -1246,6 +2077,14 @@ async def update_user(
         current_user.profile_public = profile_public
     if radio_public is not None:
         current_user.radio_public = radio_public
+    if presence_status is not None:
+        if presence_status not in VALID_PRESENCE_STATUSES:
+            raise HTTPException(status_code=422, detail=f"presence_status debe ser uno de {VALID_PRESENCE_STATUSES}")
+        current_user.presence_status = presence_status
+    if role is not None:
+        if role not in ("user", "artist"):
+            raise HTTPException(status_code=422, detail="role debe ser 'user' o 'artist'")
+        current_user.role = role
     if preferences is not None:
         # Validate it's actually JSON before persisting, but store the raw string
         # so the client owns the shape of its own preferences blob. Copilot's
@@ -1265,7 +2104,23 @@ async def update_user(
 
     db.commit()
     db.refresh(current_user)
-    return current_user
+    return _serialize_user(current_user, db)
+
+
+@api_router.post("/users/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if Path(file.filename).suffix.lower() not in (".jpg", ".jpeg", ".png", ".gif"):
+        raise HTTPException(status_code=400, detail="La foto de perfil debe ser una imagen (jpg/png/gif)")
+
+    avatar_url = await _save_uploaded_file(file, current_user.id)
+    current_user.avatar_url = avatar_url
+    db.commit()
+    db.refresh(current_user)
+    return _serialize_user(current_user, db)
 
 
 # ========== ENDPOINTS DE RADIO ==========
@@ -1402,8 +2257,18 @@ def startup():
     Base.metadata.create_all(bind=engine)
     with engine.begin() as connection:
         _ensure_column(connection, "users", "preferences", "TEXT")
+        _ensure_column(connection, "users", "avatar_url", "VARCHAR")
+        _ensure_column(connection, "users", "role", "VARCHAR NOT NULL DEFAULT 'user'")
+        _ensure_column(connection, "users", "last_seen", "DATETIME")
+        _ensure_column(connection, "posts", "track_id", "INTEGER")
+        _ensure_column(connection, "users", "presence_status", "VARCHAR NOT NULL DEFAULT 'online'")
+        _ensure_column(connection, "messages", "message_type", "VARCHAR NOT NULL DEFAULT 'text'")
         _ensure_index(connection, "ix_posts_media_url", "posts", "media_url")
         _ensure_index(connection, "ix_tracks_media_url", "tracks", "media_url")
+        # post_likes/comment_likes/messages are brand-new tables — create_all()
+        # above already creates their indexes from Column(index=True), no
+        # additive migration needed (that's only for columns on tables that
+        # already existed with data, like posts/tracks above).
     MEDIA_FOLDER.mkdir(parents=True, exist_ok=True)
     print("[OK] Base de datos inicializada")
     print("[OK] Carpeta media creada")

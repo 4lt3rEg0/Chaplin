@@ -229,6 +229,20 @@ const ProfileSidebarLeftComponent = ({ user, isOwnProfile }) => {
     }
 
     if (sectionId === 'actions') {
+      // Editing controls only make sense on your own profile — showing them
+      // while visiting someone else's would edit YOUR OWN settings, not theirs.
+      if (!isOwnProfile) {
+        return (
+          <Card key="actions" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
+            <CardTitle $accentColor={accentColor}>Acciones</CardTitle>
+            <LinkList>
+              <LinkButton type="button" onClick={() => navigate('/inbox', { state: { startWith: user?.username } })} $accentColor={accentColor} $widgetShape={widgetShape}>
+                Enviar mensaje
+              </LinkButton>
+            </LinkList>
+          </Card>
+        );
+      }
       return (
         <Card key="actions" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
           <CardTitle $accentColor={accentColor}>Acciones</CardTitle>
@@ -242,6 +256,7 @@ const ProfileSidebarLeftComponent = ({ user, isOwnProfile }) => {
     }
 
     if (sectionId === 'background') {
+      if (!isOwnProfile) return null;
       return (
         <Card key="background" id="profile-background-card" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
           <CardTitle $accentColor={accentColor}>Fondos & Efectos</CardTitle>

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
 import { getTheme, updateTheme } from '../services/themeService';
+import api, { uploadProfileMusic } from '../services/api';
 import ProfileHeader from './ProfileHeader';
 import {
   resolveCardTexture,
@@ -269,7 +270,7 @@ export default function ProfileCustomizePanel({ embedded = false }) {
   ];
 
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
   const {
     skinId,
     setSkinId,
@@ -327,11 +328,28 @@ export default function ProfileCustomizePanel({ embedded = false }) {
   const [profileVisible, setProfileVisible] = useState(true);
   const [radioVisible, setRadioVisible] = useState(false);
   const [musicName, setMusicName] = useState('');
-  const [musicDataUrl, setMusicDataUrl] = useState('');
-  const [saveStatus, setSaveStatus] = useState('idle');
+  const [musicTrackId, setMusicTrackId] = useState(null);
+  const [musicUploading, setMusicUploading] = useState(false);
+  const [musicError, setMusicError] = useState('');
+  const [roleSaving, setRoleSaving] = useState(false);
+  const isArtist = user?.role === 'artist';
 
-  const photoStorageKey = `chaplin_profile_photo_${user?.username || 'guest'}`;
-  const musicStorageKey = `chaplin_profile_music_${user?.username || 'guest'}`;
+  const toggleArtistAccount = async () => {
+    setRoleSaving(true);
+    try {
+      await updateTheme({ role: isArtist ? 'user' : 'artist' });
+      await refreshUser();
+    } finally {
+      setRoleSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    if (!window.confirm('¿Cerrar sesión?')) return;
+    logout();
+    navigate('/login');
+  };
+  const [saveStatus, setSaveStatus] = useState('idle');
 
   useEffect(() => {
     const load = async () => {
@@ -362,14 +380,18 @@ export default function ProfileCustomizePanel({ embedded = false }) {
         // ignore
       }
 
-      const storedMusic = localStorage.getItem(musicStorageKey) || '';
-      const storedName = localStorage.getItem(`${musicStorageKey}_name`) || '';
-      setMusicDataUrl(storedMusic);
-      setMusicName(storedName);
+      try {
+        const { data: profilePlaylist } = await api.get('/playlists/mine/profile');
+        const latestTrack = profilePlaylist?.tracks?.[profilePlaylist.tracks.length - 1];
+        setMusicName(latestTrack?.title || '');
+        setMusicTrackId(latestTrack?.id || null);
+      } catch {
+        // ignore — profile music display is best-effort
+      }
     };
 
     load();
-  }, [musicStorageKey]);
+  }, []);
 
   const variantOptions = useMemo(() => Object.values(themeVariants || {}), [themeVariants]);
 
@@ -400,38 +422,39 @@ export default function ProfileCustomizePanel({ embedded = false }) {
       visual_density: density,
       ornament_level: ornament,
       material_intensity: materialIntensity,
-      profile_layout: layout,
-      profile_music: musicName || ''
+      profile_layout: layout
     });
     setSaveStatus('saved');
   };
 
-  const onMusicFile = (event) => {
+  const onMusicFile = async (event) => {
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = typeof reader.result === 'string' ? reader.result : '';
-      if (!value) return;
-      localStorage.setItem(musicStorageKey, value);
-      localStorage.setItem(`${musicStorageKey}_name`, file.name);
-      setMusicDataUrl(value);
-      setMusicName(file.name);
-    };
-    reader.readAsDataURL(file);
+    setMusicUploading(true);
+    setMusicError('');
+    try {
+      const track = await uploadProfileMusic(file);
+      setMusicName(track.title);
+      setMusicTrackId(track.id);
+    } catch {
+      setMusicError('No se pudo subir la canción. Comprueba que sea un audio válido.');
+    } finally {
+      setMusicUploading(false);
+    }
   };
 
-  const clearMusic = () => {
-    localStorage.removeItem(musicStorageKey);
-    localStorage.removeItem(`${musicStorageKey}_name`);
-    setMusicDataUrl('');
-    setMusicName('');
-  };
-
-  const onPhotoChanged = (dataUrl) => {
-    localStorage.setItem(photoStorageKey, dataUrl);
-    window.dispatchEvent(new Event('chaplin-profile-photo-updated'));
+  const clearMusic = async () => {
+    if (!musicTrackId) return;
+    try {
+      const { data: profilePlaylist } = await api.get('/playlists/mine/profile');
+      await api.delete(`/playlists/${profilePlaylist.id}/items/${musicTrackId}`);
+      setMusicName('');
+      setMusicTrackId(null);
+    } catch {
+      setMusicError('No se pudo quitar la canción. Inténtalo de nuevo.');
+    }
   };
 
   if (!user) {
@@ -456,7 +479,7 @@ export default function ProfileCustomizePanel({ embedded = false }) {
         {!embedded && <Btn type="button" onClick={() => navigate('/profile')}>Volver al perfil</Btn>}
       </Header>
 
-      {!embedded ? <ProfileHeader user={user} editable onPhotoChange={onPhotoChanged} /> : null}
+      {!embedded ? <ProfileHeader user={user} /> : null}
 
       <MiniPreview>
         <CardSample>
@@ -739,6 +762,26 @@ export default function ProfileCustomizePanel({ embedded = false }) {
         </Section>
 
         <Section>
+          <Label>Tipo de cuenta</Label>
+          <Sub style={{ marginBottom: 8 }}>
+            {isArtist
+              ? 'Cuenta de artista activa — tu perfil se muestra como creador.'
+              : 'Cuenta normal. Cambiar a artista es solo una identidad visual, no cambia lo que puedes subir.'}
+          </Sub>
+          <Btn type="button" onClick={toggleArtistAccount} disabled={roleSaving}>
+            {roleSaving ? 'Guardando...' : isArtist ? 'Volver a cuenta normal' : 'Cambiar a cuenta de artista'}
+          </Btn>
+        </Section>
+
+        <Section>
+          <Label>Sesión</Label>
+          <Sub style={{ marginBottom: 8 }}>
+            Conectado como @{user?.username}. Cierra sesión para entrar con otra cuenta o para ver la pantalla de registro.
+          </Sub>
+          <Btn type="button" onClick={handleLogout}>Cerrar sesión</Btn>
+        </Section>
+
+        <Section>
           <CheckLine>
             <input
               type="checkbox"
@@ -752,11 +795,12 @@ export default function ProfileCustomizePanel({ embedded = false }) {
         <FullWidth>
           <Section>
             <Label>Musica de perfil (archivo)</Label>
-            <Input type="file" accept="audio/*" onChange={onMusicFile} />
-            {musicName && <Sub style={{ marginTop: 6, textAlign: 'center' }}>Archivo: {musicName}</Sub>}
-            {musicDataUrl && (
+            <Input type="file" accept="audio/*" onChange={onMusicFile} disabled={musicUploading} />
+            {musicUploading && <Sub style={{ marginTop: 6, textAlign: 'center' }}>Subiendo...</Sub>}
+            {musicError && <Sub style={{ marginTop: 6, textAlign: 'center', color: '#ff6b6b' }}>{musicError}</Sub>}
+            {musicName && !musicUploading && (
               <>
-                <MusicPlayer controls src={musicDataUrl} />
+                <Sub style={{ marginTop: 6, textAlign: 'center' }}>Actual: {musicName}</Sub>
                 <Row style={{ marginTop: 6, justifyContent: 'center' }}>
                   <Btn type="button" onClick={clearMusic}>Quitar musica</Btn>
                 </Row>

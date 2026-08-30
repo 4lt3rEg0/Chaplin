@@ -147,12 +147,18 @@ const Handle = styled.p`
   }
 `;
 
+const STATUS_META = {
+  online: { label: 'Activo en Chaplin', color: '#3ddc84', pulse: true },
+  away: { label: 'Ausente', color: '#f5a623', pulse: false },
+  offline: { label: 'Desconectado', color: 'rgba(255,255,255,0.45)', pulse: false }
+};
+
 const Status = styled.div`
   padding: 8px 16px;
   border-radius: ${props => resolveWidgetRadius(props.$widgetShape)};
-  background: ${props => props.$accentColor}20;
-  border: 1px solid ${props => props.$accentColor};
-  color: ${props => props.$accentColor};
+  background: ${props => props.$dotColor}18;
+  border: 1px solid ${props => props.$dotColor};
+  color: ${props => props.$textColor};
   font-size: 13px;
   font-weight: 600;
   width: fit-content;
@@ -166,8 +172,8 @@ const Status = styled.div`
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: ${props => props.$accentColor};
-    animation: ${props => props.$isOnline ? 'pulse 2s ease-in-out infinite' : 'none'};
+    background: ${props => props.$dotColor};
+    animation: ${props => props.$pulse ? 'pulse 2s ease-in-out infinite' : 'none'};
   }
 
   @keyframes pulse {
@@ -178,6 +184,18 @@ const Status = styled.div`
   @media (max-width: 640px) {
     justify-content: center;
   }
+`;
+
+const StatusSelect = styled.select`
+  border: 1px solid ${props => props.$dotColor};
+  background: ${props => props.$dotColor}18;
+  color: ${props => props.$textColor};
+  border-radius: ${props => resolveWidgetRadius(props.$widgetShape)};
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  width: fit-content;
+  cursor: pointer;
 `;
 
 const Stats = styled.div`
@@ -211,10 +229,11 @@ const StatLabel = styled.div`
   letter-spacing: 0.5px;
 `;
 
-const ProfileHeaderComponent = ({ user, editable = false, onPhotoChange = null }) => {
+const ProfileHeaderComponent = ({ user, editable = false, onPhotoChange = null, onPresenceChange = null }) => {
   const { skinData, appTheme } = useSkin();
-  const [profilePhoto, setProfilePhoto] = useState('');
   const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [presenceSaving, setPresenceSaving] = useState(false);
 
   const cardBg = appTheme.card?.bg || 'rgba(255,255,255,0.05)';
   const borderColor = appTheme.card?.border || 'rgba(255,255,255,0.1)';
@@ -227,44 +246,41 @@ const ProfileHeaderComponent = ({ user, editable = false, onPhotoChange = null }
   const cardFrame = appTheme.card?.frame || 'solid';
   const cardShadow = appTheme.card?.shadow || '0 8px 32px rgba(0, 0, 0, 0.3)';
 
-  useEffect(() => {
-    const key = `chaplin_profile_photo_${user?.username || 'guest'}`;
-    const refreshPhoto = () => setProfilePhoto(localStorage.getItem(key) || '');
-
-    refreshPhoto();
-    window.addEventListener('storage', refreshPhoto);
-    window.addEventListener('chaplin-profile-photo-updated', refreshPhoto);
-
-    return () => {
-      window.removeEventListener('storage', refreshPhoto);
-      window.removeEventListener('chaplin-profile-photo-updated', refreshPhoto);
-    };
-  }, [user?.username]);
-
-  const initials = user?.full_name
-    ?.split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase() || '👤';
+  const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+  const initials = fullName
+    ? fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+    : '👤';
 
   const openPhotoPicker = () => {
-    if (!editable) return;
+    if (!editable || uploading) return;
     fileInputRef.current?.click();
   };
 
-  const handlePhotoFileChange = (event) => {
+  const handlePhotoFileChange = async (event) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    event.target.value = '';
+    if (!file || !onPhotoChange) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = typeof reader.result === 'string' ? reader.result : '';
-      if (!value) return;
-      setProfilePhoto(value);
-      onPhotoChange?.(value, file.name);
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      await onPhotoChange(file);
+    } finally {
+      setUploading(false);
+    }
   };
+
+  const handlePresenceSelect = async (event) => {
+    const next = event.target.value;
+    if (!onPresenceChange || presenceSaving) return;
+    setPresenceSaving(true);
+    try {
+      await onPresenceChange(next);
+    } finally {
+      setPresenceSaving(false);
+    }
+  };
+
+  const currentStatus = STATUS_META[user?.status] || STATUS_META.offline;
 
   return (
     <HeaderWrapper
@@ -282,7 +298,7 @@ const ProfileHeaderComponent = ({ user, editable = false, onPhotoChange = null }
         <Avatar
           $accentColor={accentColor}
         >
-          {profilePhoto ? <AvatarImage src={profilePhoto} alt="Foto de perfil" /> : initials}
+          {user?.avatar_url ? <AvatarImage src={user.avatar_url} alt="Foto de perfil" /> : initials}
           {editable && (
             <>
               <CameraButton
@@ -291,6 +307,7 @@ const ProfileHeaderComponent = ({ user, editable = false, onPhotoChange = null }
                 $accentColor={accentColor}
                 $widgetShape={widgetShape}
                 title="Cambiar foto"
+                disabled={uploading}
               >
                 <Camera size={16} />
               </CameraButton>
@@ -305,30 +322,45 @@ const ProfileHeaderComponent = ({ user, editable = false, onPhotoChange = null }
         </Avatar>
         <Info>
           <Name $textColor={textColor}>
-            {user?.full_name || 'Usuario'}
+            {fullName || 'Usuario'}
           </Name>
           <Handle $textColor={textColor}>
             @{user?.username || 'username'}
           </Handle>
-          <Status $accentColor={accentColor} $isOnline={true} $widgetShape={widgetShape}>
-            Activo en Chaplin
-          </Status>
+          {editable && onPresenceChange ? (
+            <StatusSelect
+              $dotColor={currentStatus.color}
+              $textColor={textColor}
+              $widgetShape={widgetShape}
+              value={user?.status && STATUS_META[user.status] ? user.status : 'online'}
+              onChange={handlePresenceSelect}
+              disabled={presenceSaving}
+            >
+              <option value="online">Activo en Chaplin</option>
+              <option value="away">Ausente</option>
+              <option value="invisible">Invisible (aparecer desconectado)</option>
+            </StatusSelect>
+          ) : (
+            <Status $dotColor={currentStatus.color} $textColor={textColor} $pulse={currentStatus.pulse} $widgetShape={widgetShape}>
+              {currentStatus.label}
+            </Status>
+          )}
           <Stats $borderColor={borderColor}>
             <StatItem>
               <StatNumber $accentColor={accentColor}>
-                128
+                {user?.follower_count ?? 0}
               </StatNumber>
               <StatLabel $textColor={textColor}>Seguidores</StatLabel>
             </StatItem>
             <StatItem>
               <StatNumber $accentColor={accentColor}>
-                42
+                {user?.following_count ?? 0}
               </StatNumber>
               <StatLabel $textColor={textColor}>Siguiendo</StatLabel>
             </StatItem>
             <StatItem>
               <StatNumber $accentColor={accentColor}>
-                256
+                {user?.post_count ?? 0}
               </StatNumber>
               <StatLabel $textColor={textColor}>Posts</StatLabel>
             </StatItem>

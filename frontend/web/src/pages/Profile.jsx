@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
 import { useVortex } from '../context/VortexContext';
 import { usePlayer } from '../context/PlayerContext';
-import api from '../services/api';
+import api, { uploadAvatar } from '../services/api';
 
 import ProfileHeader from '../components/ProfileHeader';
 import ProfileSidebarLeft from '../components/ProfileSidebarLeft';
-import ProfileFeed from '../components/ProfileFeed';
+import ProfileTabs from '../components/ProfileTabs';
 import ProfileSidebarRight from '../components/ProfileSidebarRight';
 import ProfileCustomizePanel from '../components/ProfileCustomizePanel';
 
@@ -141,14 +141,16 @@ const RightArea = styled.div`
 `;
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { username: routeUsername } = useParams();
+  const location = useLocation();
   const { skinData, appTheme, setProfileOverride: setSkinOverride } = useSkin();
   const { setProfileOverride: setVortexOverride } = useVortex();
   const { pause } = usePlayer();
 
   const [viewedUser, setViewedUser] = useState(null);
   const [viewedUserError, setViewedUserError] = useState(false);
+  const [showCustomize, setShowCustomize] = useState(() => window.location.hash === '#customize');
 
   const isOwnProfile = !routeUsername || (user && routeUsername === user.username);
 
@@ -214,8 +216,34 @@ const ProfilePage = () => {
 
   const displayUser = isOwnProfile ? user : viewedUser;
 
+  const handleAvatarUpload = async (file) => {
+    try {
+      await uploadAvatar(file);
+      await refreshUser();
+    } catch {
+      window.alert('No se pudo subir la foto de perfil. Inténtalo de nuevo.');
+    }
+  };
+
+  const handlePresenceChange = async (presenceStatus) => {
+    try {
+      const formData = new FormData();
+      formData.append('presence_status', presenceStatus);
+      await api.put('/users/me', formData);
+      await refreshUser();
+    } catch {
+      window.alert('No se pudo actualizar tu estado. Inténtalo de nuevo.');
+    }
+  };
+
   useEffect(() => {
-    if (window.location.hash !== '#customize') {
+    if (location.hash === '#customize') {
+      setShowCustomize(true);
+    }
+  }, [location.hash]);
+
+  useEffect(() => {
+    if (!showCustomize || window.location.hash !== '#customize') {
       return;
     }
 
@@ -227,7 +255,7 @@ const ProfilePage = () => {
     requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  }, []);
+  }, [showCustomize]);
 
   if (!user) {
     return (
@@ -280,14 +308,19 @@ const ProfilePage = () => {
           <ProfileSidebarLeft user={displayUser} isOwnProfile={isOwnProfile} />
         </LeftArea>
         <HeroArea>
-          <ProfileHeader user={displayUser} />
+          <ProfileHeader
+            user={displayUser}
+            editable={isOwnProfile}
+            onPhotoChange={isOwnProfile ? handleAvatarUpload : null}
+            onPresenceChange={isOwnProfile ? handlePresenceChange : null}
+          />
         </HeroArea>
         <FeedArea>
-          <ProfileFeed user={displayUser} />
+          <ProfileTabs user={displayUser} isOwnProfile={isOwnProfile} />
         </FeedArea>
         <RightArea data-profile-rail="right">
-          <ProfileSidebarRight user={displayUser} />
-          {isOwnProfile ? <ProfileCustomizePanel embedded /> : null}
+          <ProfileSidebarRight user={displayUser} isOwnProfile={isOwnProfile} />
+          {isOwnProfile && showCustomize ? <ProfileCustomizePanel embedded /> : null}
         </RightArea>
       </Container>
     </PageWrapper>

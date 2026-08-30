@@ -20,6 +20,7 @@ export const Z_INDEX = {
   FLOATING_CONTROLS_START: 4999, // FloatingPlayerButton (mini state)
   FLOATING_CONTROLS_END: 5005, // FloatingTopIcons — keep new floating controls inside this band
   TOAST: 9000, // reserved for future toast/notification layer
-  MODAL: 9500, // reserved for future modal layer
+  MODAL: 9500, // Feed's composer/creator-studio overlay
+  MEDIA_EDITOR: 9600, // MediaEditor — sits above the composer it opens on top of
   CRITICAL_OVERLAY: 9999 // top-of-stack scanline/noise overlays (Y2KTheme.jsx)
 };

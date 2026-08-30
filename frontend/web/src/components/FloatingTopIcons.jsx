@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
-import { BookOpen, Pause, Play, Radio, Sparkles } from "lucide-react";
+import { BookOpen, Pause, Play, Radio, Search, Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { usePlayer } from "../context/PlayerContext";
 
@@ -102,6 +102,10 @@ export default function FloatingTopIcons() {
     navigate(makePathWithFlags("/feed", { compose: 1, mode: "diary" }));
   };
 
+  const openSearch = () => {
+    navigate(makePathWithFlags("/explore"));
+  };
+
   const openStation = async () => {
     setActiveSource("chaplin");
     await playFromSource("chaplin");
@@ -124,6 +128,10 @@ export default function FloatingTopIcons() {
     <Bar>
       <IconButton type="button" onClick={openDiary} aria-label="Querido diario">
         <BookOpen size={20} />
+      </IconButton>
+
+      <IconButton type="button" onClick={openSearch} aria-label="Explorar">
+        <Search size={20} />
       </IconButton>
 
       <IconButton type="button" onClick={togglePlay} aria-label="Play">
