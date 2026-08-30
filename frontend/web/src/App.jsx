@@ -51,6 +51,8 @@ import Feed from "./pages/Feed";
 import Profile from "./pages/Profile";
 import ProfileCustomize from "./pages/ProfileCustomize";
 import Radio from "./pages/Radio";
+import Inbox from "./pages/Inbox";
+import Explore from "./pages/Explore";
 import RegisterCyber from "./components/RegisterCyber";
 
 const MOBILE_PREVIEW_FLAG = "chaplin_mobile_preview";
@@ -353,6 +355,24 @@ const AppShell = () => {
               element={
                 <PrivateRoute>
                   <Radio />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/inbox"
+              element={
+                <PrivateRoute>
+                  <Inbox />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/explore"
+              element={
+                <PrivateRoute>
+                  <Explore />
                 </PrivateRoute>
               }
             />

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import styled from "styled-components";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 const LoginFrame = styled.main`
 	.chaplin-page-shell {
@@ -59,8 +60,26 @@ const ErrorText = styled.div`
 	font-size: 13px;
 `;
 
+const RegisterLink = styled.p`
+	margin: 4px 0 0;
+	text-align: center;
+	font-size: 13px;
+	color: ${({ theme }) => theme.colors.textSecondary};
+
+	a {
+		color: ${({ theme }) => theme.colors.primary};
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	a:hover {
+		text-decoration: underline;
+	}
+`;
+
 export default function Login() {
 	const navigate = useNavigate();
+	const { refreshUser } = useAuth();
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
@@ -80,6 +99,10 @@ export default function Login() {
 
 			if (data?.access_token) {
 				localStorage.setItem("token", data.access_token);
+				// AuthContext only fetches /users/me once, on its own mount — without
+				// this, `user` would stay null after a client-side login until a full
+				// page reload happened to re-trigger it.
+				await refreshUser();
 				navigate("/feed");
 			} else {
 				setError("No se recibió token de acceso.");
@@ -111,6 +134,9 @@ export default function Login() {
 				/>
 					{error ? <ErrorText>{error}</ErrorText> : null}
 					<SubmitButton type="submit">Entrar</SubmitButton>
+					<RegisterLink>
+						¿No tienes cuenta? <Link to="/register">Regístrate</Link>
+					</RegisterLink>
 				</LoginCard>
 			</div>
 		</LoginFrame>

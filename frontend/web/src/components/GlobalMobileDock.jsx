@@ -113,7 +113,7 @@ export default function GlobalMobileDock() {
         feed
       </DockButton>
 
-      <DockButton type="button" onClick={() => window.alert("Bandeja DM en construccion")}>
+      <DockButton type="button" onClick={() => navigate(makePathWithFlags("/inbox"))}>
         <Inbox size={13} />
         inbox
       </DockButton>

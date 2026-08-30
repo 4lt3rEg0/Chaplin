@@ -128,6 +128,52 @@ const OptionButton = styled.button`
   }
 `;
 
+const HorizontalScroller = styled.div`
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  padding: 4px 2px 10px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+`;
+
+const PreviewCard = styled.button`
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  width: 132px;
+  height: 96px;
+  border-radius: 12px;
+  border: 2px solid ${props => (props.$active ? props.$accentColor : props.$accentColor + '30')};
+  background:
+    linear-gradient(160deg, ${props => props.$accentColor}55, transparent 60%),
+    radial-gradient(circle at 70% 75%, ${props => props.$accentColor}35, #05070b 70%);
+  color: ${props => props.$accentColor};
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+  text-align: left;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+
+  ${props => props.$active && `box-shadow: 0 0 0 2px ${props.$accentColor}55;`}
+`;
+
+const PreviewCardLabel = styled.span`
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+`;
+
 const ChoiceDisclosure = styled.details`
   border: 1px solid ${props => props.$accentColor}30;
   border-radius: 8px;
@@ -144,8 +190,6 @@ const ChoiceDisclosure = styled.details`
   }
 
   > div {
-    max-height: min(38dvh, 320px);
-    overflow-y: auto;
     overscroll-behavior: contain;
     padding: 8px;
     scrollbar-width: thin;
@@ -287,12 +331,13 @@ const BackgroundConfigurator = () => {
             { label: 'Fondos generativos', options: GENERATED_BACKGROUNDS },
             { label: 'Visualizadores de vídeo', options: VIDEO_BACKGROUNDS }
           ].map((group) => (
-            <ChoiceDisclosure key={group.label} $accentColor={accentColor}>
-              <summary>{group.label} · {group.options.length}</summary>
-              <OptionGrid>
+            <ChoiceDisclosure key={group.label} $accentColor={accentColor} open>
+              <summary>{group.label} · {group.options.length} · desliza para ver más</summary>
+              <HorizontalScroller>
                 {group.options.map(({ id, label }) => (
-                  <OptionButton
+                  <PreviewCard
                     key={id}
+                    type="button"
                     $active={backgroundStyle === id}
                     $accentColor={accentColor}
                     onClick={() => {
@@ -300,10 +345,10 @@ const BackgroundConfigurator = () => {
                       setBackgroundStyle(id);
                     }}
                   >
-                    {label}
-                  </OptionButton>
+                    <PreviewCardLabel>{label}</PreviewCardLabel>
+                  </PreviewCard>
                 ))}
-              </OptionGrid>
+              </HorizontalScroller>
             </ChoiceDisclosure>
           ))}
         </ControlGroup>

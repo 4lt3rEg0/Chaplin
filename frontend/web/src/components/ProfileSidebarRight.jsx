@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import { useSkin } from '../context/SkinContext';
-import { UserPlus, Zap } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
+import api from '../services/api';
 import {
   resolveCardTexture,
   resolveMaterialOverlay,
@@ -81,6 +83,29 @@ const CardTitle = styled.h3`
   gap: 8px;
 `;
 
+const FollowButtonTop = styled.button`
+  padding: 8px 14px;
+  border: 1px solid ${props => props.$accentColor};
+  border-radius: ${props => resolveWidgetRadius(props.$widgetShape)};
+  background: ${props => (props.$active ? props.$accentColor : 'transparent')};
+  color: ${props => (props.$active ? props.$cardBg : props.$accentColor)};
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  margin-bottom: 16px;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
 const FriendItem = styled.div`
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
@@ -114,6 +139,25 @@ const FriendAvatar = styled.div`
   font-size: 16px;
   font-weight: 700;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+`;
+
+const OnlineDot = styled.span`
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #3ddc84;
+  border: 2px solid ${props => props.$cardBg};
 `;
 
 const FriendInfo = styled.div`
@@ -138,67 +182,33 @@ const FriendHandle = styled.div`
   line-height: 1.25;
 `;
 
-const FriendButton = styled.button`
-  padding: 6px 12px;
-  border: none;
-  border-radius: ${props => resolveWidgetRadius(props.$widgetShape)};
-  background: ${props => props.$accentColor};
-  color: ${props => props.$cardBg};
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  flex-shrink: 0;
-  grid-column: 2;
-  justify-self: end;
-  min-width: 34px;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px ${props => props.$accentColor}50;
-  }
-`;
-
-const StatBox = styled.div`
-  padding: 16px;
-  border-radius: ${props => resolveWidgetRadius(props.$widgetShape)};
-  background: linear-gradient(135deg, ${props => props.$accentColor}15, ${props => props.$accentColor}05);
-  border: 1px solid ${props => props.$accentColor}40;
-  text-align: center;
-  margin-bottom: 12px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-`;
-
-const StatValue = styled.div`
-  font-size: 24px;
-  font-weight: 700;
-  color: ${props => props.$accentColor};
-  margin-bottom: 4px;
-`;
-
-const StatLabel = styled.div`
+const EmptyFriends = styled.p`
   font-size: 12px;
-  font-weight: 600;
-  color: ${props => props.$textColor}99;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
+  color: ${props => props.$textColor}80;
+  margin: 0;
+  text-align: center;
 `;
 
-const GlowBar = styled.div`
-  height: 4px;
-  background: linear-gradient(90deg, ${props => props.$accentColor}, ${props => props.$accentColor}00);
-  border-radius: 2px;
-  margin-bottom: 16px;
-  opacity: 0.4;
-`;
 
-const ProfileSidebarRightComponent = ({ user }) => {
+const ProfileSidebarRightComponent = ({ user, isOwnProfile }) => {
   const { skinData, appTheme } = useSkin();
+  const navigate = useNavigate();
+  const [following, setFollowing] = useState(Boolean(user?.is_following));
+  const [followerCount, setFollowerCount] = useState(user?.follower_count || 0);
+  const [followSaving, setFollowSaving] = useState(false);
+  const [followersList, setFollowersList] = useState([]);
+
+  useEffect(() => {
+    setFollowing(Boolean(user?.is_following));
+    setFollowerCount(user?.follower_count || 0);
+  }, [user?.is_following, user?.follower_count]);
+
+  useEffect(() => {
+    if (!user?.username) return;
+    api.get(`/users/${user.username}/followers`)
+      .then(({ data }) => setFollowersList(data.slice(0, 5)))
+      .catch(() => setFollowersList([]));
+  }, [user?.username]);
 
   const cardBg = appTheme.card?.bg || 'rgba(255,255,255,0.05)';
   const borderColor = appTheme.card?.border || 'rgba(255,255,255,0.1)';
@@ -213,13 +223,23 @@ const ProfileSidebarRightComponent = ({ user }) => {
   const widgetShape = appTheme.card?.widgetShape || 'rounded';
   const material = appTheme.card?.material || 'glass';
 
-  const friends = [
-    { name: 'Alex Vibes', handle: '@alexvibes', icon: '🎨' },
-    { name: 'Luna Echo', handle: '@lunaecho', icon: '🌙' },
-    { name: 'Cyber Nova', handle: '@cybernova', icon: '⚡' },
-    { name: 'Neon Soul', handle: '@neonsoul', icon: '💜' },
-    { name: 'Synth Wave', handle: '@synthw4ve', icon: '🌀' },
-  ];
+  const toggleFollow = async () => {
+    if (!user?.username || followSaving) return;
+    setFollowSaving(true);
+    const wasFollowing = following;
+    setFollowing(!wasFollowing);
+    setFollowerCount((c) => Math.max(0, c + (wasFollowing ? -1 : 1)));
+    try {
+      const { data } = await api.post(`/users/${user.username}/follow`);
+      setFollowing(data.is_following);
+      setFollowerCount(data.follower_count);
+    } catch {
+      setFollowing(wasFollowing);
+      setFollowerCount((c) => Math.max(0, c + (wasFollowing ? 1 : -1)));
+    } finally {
+      setFollowSaving(false);
+    }
+  };
 
   const renderCard = (sectionId) => {
     if (sectionId === 'friends') {
@@ -227,48 +247,53 @@ const ProfileSidebarRightComponent = ({ user }) => {
         <Card key="friends" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
           <CardTitle $accentColor={accentColor}>
             <UserPlus size={16} />
-            Amigos
+            Seguidores
           </CardTitle>
-          {friends.map((friend, idx) => (
-            <FriendItem key={idx} $accentColor={accentColor} $widgetShape={widgetShape}>
-              <FriendAvatar $accentColor={accentColor}>{friend.icon}</FriendAvatar>
-              <FriendInfo>
-                <FriendName $textColor={textColor}>{friend.name}</FriendName>
-                <FriendHandle $textColor={textColor}>{friend.handle}</FriendHandle>
-              </FriendInfo>
-              <FriendButton $accentColor={accentColor} $cardBg={cardBg} $widgetShape={widgetShape}>+</FriendButton>
-            </FriendItem>
-          ))}
+          {!isOwnProfile && (
+            <FollowButtonTop
+              type="button"
+              onClick={toggleFollow}
+              disabled={followSaving}
+              $active={following}
+              $accentColor={accentColor}
+              $cardBg={cardBg}
+              $widgetShape={widgetShape}
+            >
+              {followSaving ? 'Guardando...' : following ? 'Siguiendo' : 'Seguir'}
+            </FollowButtonTop>
+          )}
+          {followersList.length === 0 ? (
+            <EmptyFriends $textColor={textColor}>
+              {isOwnProfile ? 'Todavía no tienes seguidores.' : 'Sin seguidores todavía.'}
+            </EmptyFriends>
+          ) : (
+            followersList.map((f) => (
+              <FriendItem
+                key={f.id}
+                $accentColor={accentColor}
+                $widgetShape={widgetShape}
+                onClick={() => navigate(`/profile/${f.username}`)}
+              >
+                <FriendAvatar $accentColor={accentColor}>
+                  {f.avatar_url ? <img src={f.avatar_url} alt="" /> : f.username[0]?.toUpperCase()}
+                  {f.is_online && <OnlineDot $cardBg={cardBg} />}
+                </FriendAvatar>
+                <FriendInfo>
+                  <FriendName $textColor={textColor}>{f.first_name} {f.last_name}</FriendName>
+                  <FriendHandle $textColor={textColor}>@{f.username}{f.is_online ? ' · en línea' : ''}</FriendHandle>
+                </FriendInfo>
+              </FriendItem>
+            ))
+          )}
         </Card>
       );
     }
 
+    // 'stats' intentionally renders nothing now — the same follower/following
+    // counts moved to ProfileHeader (Instagram-style, next to the avatar)
+    // instead of duplicating them in a second card here.
     if (sectionId === 'stats') {
-      return (
-        <Card key="stats" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
-          <GlowBar $accentColor={accentColor} />
-          <CardTitle $accentColor={accentColor}>
-            <Zap size={16} />
-            Estadísticas
-          </CardTitle>
-          <StatBox $accentColor={accentColor} $widgetShape={widgetShape}>
-            <StatValue $accentColor={accentColor}>1.2K</StatValue>
-            <StatLabel $textColor={textColor}>Reproducciones</StatLabel>
-          </StatBox>
-          <StatBox $accentColor={accentColor} $widgetShape={widgetShape}>
-            <StatValue $accentColor={accentColor}>847</StatValue>
-            <StatLabel $textColor={textColor}>Me gusta recibidos</StatLabel>
-          </StatBox>
-          <StatBox $accentColor={accentColor} $widgetShape={widgetShape}>
-            <StatValue $accentColor={accentColor}>156</StatValue>
-            <StatLabel $textColor={textColor}>Compartidos</StatLabel>
-          </StatBox>
-          <StatBox $accentColor={accentColor} $widgetShape={widgetShape}>
-            <StatValue $accentColor={accentColor}>92%</StatValue>
-            <StatLabel $textColor={textColor}>Tasa de engagement</StatLabel>
-          </StatBox>
-        </Card>
-      );
+      return null;
     }
 
     return null;

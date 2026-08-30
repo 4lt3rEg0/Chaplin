@@ -33,6 +33,7 @@ const safeParseObject = (raw) => {
 // Fields that live inside the `preferences` JSON blob on the backend, as opposed
 // to bio/profile_public/radio_public which are real dedicated User columns.
 const PREFERENCE_KEYS = [
+  "profile_layout",
   "base_theme",
   "theme_variant",
   "accent_color",
@@ -122,6 +123,9 @@ export const updateTheme = async (payload) => {
     }
     if (typeof rest.radio_public !== "undefined") {
       form.append("radio_public", String(Boolean(rest.radio_public)));
+    }
+    if (typeof rest.role !== "undefined") {
+      form.append("role", rest.role);
     }
 
     if (Object.keys(incomingPreferences).length > 0) {

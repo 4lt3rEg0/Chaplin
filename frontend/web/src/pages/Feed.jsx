@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import {
   MessageCircle,
@@ -12,13 +13,18 @@ import {
   X,
   Camera,
   Sliders,
-  Sparkles,
   Eye,
   EyeOff,
-  BookOpen
+  BookOpen,
+  Play,
+  Pause
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSkin } from '../context/SkinContext';
+import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import { Z_INDEX } from '../styles/zIndexScale';
+import MediaEditor from '../components/MediaEditor';
 
 const CREATOR_MODES = ['feed', 'historia', 'reel', 'directo', 'camara'];
 
@@ -255,6 +261,20 @@ const MediaAudio = styled.audio`
   width: 100%;
 `;
 
+const TrackBadge = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.06)'};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 999px;
+  padding: 5px 12px 5px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 8px;
+`;
+
 const ActionRow = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -401,7 +421,7 @@ const ComposerBackdrop = styled.div`
     radial-gradient(circle at 50% 50%, rgba(52, 87, 123, 0.38), rgba(0, 0, 0, 0.72));
   display: grid;
   place-items: center;
-  z-index: 80;
+  z-index: ${Z_INDEX.MODAL};
   padding: 12px;
 `;
 
@@ -492,6 +512,12 @@ const ToolButton = styled.button`
     opacity: 1;
     transform: scale(1.06);
   }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
 `;
 
 const CreatorModeRail = styled.div`
@@ -532,7 +558,11 @@ const CreatorFooter = styled.div`
 
 const DiaryWidget = styled.button`
   position: absolute;
-  left: 12px;
+  /* Bottom-right, not bottom-left — CreatorTools is a full-height icon
+     column anchored at left:12/top:12/bottom:12, so bottom-left is
+     guaranteed to overlap it whenever the icon stack's real height reaches
+     the bottom (routine on short/mobile viewports). */
+  right: 12px;
   bottom: 12px;
   z-index: 4;
   border: 1px solid ${({ theme }) => theme.colors.borderStrong};
@@ -605,6 +635,20 @@ const Preview = styled.div`
   background: ${({ theme }) => theme.card?.bg || 'rgba(9, 12, 17, 0.82)'};
 `;
 
+const CancelPublishButton = styled.button`
+  margin-top: 12px;
+  width: 100%;
+  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.borderStrong};
+  border-radius: 12px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+`;
+
 const PublishButton = styled.button`
   margin-top: 12px;
   width: 100%;
@@ -649,19 +693,26 @@ export default function Feed() {
   const navigate = useNavigate();
   const location = useLocation();
   const { appTheme } = useSkin();
+  const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [publishType, setPublishType] = useState('text');
   const [draftText, setDraftText] = useState('');
   const [draftFile, setDraftFile] = useState(null);
+  const [draftTrackId, setDraftTrackId] = useState(null);
+  const [playingTrackPostId, setPlayingTrackPostId] = useState(null);
+  const trackAudioRef = useRef(null);
   const [filePreview, setFilePreview] = useState('');
+  const [editorOpen, setEditorOpen] = useState(false);
   const [sending, setSending] = useState(false);
-  const [likedPosts, setLikedPosts] = useState({});
-  const [likeCounts, setLikeCounts] = useState({});
   const [openComments, setOpenComments] = useState({});
   const [commentsByPost, setCommentsByPost] = useState({});
   const [commentDrafts, setCommentDrafts] = useState({});
+  const [editingPostId, setEditingPostId] = useState(null);
+  const [editDraft, setEditDraft] = useState('');
+  const [editFile, setEditFile] = useState(null);
+  const [editRemoveMedia, setEditRemoveMedia] = useState(false);
   const [creatorModeIndex, setCreatorModeIndex] = useState(0);
   const [creatorToolsVisible, setCreatorToolsVisible] = useState(true);
   const [cameraReady, setCameraReady] = useState(false);
@@ -738,15 +789,6 @@ export default function Feed() {
       }
       const data = await res.json();
       setPosts(data);
-      setLikeCounts((prev) => {
-        const next = { ...prev };
-        for (const post of data) {
-          if (typeof next[post.id] !== 'number') {
-            next[post.id] = 0;
-          }
-        }
-        return next;
-      });
     } catch (error) {
       console.error(error);
     } finally {
@@ -764,6 +806,7 @@ export default function Feed() {
     setComposerOpen(false);
     setDraftText('');
     setDraftFile(null);
+    setDraftTrackId(null);
     if (filePreview) {
       URL.revokeObjectURL(filePreview);
     }
@@ -842,6 +885,29 @@ export default function Feed() {
     }
   };
 
+  const toggleTrackPlayback = (post) => {
+    const audioEl = trackAudioRef.current;
+    if (!audioEl || !post.track_media_url) return;
+    if (playingTrackPostId === post.id) {
+      audioEl.pause();
+      setPlayingTrackPostId(null);
+      return;
+    }
+    audioEl.src = post.track_media_url;
+    audioEl.play();
+    setPlayingTrackPostId(post.id);
+  };
+
+  const applyEditedFile = (editedFile, { trackId } = {}) => {
+    setDraftFile(editedFile);
+    setDraftTrackId(trackId || null);
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview);
+    }
+    setFilePreview(URL.createObjectURL(editedFile));
+    setEditorOpen(false);
+  };
+
   const publishPost = async (event) => {
     event.preventDefault();
 
@@ -858,6 +924,9 @@ export default function Feed() {
     formData.append('is_public', 'true');
     if (draftFile) {
       formData.append('file', draftFile);
+    }
+    if (draftTrackId) {
+      formData.append('track_id', String(draftTrackId));
     }
 
     try {
@@ -879,23 +948,80 @@ export default function Feed() {
     }
   };
 
-  const toggleLike = (postId) => {
-    setLikedPosts((prevLiked) => {
-      const nextLiked = !prevLiked[postId];
+  const toggleLike = async (postId) => {
+    // Optimistic flip so the tap feels instant; reconciled with the real
+    // count/state from the backend right after (or reverted on failure).
+    setPosts((prev) => prev.map((p) => (
+      p.id === postId
+        ? { ...p, liked_by_me: !p.liked_by_me, like_count: p.like_count + (p.liked_by_me ? -1 : 1) }
+        : p
+    )));
 
-      setLikeCounts((prevCounts) => {
-        const currentLike = prevCounts[postId] || 0;
-        return {
-          ...prevCounts,
-          [postId]: nextLiked ? currentLike + 1 : Math.max(0, currentLike - 1)
-        };
-      });
+    try {
+      const { data } = await api.post(`/posts/${postId}/like`);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...data } : p)));
+    } catch {
+      // revert the optimistic flip
+      setPosts((prev) => prev.map((p) => (
+        p.id === postId
+          ? { ...p, liked_by_me: !p.liked_by_me, like_count: p.like_count + (p.liked_by_me ? -1 : 1) }
+          : p
+      )));
+    }
+  };
 
-      return {
-        ...prevLiked,
-        [postId]: nextLiked
-      };
-    });
+  const toggleCommentLike = async (postId, commentId) => {
+    try {
+      const { data } = await api.post(`/comments/${commentId}/like`);
+      setCommentsByPost((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).map((c) => (c.id === commentId ? data : c))
+      }));
+    } catch {
+      // leave state unchanged on failure
+    }
+  };
+
+  const startEditPost = (post) => {
+    setEditingPostId(post.id);
+    setEditDraft(post.content || '');
+    setEditFile(null);
+    setEditRemoveMedia(false);
+  };
+
+  const cancelEditPost = () => {
+    setEditingPostId(null);
+    setEditDraft('');
+    setEditFile(null);
+    setEditRemoveMedia(false);
+  };
+
+  const saveEditPost = async (postId) => {
+    const form = new FormData();
+    form.append('content', editDraft.trim());
+    if (editFile) {
+      form.append('file', editFile);
+    } else if (editRemoveMedia) {
+      form.append('remove_media', 'true');
+    }
+
+    try {
+      const { data } = await api.put(`/posts/${postId}`, form);
+      setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, ...data } : p)));
+      cancelEditPost();
+    } catch {
+      window.alert('No se pudo guardar la edición. Inténtalo de nuevo.');
+    }
+  };
+
+  const deletePost = async (postId) => {
+    if (!window.confirm('¿Borrar esta publicación? No se puede deshacer.')) return;
+    try {
+      await api.delete(`/posts/${postId}`);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch {
+      window.alert('No se pudo borrar la publicación. Inténtalo de nuevo.');
+    }
   };
 
   const toggleComments = async (postId) => {
@@ -1019,6 +1145,13 @@ export default function Feed() {
               {type === 'image' && post.media_url && <MediaImg src={post.media_url} alt="post" />}
               {type === 'video' && post.media_url && <MediaVideo src={post.media_url} controls />}
 
+              {post.track_media_url && (
+                <TrackBadge type="button" onClick={() => toggleTrackPlayback(post)}>
+                  {playingTrackPostId === post.id ? <Pause size={12} /> : <Play size={12} />}
+                  {post.track_title || 'cancion'}
+                </TrackBadge>
+              )}
+
               <CardContent>
                 {type === 'text' && (
                   <DiaryNotice>
@@ -1026,17 +1159,48 @@ export default function Feed() {
                   </DiaryNotice>
                 )}
                 {type === 'audio' && post.media_url && <MediaAudio src={post.media_url} controls />}
-                {post.content && <TextBody>{post.content}</TextBody>}
+                {editingPostId === post.id ? (
+                  <CommentForm onSubmit={(event) => { event.preventDefault(); saveEditPost(post.id); }}>
+                    <CommentInput
+                      value={editDraft}
+                      onChange={(event) => setEditDraft(event.target.value)}
+                      autoFocus
+                    />
+                    {post.media_url && !editFile && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+                        <input
+                          type="checkbox"
+                          checked={editRemoveMedia}
+                          onChange={(event) => setEditRemoveMedia(event.target.checked)}
+                        />
+                        Quitar archivo adjunto
+                      </label>
+                    )}
+                    <FileInput
+                      type="file"
+                      accept="image/*,video/*,audio/*"
+                      onChange={(event) => {
+                        setEditFile(event.target.files?.[0] || null);
+                        setEditRemoveMedia(false);
+                      }}
+                    />
+                    {editFile && <span style={{ fontSize: 12, opacity: 0.8 }}>Nuevo archivo: {editFile.name}</span>}
+                    <ActionButton type="submit">Guardar</ActionButton>
+                    <ActionButton type="button" onClick={cancelEditPost}>Cancelar</ActionButton>
+                  </CommentForm>
+                ) : (
+                  post.content && <TextBody>{post.content}</TextBody>
+                )}
               </CardContent>
 
               <ActionRow>
                 <ActionButton type="button" onClick={() => toggleLike(post.id)}>
-                  <HarlequinMask $active={Boolean(likedPosts[post.id])}>
+                  <HarlequinMask $active={Boolean(post.liked_by_me)}>
                     <HarlequinFace />
                     <HarlequinSmile />
                     <HarlequinTear />
                   </HarlequinMask>
-                  ovacion {likeCounts[post.id] || 0}
+                  ovacion {post.like_count || 0}
                 </ActionButton>
 
                 <ActionButton type="button" onClick={() => toggleComments(post.id)}>
@@ -1051,13 +1215,40 @@ export default function Feed() {
                   <Send size={14} />
                   relay
                 </ActionButton>
+
+                {user && post.owner_id === user.id && editingPostId !== post.id && (
+                  <>
+                    <ActionButton type="button" onClick={() => startEditPost(post)}>
+                      editar
+                    </ActionButton>
+                    <ActionButton type="button" onClick={() => deletePost(post.id)}>
+                      borrar
+                    </ActionButton>
+                  </>
+                )}
               </ActionRow>
 
               {openComments[post.id] && (
                 <CommentBox>
                   <CommentList>
                     {postComments.map((comment) => (
-                      <CommentItem key={comment.id}>{comment.content}</CommentItem>
+                      <CommentItem key={comment.id}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
+                          <div>
+                            {comment.owner_username && (
+                              <strong style={{ marginRight: 6 }}>@{comment.owner_username}</strong>
+                            )}
+                            {comment.content}
+                          </div>
+                          <ActionButton
+                            type="button"
+                            onClick={() => toggleCommentLike(post.id, comment.id)}
+                            style={{ flexShrink: 0 }}
+                          >
+                            ♥ {comment.like_count || 0}
+                          </ActionButton>
+                        </div>
+                      </CommentItem>
                     ))}
                   </CommentList>
 
@@ -1081,6 +1272,7 @@ export default function Feed() {
           );
         })}
       </Stack>
+      <audio ref={trackAudioRef} onEnded={() => setPlayingTrackPostId(null)} style={{ display: 'none' }} />
       </FeedCenter>
 
       <FeedRightRail
@@ -1109,7 +1301,7 @@ export default function Feed() {
       </FeedRightRail>
       </FeedGrid>
 
-      {composerOpen && (
+      {composerOpen && createPortal(
         <ComposerBackdrop>
           <CreatorShell className="chaplin-theme-panel" onSubmit={publishPost}>
             <CreatorTopBar>
@@ -1173,11 +1365,11 @@ export default function Feed() {
                     <Music size={18} />
                   </ToolButton>
 
-                  <ToolButton type="button" onClick={() => window.alert('Filtros visuales en siguiente iteracion')}>
-                    <Sparkles size={18} />
-                  </ToolButton>
-
-                  <ToolButton type="button" onClick={() => window.alert('Editor avanzado en siguiente iteracion')}>
+                  <ToolButton
+                    type="button"
+                    disabled={!draftFile || publishType === 'song'}
+                    onClick={() => setEditorOpen(true)}
+                  >
                     <Sliders size={18} />
                   </ToolButton>
                 </CreatorTools>
@@ -1224,6 +1416,17 @@ export default function Feed() {
                 </ActionButton>
               )}
 
+              {draftTrackId && (
+                <ActionButton type="button" onClick={() => setDraftTrackId(null)}>
+                  <Music size={14} />
+                  quitar cancion
+                </ActionButton>
+              )}
+
+              <CancelPublishButton type="button" onClick={closeComposer} disabled={sending}>
+                cancelar
+              </CancelPublishButton>
+
               <PublishButton type="submit" disabled={sending}>
                 {sending ? 'publicando...' : 'confirmar publicacion'}
               </PublishButton>
@@ -1231,7 +1434,18 @@ export default function Feed() {
 
             {cameraError && <CameraError>{cameraError}</CameraError>}
           </CreatorShell>
-        </ComposerBackdrop>
+
+          {editorOpen && draftFile && (publishType === 'photo' || publishType === 'video') && (
+            <MediaEditor
+              file={draftFile}
+              mediaType={publishType}
+              initialTrackId={draftTrackId}
+              onApply={applyEditedFile}
+              onClose={() => setEditorOpen(false)}
+            />
+          )}
+        </ComposerBackdrop>,
+        document.body
       )}
       </Shell>
     </div>
