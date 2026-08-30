@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, F
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey, text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.sql import func
@@ -13,20 +13,97 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 import os
 import shutil
+import json
 from pathlib import Path
 import re
+import secrets
+import uuid
+from dotenv import load_dotenv
+
+# Load backend/.env (if present) into os.environ before reading any config
+# below. python-dotenv never overrides a variable already set in the real
+# environment, so an explicit `SECRET_KEY=... uvicorn ...` still wins over
+# whatever is in this file — this is purely a convenience for local dev so a
+# secret doesn't have to be exported by hand in every terminal.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # ========== CONFIGURACIÓN ==========
-SECRET_KEY = "***REMOVED_SECRET***"
+# Absolute, deterministic resolution based on this file's own location — NOT the
+# current working directory. This has always been stable regardless of where
+# uvicorn is launched from; the historical "duplicate DB/media" confusion came
+# from a stale committed copy under backend/, not from path ambiguity at runtime.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SQLITE_PATH = PROJECT_ROOT / "chaplin.db"
+
+# Runtime version fingerprint, exposed (in non-sensitive form) via /health so
+# whoever is testing can immediately answer "am I actually running the code I
+# just saved?" instead of assuming a process picked up a recent edit. Never
+# expose an absolute filesystem path, git state, or env vars here — just a
+# timestamp-derived marker (see CHAPLIN — BETA HARDENING CONTINUATION V5, Fase I).
+_PROCESS_STARTED_AT = datetime.utcnow().isoformat()
+_MAIN_PY_MTIME = datetime.utcfromtimestamp(Path(__file__).stat().st_mtime).isoformat()
+
+# SECURITY: never ship a hardcoded fallback secret in source — anyone who reads
+# this file could forge valid JWTs for any user.
+#
+# CHAPLIN_ENV distinguishes "I'm iterating locally" from "real users are
+# depending on this staying up" — a random per-process secret invalidates
+# every existing session on every restart, which is fine while developing
+# alone but unacceptable once anyone else has a login that must survive a
+# routine restart. CHAPLIN_SECRET_KEY/SECRET_KEY are equivalent; the former
+# matches this project's CHAPLIN_* naming convention, the latter is kept for
+# the .env file that already existed before this variable was introduced.
+CHAPLIN_ENV = os.getenv("CHAPLIN_ENV", "development").strip().lower()
+SECRET_KEY = os.getenv("CHAPLIN_SECRET_KEY") or os.getenv("SECRET_KEY")
+_DEV_SECRET_FILE = PROJECT_ROOT / ".chaplin_dev_secret"
+
+if not SECRET_KEY:
+    if CHAPLIN_ENV in ("beta", "production", "prod"):
+        raise RuntimeError(
+            f"CHAPLIN_ENV='{CHAPLIN_ENV}' requiere una CHAPLIN_SECRET_KEY explicita y "
+            "persistente (no se genera una aleatoria en este modo, porque invalidaria "
+            "todas las sesiones en cada reinicio). Configura la variable de entorno "
+            "antes de arrancar."
+        )
+    # Development only: generate once and persist locally (never committed —
+    # see .gitignore) so restarting the dev server doesn't log everyone out.
+    if _DEV_SECRET_FILE.is_file():
+        SECRET_KEY = _DEV_SECRET_FILE.read_text().strip() or None
+    if not SECRET_KEY:
+        SECRET_KEY = secrets.token_hex(32)
+        try:
+            _DEV_SECRET_FILE.write_text(SECRET_KEY)
+        except OSError:
+            pass
+    print(
+        f"[AVISO] CHAPLIN_SECRET_KEY no configurada - usando un secreto de desarrollo "
+        f"persistido en {_DEV_SECRET_FILE.name} (no se sube a git, estable entre "
+        "reinicios). Configura CHAPLIN_SECRET_KEY en el entorno antes de desplegar una "
+        "beta real (CHAPLIN_ENV=beta exige esto explicitamente)."
+    )
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 días
-DATABASE_URL = "sqlite:///./chaplin.db"
-MEDIA_FOLDER = "media"
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", str(60 * 24 * 30)))
+
+# CHAPLIN_DB_PATH / CHAPLIN_MEDIA_ROOT are the preferred, explicitly-named
+# overrides; DATABASE_URL / MEDIA_FOLDER are kept for backward compatibility
+# with existing scripts/deployments that may already set them.
+_chaplin_db_path = os.getenv("CHAPLIN_DB_PATH")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{Path(_chaplin_db_path).resolve().as_posix()}" if _chaplin_db_path
+    else f"sqlite:///{DEFAULT_SQLITE_PATH.as_posix()}"
+)
+MEDIA_FOLDER = Path(os.getenv("CHAPLIN_MEDIA_ROOT") or os.getenv("MEDIA_FOLDER") or str(PROJECT_ROOT / "media"))
 INVITATION_CODES = ["CHA2024", "Y2KFM", "SPIRAL01", "CHA2024INV"]
 DEFAULT_TAGS = ["Musica", "Arte", "Gaming", "Pelis", "Series", "Deporte", "Anime", "Moda", "Reflexiones"]
 
 # ========== BASE DE DATOS ==========
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine_kwargs = {}
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -47,6 +124,10 @@ class User(Base):
     radio_public = Column(Boolean, default=False)
     bio = Column(Text, nullable=True)
     social_goal = Column(Text, nullable=False)
+    # JSON-encoded blob (theme/skin/background/visualizer settings). Kept as a single
+    # column instead of one-per-field so the client's preference shape can evolve
+    # without further schema migrations.
+    preferences = Column(Text, nullable=True)
 
     is_invited = Column(Boolean, default=False)
     invitation_code = Column(String, nullable=True)
@@ -64,7 +145,9 @@ class Post(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=True)
-    media_url = Column(String, nullable=True)
+    # Indexed: /media/{filename} looks up the owning Post by this column on
+    # every request (including every Range sub-request during audio seek).
+    media_url = Column(String, nullable=True, index=True)
     media_type = Column(String, nullable=True)
     tags = Column(Text, nullable=True)
     is_public = Column(Boolean, default=True)
@@ -95,6 +178,69 @@ class Comment(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+# ========== MODELOS DE MÚSICA (Track / Playlist) ==========
+# Minimal, additive schema: audio stops being defined solely by
+# `Post.media_type == "audio"`. A Track can reference an existing Post
+# (`source_post_id`) to preserve history without duplicating/moving any media file.
+class Track(Base):
+    __tablename__ = "tracks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    title = Column(String, nullable=False)
+    # Indexed for the same reason as Post.media_url — see /media/{filename}.
+    media_url = Column(String, nullable=False, index=True)
+    artwork_url = Column(String, nullable=True)
+    duration = Column(Integer, nullable=True)  # seconds; nullable until known
+    visibility = Column(String, default="public", nullable=False)  # "public" | "private"
+
+    # Preserves the historical link to the audio Post it was backfilled from, if any.
+    # Never used to duplicate or move the underlying media file.
+    source_post_id = Column(Integer, ForeignKey("posts.id"), nullable=True)
+    source_post = relationship("Post")
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class Playlist(Base):
+    __tablename__ = "playlists"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    name = Column(String, nullable=False)
+    # "personal" (private, per-user) | "profile" (public, one per user, shown to visitors)
+    # | "chaplin_radio" (public, curated, restricted to authorized owners)
+    kind = Column(String, default="personal", nullable=False)
+    visibility = Column(String, default="private", nullable=False)  # "public" | "private"
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    items = relationship(
+        "PlaylistItem",
+        back_populates="playlist",
+        order_by="PlaylistItem.position",
+        cascade="all, delete-orphan"
+    )
+
+
+class PlaylistItem(Base):
+    __tablename__ = "playlist_items"
+    __table_args__ = (UniqueConstraint("playlist_id", "track_id", name="uq_playlist_track"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    playlist_id = Column(Integer, ForeignKey("playlists.id"), nullable=False)
+    playlist = relationship("Playlist", back_populates="items")
+
+    track_id = Column(Integer, ForeignKey("tracks.id"), nullable=False)
+    track = relationship("Track")
+
+    position = Column(Integer, nullable=False, default=0)
+    added_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # ========== ESQUEMAS PYDANTIC ==========
 class UserBase(BaseModel):
     email: EmailStr
@@ -115,6 +261,27 @@ class UserResponse(UserBase):
     profile_public: bool
     radio_public: bool
     bio: Optional[str]
+    preferences: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PublicUserResponse(BaseModel):
+    """Safe subset of UserResponse for endpoints anyone can hit without auth.
+
+    Deliberately excludes `email` and `preferences` (raw JSON blob) — see the
+    same whitelist rule already enforced for /users/{user_id}/environment.
+    UserResponse itself must stay reserved for /users/me (the authenticated
+    owner looking at their own record).
+    """
+    id: int
+    username: str
+    first_name: str
+    last_name: str
+    profile_public: bool
+    radio_public: bool
+    bio: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -162,9 +329,71 @@ class CommentResponse(CommentCreate):
         from_attributes = True
 
 
+class TrackResponse(BaseModel):
+    id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    title: str
+    media_url: str
+    artwork_url: Optional[str] = None
+    duration: Optional[int] = None
+    visibility: str
+    source_post_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TrackFromPostCreate(BaseModel):
+    title: Optional[str] = None
+    visibility: str = "public"
+
+
+class TrackUpdate(BaseModel):
+    title: Optional[str] = None
+    artwork_url: Optional[str] = None
+    duration: Optional[int] = None
+    visibility: Optional[str] = None
+
+
+class PlaylistResponse(BaseModel):
+    id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    name: str
+    kind: str
+    visibility: str
+    created_at: datetime
+    tracks: List[TrackResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class PlaylistCreate(BaseModel):
+    name: str
+    kind: str = "personal"
+    visibility: str = "private"
+
+
+class PlaylistUpdate(BaseModel):
+    name: Optional[str] = None
+    visibility: Optional[str] = None
+
+
+class PlaylistItemCreate(BaseModel):
+    track_id: int
+
+
+class PlaylistReorder(BaseModel):
+    track_ids: List[int]
+
+
 # ========== SEGURIDAD ==========
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 def verify_password(plain_password, hashed_password):
@@ -216,6 +445,22 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     return user
 
 
+def get_optional_current_user(db: Session = Depends(get_db), token: Optional[str] = Depends(optional_oauth2_scheme)):
+    """Like get_current_user, but returns None instead of raising 401 when there's
+    no (or an invalid) token — for endpoints that are public for public content
+    but still need to recognize the owner viewing their own private content."""
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+    except JWTError:
+        return None
+    return db.query(User).filter(User.id == int(user_id)).first()
+
+
 # ========== UTILIDADES ==========
 def extract_tags(text: str) -> str:
     """Extrae tags en formato #tag# del texto"""
@@ -227,10 +472,34 @@ def extract_tags(text: str) -> str:
 
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".mp4", ".mp3", ".wav"}
+MAX_UPLOAD_SIZE_BYTES = int(os.getenv("CHAPLIN_MAX_UPLOAD_MB", "50")) * 1024 * 1024
+MAX_PREFERENCES_BYTES = 32 * 1024
 
 
 def allowed_file(filename: str) -> bool:
     return any(filename.lower().endswith(ext) for ext in ALLOWED_EXTENSIONS)
+
+
+def _content_matches_extension(head: bytes, ext: str) -> bool:
+    """Light magic-byte sniff — not a virus scanner, just enough to catch a
+    renamed .txt/.exe pretending to be media via its extension. Only checks
+    the handful of formats in ALLOWED_EXTENSIONS."""
+    if ext in (".jpg", ".jpeg"):
+        return head.startswith(b"\xff\xd8\xff")
+    if ext == ".png":
+        return head.startswith(b"\x89PNG\r\n\x1a\n")
+    if ext == ".gif":
+        return head.startswith((b"GIF87a", b"GIF89a"))
+    if ext == ".mp4":
+        return len(head) >= 8 and head[4:8] == b"ftyp"
+    if ext == ".wav":
+        return head.startswith(b"RIFF") and len(head) >= 12 and head[8:12] == b"WAVE"
+    if ext == ".mp3":
+        if head.startswith(b"ID3"):
+            return True
+        # Raw MPEG frame sync: 11 set bits (0xFF followed by top 3 bits set).
+        return len(head) >= 2 and head[0] == 0xFF and (head[1] & 0xE0) == 0xE0
+    return True
 
 
 # ========== APLICACIÓN FASTAPI ==========
@@ -242,10 +511,18 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS
+# CORS — dev default stays permissive (localhost/any origin) for local work, but
+# a beta/production deployment must set CHAPLIN_ALLOWED_ORIGINS explicitly.
+# `allow_origins=["*"]` combined with `allow_credentials=True` is invalid per the
+# CORS spec (browsers should refuse to send credentials to a wildcard origin) —
+# harmless for local dev where no real cross-origin credentialed traffic exists,
+# but not something to carry into a real deployment.
+_allowed_origins_env = os.getenv("CHAPLIN_ALLOWED_ORIGINS")
+_cors_origins = [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()] if _allowed_origins_env else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -298,6 +575,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 @api_router.post("/auth/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form_data.username).first()
+    if not user:
+        user = db.query(User).filter(User.username == form_data.username).first()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
@@ -337,23 +616,59 @@ async def create_post(
                 detail="Tipo de archivo no permitido"
             )
 
+        # SECURITY: never trust the client-supplied filename for the on-disk path.
+        # `Path(...).name` strips any directory components (e.g. "../../evil.sh"
+        # becomes "evil.sh"), and the stored name is rebuilt entirely from safe,
+        # server-controlled parts (user id + a random token + the validated
+        # extension) — this also fixes silent overwrites when the same user
+        # uploads two files that happen to share a filename.
+        safe_ext = Path(file.filename).suffix.lower()
+        stored_filename = f"{current_user.id}_{uuid.uuid4().hex}{safe_ext}"
+
         # Crear directorio media si no existe
-        os.makedirs(MEDIA_FOLDER, exist_ok=True)
+        MEDIA_FOLDER.mkdir(parents=True, exist_ok=True)
 
-        # Guardar archivo
-        file_location = f"{MEDIA_FOLDER}/{current_user.id}_{file.filename}"
-        with open(file_location, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        file_location = MEDIA_FOLDER / stored_filename
+        bytes_written = 0
+        try:
+            with open(file_location, "wb") as buffer:
+                first_chunk = True
+                while True:
+                    chunk = await file.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    if first_chunk:
+                        if not _content_matches_extension(chunk, safe_ext):
+                            raise HTTPException(
+                                status_code=400,
+                                detail="El contenido del archivo no coincide con su extensión"
+                            )
+                        first_chunk = False
+                    bytes_written += len(chunk)
+                    if bytes_written > MAX_UPLOAD_SIZE_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Archivo demasiado grande (máx. {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MB)"
+                        )
+                    buffer.write(chunk)
+            if bytes_written == 0:
+                raise HTTPException(status_code=400, detail="El archivo esta vacio")
+        except HTTPException:
+            # Partial file cleanup — never leave a half-written upload on disk.
+            file_location.unlink(missing_ok=True)
+            raise
+        except Exception:
+            file_location.unlink(missing_ok=True)
+            raise HTTPException(status_code=400, detail="No se pudo procesar el archivo subido")
 
-        media_url = f"/media/{current_user.id}_{file.filename}"
+        media_url = f"/media/{stored_filename}"
 
         # Determinar tipo
-        ext = Path(file.filename).suffix.lower()
-        if ext in ['.jpg', '.jpeg', '.png', '.gif']:
+        if safe_ext in ['.jpg', '.jpeg', '.png', '.gif']:
             media_type = 'image'
-        elif ext in ['.mp4', '.avi', '.mov']:
+        elif safe_ext in ['.mp4', '.avi', '.mov']:
             media_type = 'video'
-        elif ext in ['.mp3', '.wav']:
+        elif safe_ext in ['.mp3', '.wav']:
             media_type = 'audio'
 
     # Crear post
@@ -377,8 +692,7 @@ async def get_posts(
         skip: int = 0,
         limit: int = 50,
         tag: Optional[str] = None,
-        db: Session = Depends(get_db),
-        current_user: Optional[User] = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     # Feed VANILLA: sin algoritmos, solo cronológico
     query = db.query(Post).filter(Post.is_public == True)
@@ -391,9 +705,14 @@ async def get_posts(
 
 
 @api_router.get("/posts/{post_id}", response_model=PostResponse)
-async def get_post(post_id: int, db: Session = Depends(get_db)):
+async def get_post(
+        post_id: int,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
     post = db.query(Post).filter(Post.id == post_id).first()
-    if not post or not post.is_public:
+    is_owner = current_user is not None and post is not None and post.owner_id == current_user.id
+    if not post or (not post.is_public and not is_owner):
         raise HTTPException(status_code=404, detail="Post no encontrado")
     return post
 
@@ -406,9 +725,11 @@ async def create_comment(
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    # Verificar post existe
+    # Same visibility rule as GET /posts/{post_id} — the owner can always
+    # comment on their own post even while it's private.
     post = db.query(Post).filter(Post.id == post_id).first()
-    if not post:
+    is_owner = post is not None and post.owner_id == current_user.id
+    if not post or (not post.is_public and not is_owner):
         raise HTTPException(status_code=404, detail="Post no encontrado")
 
     # Crear comentario
@@ -427,9 +748,346 @@ async def create_comment(
 
 
 @api_router.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
-async def get_comments(post_id: int, db: Session = Depends(get_db)):
+async def get_comments(
+        post_id: int,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    # Same visibility rule as the post itself — comments on a private post are
+    # not a public side-channel just because the comment endpoint has no gate.
+    # The owner can still read comments on their own private post.
+    post = db.query(Post).filter(Post.id == post_id).first()
+    is_owner = current_user is not None and post is not None and post.owner_id == current_user.id
+    if not post or (not post.is_public and not is_owner):
+        raise HTTPException(status_code=404, detail="Post no encontrado")
     comments = db.query(Comment).filter(Comment.post_id == post_id).order_by(Comment.created_at.desc()).all()
     return comments
+
+
+# ========== ENDPOINTS DE MÚSICA (Track / Playlist) ==========
+# Usernames allowed to manage the curated "chaplin_radio" playlist. Mirrors the
+# existing INVITATION_CODES-style hardcoded allowlist pattern already used in
+# this file rather than introducing a full roles/permissions system.
+RADIO_CURATORS = {"root", "testchaplin"}
+
+
+def _serialize_track(track: "Track") -> TrackResponse:
+    return TrackResponse(
+        id=track.id,
+        owner_id=track.owner_id,
+        owner_username=track.owner.username if track.owner else None,
+        title=track.title,
+        media_url=track.media_url,
+        artwork_url=track.artwork_url,
+        duration=track.duration,
+        visibility=track.visibility,
+        source_post_id=track.source_post_id,
+        created_at=track.created_at
+    )
+
+
+def _serialize_playlist(playlist: "Playlist", only_public_tracks: bool = False) -> PlaylistResponse:
+    ordered_items = sorted(playlist.items, key=lambda item: item.position)
+    if only_public_tracks:
+        # A playlist being public doesn't make every track inside it public — the
+        # owner may have flipped a track back to private after adding it. Public
+        # read paths (profile playlist, chaplin radio) must re-check each track's
+        # own visibility rather than trusting the playlist's visibility alone.
+        ordered_items = [item for item in ordered_items if item.track and item.track.visibility == "public"]
+    return PlaylistResponse(
+        id=playlist.id,
+        owner_id=playlist.owner_id,
+        owner_username=playlist.owner.username if playlist.owner else None,
+        name=playlist.name,
+        kind=playlist.kind,
+        visibility=playlist.visibility,
+        created_at=playlist.created_at,
+        tracks=[_serialize_track(item.track) for item in ordered_items]
+    )
+
+
+@api_router.get("/tracks/", response_model=List[TrackResponse])
+async def list_public_tracks(db: Session = Depends(get_db)):
+    tracks = db.query(Track).filter(Track.visibility == "public").order_by(Track.created_at.desc()).limit(200).all()
+    return [_serialize_track(t) for t in tracks]
+
+
+@api_router.get("/tracks/mine", response_model=List[TrackResponse])
+async def list_my_tracks(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    tracks = db.query(Track).filter(Track.owner_id == current_user.id).order_by(Track.created_at.desc()).all()
+    return [_serialize_track(t) for t in tracks]
+
+
+@api_router.get("/tracks/by-user/{username}", response_model=List[TrackResponse])
+async def list_user_public_tracks(username: str, db: Session = Depends(get_db)):
+    owner = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    tracks = (
+        db.query(Track)
+        .filter(Track.owner_id == owner.id, Track.visibility == "public")
+        .order_by(Track.created_at.desc())
+        .all()
+    )
+    return [_serialize_track(t) for t in tracks]
+
+
+@api_router.get("/tracks/{track_id}", response_model=TrackResponse)
+async def get_track(
+        track_id: int,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    track = db.query(Track).filter(Track.id == track_id).first()
+    is_owner = current_user is not None and track is not None and track.owner_id == current_user.id
+    if not track or (track.visibility != "public" and not is_owner):
+        raise HTTPException(status_code=404, detail="Track no encontrado")
+    return _serialize_track(track)
+
+
+@api_router.post("/tracks/from-post/{post_id}", response_model=TrackResponse)
+async def create_track_from_post(
+        post_id: int,
+        payload: TrackFromPostCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    # Idempotent: linking the same Post twice returns the existing Track instead
+    # of creating a duplicate. Never copies, moves, or renames the media file.
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post no encontrado")
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el propietario del post puede convertirlo en Track")
+    if post.media_type != "audio" or not post.media_url:
+        raise HTTPException(status_code=400, detail="El post no es un adjunto de audio")
+
+    existing = db.query(Track).filter(Track.source_post_id == post_id).first()
+    if existing:
+        return _serialize_track(existing)
+
+    title = (payload.title or post.content or "").strip()[:120] or "Untitled Track"
+    track = Track(
+        owner_id=current_user.id,
+        title=title,
+        media_url=post.media_url,
+        visibility=payload.visibility if payload.visibility in ("public", "private") else "public",
+        source_post_id=post.id
+    )
+    db.add(track)
+    db.commit()
+    db.refresh(track)
+    return _serialize_track(track)
+
+
+@api_router.put("/tracks/{track_id}", response_model=TrackResponse)
+async def update_track(
+        track_id: int,
+        payload: TrackUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    track = db.query(Track).filter(Track.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track no encontrado")
+    if track.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    if payload.title is not None:
+        track.title = payload.title
+    if payload.artwork_url is not None:
+        track.artwork_url = payload.artwork_url
+    if payload.duration is not None:
+        track.duration = payload.duration
+    if payload.visibility is not None and payload.visibility in ("public", "private"):
+        track.visibility = payload.visibility
+
+    db.commit()
+    db.refresh(track)
+    return _serialize_track(track)
+
+
+@api_router.delete("/tracks/{track_id}")
+async def delete_track(
+        track_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    # Deletes only the Track's own metadata row (and its playlist memberships) —
+    # NEVER the underlying Post or the media file on disk.
+    track = db.query(Track).filter(Track.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track no encontrado")
+    if track.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    db.query(PlaylistItem).filter(PlaylistItem.track_id == track_id).delete()
+    db.delete(track)
+    db.commit()
+    return {"detail": "Track eliminado (el archivo de medios original no se ha tocado)"}
+
+
+def _get_or_create_playlist(db: Session, owner: User, kind: str, default_name: str, visibility: str) -> "Playlist":
+    playlist = db.query(Playlist).filter(Playlist.owner_id == owner.id, Playlist.kind == kind).first()
+    if playlist:
+        return playlist
+    playlist = Playlist(owner_id=owner.id, name=default_name, kind=kind, visibility=visibility)
+    db.add(playlist)
+    db.commit()
+    db.refresh(playlist)
+    return playlist
+
+
+@api_router.get("/playlists/mine", response_model=List[PlaylistResponse])
+async def list_my_playlists(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    playlists = db.query(Playlist).filter(Playlist.owner_id == current_user.id).all()
+    return [_serialize_playlist(p) for p in playlists]
+
+
+@api_router.get("/playlists/mine/personal", response_model=PlaylistResponse)
+async def get_my_personal_playlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    playlist = _get_or_create_playlist(db, current_user, "personal", "Mi lista personal", "private")
+    return _serialize_playlist(playlist)
+
+
+@api_router.get("/playlists/mine/profile", response_model=PlaylistResponse)
+async def get_my_profile_playlist(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    playlist = _get_or_create_playlist(db, current_user, "profile", "Playlist de perfil", "public")
+    return _serialize_playlist(playlist)
+
+
+@api_router.get("/playlists/profile/{username}", response_model=PlaylistResponse)
+async def get_user_profile_playlist(username: str, db: Session = Depends(get_db)):
+    owner = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    playlist = db.query(Playlist).filter(Playlist.owner_id == owner.id, Playlist.kind == "profile").first()
+    if not playlist or playlist.visibility != "public":
+        return PlaylistResponse(
+            id=0, owner_id=owner.id, owner_username=owner.username,
+            name="Playlist de perfil", kind="profile", visibility="public",
+            created_at=datetime.utcnow(), tracks=[]
+        )
+    return _serialize_playlist(playlist, only_public_tracks=True)
+
+
+@api_router.get("/playlists/chaplin-radio", response_model=PlaylistResponse)
+async def get_chaplin_radio_playlist(db: Session = Depends(get_db)):
+    playlist = db.query(Playlist).filter(Playlist.kind == "chaplin_radio", Playlist.visibility == "public").first()
+    if not playlist:
+        return PlaylistResponse(
+            id=0, owner_id=0, owner_username=None,
+            name="Chaplin Radio", kind="chaplin_radio", visibility="public",
+            created_at=datetime.utcnow(), tracks=[]
+        )
+    return _serialize_playlist(playlist, only_public_tracks=True)
+
+
+@api_router.post("/playlists/", response_model=PlaylistResponse)
+async def create_playlist(
+        payload: PlaylistCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if payload.kind == "chaplin_radio" and current_user.username not in RADIO_CURATORS:
+        raise HTTPException(status_code=403, detail="No autorizado para crear la Radio Chaplin")
+
+    playlist = Playlist(
+        owner_id=current_user.id,
+        name=payload.name,
+        kind=payload.kind,
+        visibility=payload.visibility
+    )
+    db.add(playlist)
+    db.commit()
+    db.refresh(playlist)
+    return _serialize_playlist(playlist)
+
+
+def _authorize_playlist_owner(db: Session, playlist_id: int, current_user: User) -> "Playlist":
+    playlist = db.query(Playlist).filter(Playlist.id == playlist_id).first()
+    if not playlist:
+        raise HTTPException(status_code=404, detail="Playlist no encontrada")
+    if playlist.owner_id != current_user.id:
+        if playlist.kind != "chaplin_radio" or current_user.username not in RADIO_CURATORS:
+            raise HTTPException(status_code=403, detail="No autorizado")
+    return playlist
+
+
+@api_router.put("/playlists/{playlist_id}", response_model=PlaylistResponse)
+async def update_playlist(
+        playlist_id: int,
+        payload: PlaylistUpdate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    playlist = _authorize_playlist_owner(db, playlist_id, current_user)
+    if payload.name is not None:
+        playlist.name = payload.name
+    if payload.visibility is not None and payload.visibility in ("public", "private"):
+        playlist.visibility = payload.visibility
+    db.commit()
+    db.refresh(playlist)
+    return _serialize_playlist(playlist)
+
+
+@api_router.post("/playlists/{playlist_id}/items", response_model=PlaylistResponse)
+async def add_playlist_item(
+        playlist_id: int,
+        payload: PlaylistItemCreate,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    playlist = _authorize_playlist_owner(db, playlist_id, current_user)
+    track = db.query(Track).filter(Track.id == payload.track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track no encontrado")
+
+    existing = db.query(PlaylistItem).filter(
+        PlaylistItem.playlist_id == playlist_id, PlaylistItem.track_id == payload.track_id
+    ).first()
+    if existing:
+        return _serialize_playlist(playlist)
+
+    next_position = db.query(PlaylistItem).filter(PlaylistItem.playlist_id == playlist_id).count()
+    db.add(PlaylistItem(playlist_id=playlist_id, track_id=payload.track_id, position=next_position))
+    db.commit()
+    db.refresh(playlist)
+    return _serialize_playlist(playlist)
+
+
+@api_router.delete("/playlists/{playlist_id}/items/{track_id}", response_model=PlaylistResponse)
+async def remove_playlist_item(
+        playlist_id: int,
+        track_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    playlist = _authorize_playlist_owner(db, playlist_id, current_user)
+    db.query(PlaylistItem).filter(
+        PlaylistItem.playlist_id == playlist_id, PlaylistItem.track_id == track_id
+    ).delete()
+    db.commit()
+    db.refresh(playlist)
+    return _serialize_playlist(playlist)
+
+
+@api_router.put("/playlists/{playlist_id}/reorder", response_model=PlaylistResponse)
+async def reorder_playlist(
+        playlist_id: int,
+        payload: PlaylistReorder,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    playlist = _authorize_playlist_owner(db, playlist_id, current_user)
+    items_by_track = {item.track_id: item for item in playlist.items}
+    for position, track_id in enumerate(payload.track_ids):
+        item = items_by_track.get(track_id)
+        if item:
+            item.position = position
+    db.commit()
+    db.refresh(playlist)
+    return _serialize_playlist(playlist)
 
 
 # ========== ENDPOINTS DE USUARIOS ==========
@@ -438,7 +1096,18 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@api_router.get("/users/{user_id}", response_model=UserResponse)
+@api_router.get("/users/by-username/{username}", response_model=PublicUserResponse)
+async def get_user_by_username(username: str, db: Session = Depends(get_db)):
+    # Registered before /users/{user_id} on purpose: FastAPI/Starlette match routes
+    # in declaration order, and {user_id} has no `:int` path-converter, so it would
+    # otherwise swallow this request first and fail Pydantic int coercion on "by-username".
+    user = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return user
+
+
+@api_router.get("/users/{user_id}", response_model=PublicUserResponse)
 async def get_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id, User.profile_public == True).first()
     if not user:
@@ -446,11 +1115,128 @@ async def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
+class PublicThemeEnvironment(BaseModel):
+    baseTheme: Optional[str] = None
+    variant: Optional[str] = None
+    accent: Optional[str] = None
+    surfaceOpacity: Optional[float] = None
+    # Visual identity system (Copilot's theme/HUD/material/layout/typography work):
+    # these are just preset-selector IDs, small numeric knobs, hex colors, and
+    # font-family names — never arbitrary content — so they're safe to expose
+    # the same way baseTheme/accent already are. Extended for CHAPLIN MOBILE
+    # ALPHA (Prioridad 9) once Copilot's system grew past the original set.
+    materialId: Optional[str] = None
+    hudId: Optional[str] = None
+    layoutId: Optional[str] = None
+    typographyId: Optional[str] = None
+    shapeId: Optional[str] = None
+    density: Optional[str] = None
+    ornament: Optional[float] = None
+    materialIntensity: Optional[float] = None
+    secondaryAccent: Optional[str] = None
+    animatedBackground: Optional[bool] = None
+    surfaceBackground: Optional[str] = None
+    surfaceBorder: Optional[str] = None
+    surfaceText: Optional[str] = None
+    fontDisplay: Optional[str] = None
+    fontBody: Optional[str] = None
+    fontUI: Optional[str] = None
+    fontMono: Optional[str] = None
+
+
+class PublicBackgroundEnvironment(BaseModel):
+    style: Optional[str] = None
+    finish: Optional[str] = None
+    visualizerPreset: Optional[str] = None
+    reactivity: Optional[float] = None
+    deformIntensity: Optional[float] = None
+    motionIntensity: Optional[float] = None
+    bassBoost: Optional[float] = None
+    trebleBoost: Optional[float] = None
+    color: Optional[str] = None
+
+
+class PublicProfileEnvironment(BaseModel):
+    theme: PublicThemeEnvironment
+    background: PublicBackgroundEnvironment
+
+
+@api_router.get("/users/{user_id}/environment", response_model=PublicProfileEnvironment)
+async def get_user_public_environment(user_id: int, db: Session = Depends(get_db)):
+    # PRIVACY BOUNDARY: this is the only place `User.preferences` is ever read for a
+    # public response, and it is projected through an explicit whitelist below.
+    # Never return `user.preferences` (or any subset of its raw dict) directly —
+    # anything added to that internal blob in the future (volume, drafts, admin
+    # flags, device settings...) stays private unless deliberately added here.
+    user = db.query(User).filter(User.id == user_id, User.profile_public == True).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    raw = {}
+    if user.preferences:
+        try:
+            parsed = json.loads(user.preferences)
+            if isinstance(parsed, dict):
+                raw = parsed
+        except (TypeError, ValueError):
+            raw = {}
+
+    def _num(key):
+        value = raw.get(key)
+        return value if isinstance(value, (int, float)) else None
+
+    def _str(key):
+        value = raw.get(key)
+        return value if isinstance(value, str) else None
+
+    def _bool(key):
+        value = raw.get(key)
+        return value if isinstance(value, bool) else None
+
+    return PublicProfileEnvironment(
+        theme=PublicThemeEnvironment(
+            baseTheme=_str("base_theme"),
+            variant=_str("theme_variant"),
+            accent=_str("accent_color"),
+            surfaceOpacity=_num("layout_opacity"),
+            materialId=_str("material_id"),
+            hudId=_str("hud_grammar_id"),
+            layoutId=_str("layout_composition_id"),
+            typographyId=_str("typography_profile_id"),
+            shapeId=_str("shape_language_id"),
+            density=_str("visual_density"),
+            ornament=_num("ornament_level"),
+            materialIntensity=_num("material_intensity"),
+            secondaryAccent=_str("secondary_accent"),
+            animatedBackground=_bool("animated_background"),
+            surfaceBackground=_str("layout_background"),
+            surfaceBorder=_str("layout_border"),
+            surfaceText=_str("layout_text"),
+            fontDisplay=_str("font_primary"),
+            fontBody=_str("font_secondary"),
+            fontUI=_str("font_ui"),
+            fontMono=_str("font_mono"),
+        ),
+        background=PublicBackgroundEnvironment(
+            style=_str("vortex_background_style"),
+            finish=_str("vortex_finish_type"),
+            visualizerPreset=_str("vortex_visualizer_preset"),
+            reactivity=_num("vortex_reactivity"),
+            deformIntensity=_num("vortex_deform_intensity"),
+            motionIntensity=_num("vortex_motion_intensity"),
+            bassBoost=_num("vortex_bass_boost"),
+            trebleBoost=_num("vortex_treble_boost"),
+            color=_str("vortex_color"),
+        ),
+    )
+
+
 @api_router.put("/users/me", response_model=UserResponse)
 async def update_user(
         bio: Optional[str] = Form(None),
         profile_public: Optional[bool] = Form(None),
         radio_public: Optional[bool] = Form(None),
+        preferences: Optional[str] = Form(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
@@ -460,6 +1246,22 @@ async def update_user(
         current_user.profile_public = profile_public
     if radio_public is not None:
         current_user.radio_public = radio_public
+    if preferences is not None:
+        # Validate it's actually JSON before persisting, but store the raw string
+        # so the client owns the shape of its own preferences blob. Copilot's
+        # visual-identity system keeps adding new keys (theme/material/HUD/layout/
+        # typography/...) — don't gate on a fixed key whitelist here, just bound
+        # the overall size so this can't be abused as free-form blob storage.
+        if len(preferences.encode("utf-8")) > MAX_PREFERENCES_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"preferences excede el tamaño máximo permitido ({MAX_PREFERENCES_BYTES} bytes)"
+            )
+        try:
+            json.loads(preferences)
+            current_user.preferences = preferences
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="preferences debe ser JSON válido")
 
     db.commit()
     db.refresh(current_user)
@@ -491,31 +1293,10 @@ async def get_radio_info(station_id: str):
 
 
 # ========== ENDPOINTS DEL SISTEMA ==========
-# Agrega esto ANTES de app.include_router:
-
-@app.get("/")
-async def root_direct():
-    return {
-        "message": "🎭 Welcome to Chaplin Social Network!",
-        "version": "2.0.0",
-        "features": [
-            "Y2K Futurist Design",
-            "Community Radio",
-            "Spiral Feed",
-            "No Recommendation Algorithms",
-            "Auto-translation (coming soon)",
-            "#Tag# System",
-            "Media Upload (images, video, audio)"
-        ],
-        "api_endpoints": {
-            "v1": "/api/v1/",
-            "docs": "/docs",
-            "redoc": "/redoc"
-        },
-        "default_tags": DEFAULT_TAGS
-    }
-
-# Y luego el endpoint dentro del router puede quedar como /api/v1/ o eliminarlo
+# NOTE: GET "/" used to return a JSON "welcome" placeholder here. Removed —
+# CHAPLIN MOBILE ALPHA now serves the real built frontend at "/" (see the
+# frontend-serving block near the end of this file), which is what the PWA
+# manifest's start_url points at. For a plain API ping, use /api/v1/ or /docs.
 @api_router.get("/")
 async def root_api():
     return {"api": "v1", "status": "active"}
@@ -525,16 +1306,25 @@ async def root_api():
 async def health_check(db: Session = Depends(get_db)):
     try:
         # Verificar conexión a DB
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db_status = "healthy"
     except Exception:
         db_status = "unhealthy"
 
-    return {
+    payload = {
         "status": "running",
         "database": db_status,
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
+        "version": app.version,
+        "env": CHAPLIN_ENV,
+        "process_started_at": _PROCESS_STARTED_AT
     }
+    # main_py_last_modified answers "am I running the code I just saved?" —
+    # useful during local development, but it's a filesystem timestamp with no
+    # purpose for anyone hitting a real beta/prod deployment, so keep it dev-only.
+    if CHAPLIN_ENV == "development":
+        payload["main_py_last_modified"] = _MAIN_PY_MTIME
+    return payload
 
 
 @api_router.get("/tags")
@@ -547,32 +1337,180 @@ async def get_tags():
 app.include_router(api_router, prefix="/api/v1")
 
 
+def _ensure_column(connection, table: str, column: str, ddl_type: str):
+    """Additive, idempotent migration helper: adds a column if it doesn't already
+    exist. `Base.metadata.create_all()` only creates missing TABLES, it never
+    alters existing ones — so new columns on a table that already exists in the
+    live SQLite file (like `users`) need this instead. Never drops or rewrites
+    existing data."""
+    existing = {row[1] for row in connection.execute(text(f"PRAGMA table_info({table})")).fetchall()}
+    if column not in existing:
+        connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
+        print(f"[OK] Migracion: columna '{column}' anadida a '{table}'")
+
+
+def _ensure_index(connection, index_name: str, table: str, column: str):
+    """Idempotent migration helper for an existing table — CREATE INDEX IF NOT
+    EXISTS is natively idempotent in SQLite, so no PRAGMA check needed. Added
+    for Track.media_url/Post.media_url so /media/{filename} (hit on every
+    Range sub-request during audio playback) doesn't full-table-scan as the
+    library grows past a handful of rows."""
+    connection.execute(text(f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({column})"))
+
+
+def backfill_tracks_from_audio_posts(db: Session) -> dict:
+    """Additive, idempotent migration: creates a Track for every audio Post that
+    doesn't already have one (matched via Track.source_post_id). Never touches,
+    moves, renames, or deletes the underlying Post or its media file. Safe to run
+    on every startup — running it twice never creates duplicate Tracks."""
+    audio_posts = db.query(Post).filter(Post.media_type == "audio", Post.media_url.isnot(None)).all()
+    existing_source_ids = {
+        row[0] for row in db.query(Track.source_post_id).filter(Track.source_post_id.isnot(None)).all()
+    }
+
+    created = 0
+    for post in audio_posts:
+        if post.id in existing_source_ids:
+            continue
+        title = (post.content or "").strip()
+        title = title[:120] if title else f"Untitled Track #{post.id}"
+        db.add(Track(
+            owner_id=post.owner_id,
+            title=title,
+            media_url=post.media_url,
+            visibility="public" if post.is_public else "private",
+            source_post_id=post.id
+        ))
+        created += 1
+
+    if created:
+        db.commit()
+
+    return {"audio_posts_detected": len(audio_posts), "tracks_created": created}
+
+
 # Crear tablas de la base de datos al iniciar
 @app.on_event("startup")
 def startup():
+    # Canonical paths, logged once at every boot — this is the single source of
+    # truth for "which DB/media copy is actually live", precisely to avoid ever
+    # again wondering whether a root-level or backend/-level copy is in use.
+    print(f"[PATH] Chaplin DB canonica:    {DEFAULT_SQLITE_PATH if not _chaplin_db_path else Path(_chaplin_db_path).resolve()}")
+    print(f"[PATH] Chaplin media canonica: {MEDIA_FOLDER.resolve()}")
+    print(f"[PATH] Project root:           {PROJECT_ROOT}")
+
     Base.metadata.create_all(bind=engine)
-    os.makedirs(MEDIA_FOLDER, exist_ok=True)
-    print("✅ Base de datos inicializada")
-    print("✅ Carpeta media creada")
+    with engine.begin() as connection:
+        _ensure_column(connection, "users", "preferences", "TEXT")
+        _ensure_index(connection, "ix_posts_media_url", "posts", "media_url")
+        _ensure_index(connection, "ix_tracks_media_url", "tracks", "media_url")
+    MEDIA_FOLDER.mkdir(parents=True, exist_ok=True)
+    print("[OK] Base de datos inicializada")
+    print("[OK] Carpeta media creada")
+
+    migration_db = SessionLocal()
+    try:
+        stats = backfill_tracks_from_audio_posts(migration_db)
+        print(
+            f"[OK] Migracion Track: {stats['audio_posts_detected']} audio posts detectados, "
+            f"{stats['tracks_created']} tracks nuevos creados"
+        )
+    finally:
+        migration_db.close()
 
 
-# Montar archivos estáticos
+# ========== SERVIR MEDIA CON CONTROL DE VISIBILIDAD ==========
+# CRITICAL: a plain StaticFiles mount serves every file in MEDIA_FOLDER to
+# anyone regardless of the Track/Post visibility rules enforced elsewhere —
+# a Track's metadata can 404 for a stranger while its raw audio file is still
+# a public URL. A private resource whose bytes are fetchable by a public URL
+# is not private, no matter how unguessable the filename is. This single
+# route is the one choke point every media file passes through, so the
+# Track/Post visibility rule only needs to be enforced in one place.
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-app.mount("/media", StaticFiles(directory=MEDIA_FOLDER), name="media")
+
+@app.get("/media/{filename}")
+async def serve_media(
+        filename: str,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    # `filename` can't legitimately contain a path separator — Path(...).name
+    # strips any "../" component, so a mismatch means someone tried to escape
+    # MEDIA_FOLDER.
+    safe_name = Path(filename).name
+    if safe_name != filename:
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    file_path = MEDIA_FOLDER / safe_name
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    media_url = f"/media/{safe_name}"
+
+    def _is_owner(owner_id: int) -> bool:
+        return current_user is not None and current_user.id == owner_id
+
+    track = db.query(Track).filter(Track.media_url == media_url).first()
+    if track and track.visibility != "public" and not _is_owner(track.owner_id):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    post = db.query(Post).filter(Post.media_url == media_url).first()
+    if post and not post.is_public and not _is_owner(post.owner_id):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    # FileResponse streams from disk (never loads the whole file into memory)
+    # and handles Range/If-Range/ETag itself, so seeking in a large audio file
+    # keeps working exactly like the old StaticFiles mount did.
+    return FileResponse(file_path)
+
+
+# ========== SERVIR EL FRONTEND (PWA) — CHAPLIN MOBILE ALPHA ==========
+# Single-origin architecture: this same FastAPI process serves the built
+# frontend (frontend/web/dist, produced by `npm run build`) alongside the
+# API and media routes, so a phone only ever needs one URL — no CORS, no
+# "which port is the API on" guessing. Only active when a build actually
+# exists; local `npm run dev` (Vite + its own proxy) is unaffected and stays
+# the normal day-to-day workflow (Prioridad 29 — no destruir el dev workflow).
+_FRONTEND_DIST = PROJECT_ROOT / "frontend" / "web" / "dist"
+
+if _FRONTEND_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(_FRONTEND_DIST / "assets")), name="frontend-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Registered last, so /api/*, /media/*, /docs etc. above always match
+        # first when well-formed — this only ever receives whatever nothing
+        # else claimed. A malformed/probing request that was clearly AIMED at
+        # /api/ or /media/ (e.g. a path-traversal attempt that fails to match
+        # /media/{filename}'s single-segment pattern) must still 404 like a
+        # real backend route would, not silently serve the SPA shell with 200 —
+        # no client-side route legitimately starts with these prefixes anyway.
+        if full_path.startswith("api/") or full_path.startswith("media/"):
+            raise HTTPException(status_code=404, detail="No encontrado")
+
+        candidate = _FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        # SPA fallback: client-side routes like /profile/someuser must still
+        # resolve to the app shell on a hard reload, not a 404.
+        return FileResponse(_FRONTEND_DIST / "index.html")
+
 
 # ========== EJECUCIÓN ==========
 if __name__ == "__main__":
     import uvicorn
 
     print("=" * 50)
-    print("🚀 CHAPLIN SOCIAL NETWORK - Y2K Edition")
+    print("CHAPLIN SOCIAL NETWORK - Y2K Edition")
     print("=" * 50)
-    print("🌐 Servidor: http://localhost:8000")
-    print("📚 Documentación: http://localhost:8000/docs")
-    print("🎵 Radio: http://localhost:8000/api/v1/radio/stations")
-    print("🔑 Códigos de invitación:", ", ".join(INVITATION_CODES))
+    print("Servidor: http://localhost:8000")
+    print("Documentacion: http://localhost:8000/docs")
+    print("Radio: http://localhost:8000/api/v1/radio/stations")
+    print("Codigos de invitacion:", ", ".join(INVITATION_CODES))
     print("=" * 50)
 
-    # CORRECCIÓN: Pasar como string para reload
-    uvicorn.run("app.main_original:app", host="0.0.0.0", port=8000, reload=True)
+    # Ejecutar el módulo real de la app para modo local con reload
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

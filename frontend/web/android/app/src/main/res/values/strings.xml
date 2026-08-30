@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Chaplin</string>
+    <string name="title_activity_main">Chaplin</string>
+    <string name="package_name">social.chaplin.app</string>
+    <string name="custom_url_scheme">social.chaplin.app</string>
+</resources>
