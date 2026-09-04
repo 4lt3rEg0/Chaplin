@@ -3,7 +3,7 @@
   "appName": "Chaplin",
   "webDir": "dist",
   "server": {
-    "url": "http://192.168.0.16:8000",
+    "url": "https://riding-day-median-championship.trycloudflare.com",
     "cleartext": true
   },
   "android": {
