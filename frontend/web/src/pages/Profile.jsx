@@ -4,10 +4,10 @@ import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
 import { useVortex } from '../context/VortexContext';
-import { usePlayer } from '../context/PlayerContext';
 import api, { uploadAvatar } from '../services/api';
 
 import ProfileHeader from '../components/ProfileHeader';
+import ProfilePlayer from '../components/ProfilePlayer/ProfilePlayer';
 import ProfileSidebarLeft from '../components/ProfileSidebarLeft';
 import ProfileTabs from '../components/ProfileTabs';
 import ProfileSidebarRight from '../components/ProfileSidebarRight';
@@ -144,16 +144,11 @@ const ProfilePage = () => {
   const { username: routeUsername } = useParams();
   const { skinData, appTheme, setProfileOverride: setSkinOverride } = useSkin();
   const { setProfileOverride: setVortexOverride } = useVortex();
-  const { pause } = usePlayer();
 
   const [viewedUser, setViewedUser] = useState(null);
   const [viewedUserError, setViewedUserError] = useState(false);
 
   const isOwnProfile = !routeUsername || (user && routeUsername === user.username);
-
-  useEffect(() => {
-    pause();
-  }, [pause]);
 
   // Profile Owner Environment: when visiting someone else's public profile,
   // fetch their user record + whitelisted public environment and apply it as a
@@ -290,6 +285,7 @@ const ProfilePage = () => {
             onPhotoChange={isOwnProfile ? handleAvatarUpload : null}
             onPresenceChange={isOwnProfile ? handlePresenceChange : null}
           />
+          <ProfilePlayer username={displayUser.username} />
         </HeroArea>
         <FeedArea>
           <ProfileTabs user={displayUser} isOwnProfile={isOwnProfile} />

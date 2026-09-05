@@ -63,7 +63,8 @@ const PREFERENCE_KEYS = [
   "vortex_deform_intensity",
   "vortex_motion_intensity",
   "vortex_bass_boost",
-  "vortex_treble_boost"
+  "vortex_treble_boost",
+  "player_skin_id"
 ];
 
 const splitPreferences = (payload) => {
