@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { findBackgroundEntry } from './backgroundCatalog';
 
@@ -9,6 +9,35 @@ const Frame = styled.div`
   overflow: hidden;
   background: #05070b;
 `;
+
+/* Catalogs can list dozens of video-backed backgrounds at once — mounting a
+   real <video> for every card simultaneously is what actually crashes/locks
+   up constrained browsers (mobile Safari in particular caps concurrent media
+   elements hard). Each card only mounts its real preview once it has
+   scrolled into view at least once, then keeps it (no re-teardown on scroll
+   away, to avoid flicker). */
+function useMountOnceVisible(skip) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(skip);
+
+  useEffect(() => {
+    if (skip || visible || !ref.current || typeof IntersectionObserver === 'undefined') {
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [skip, visible]);
+
+  return [ref, visible];
+}
 
 const VideoEl = styled.video`
   width: 100%;
@@ -216,22 +245,29 @@ const PATTERN_COMPONENTS = {
 
 export default function BackgroundThumb({ id, autoPlay = false }) {
   const entry = findBackgroundEntry(id);
+  // The one autoPlay instance (the live demo sandbox) is never part of a
+  // large grid, so it can mount immediately — only catalog grids lazy-load.
+  const [ref, visible] = useMountOnceVisible(autoPlay);
+
+  if (!visible) {
+    return <Frame ref={ref} />;
+  }
 
   if (entry.kind === 'video') {
     return (
-      <Frame>
+      <Frame ref={ref}>
         <VideoThumb src={entry.src} autoPlay={autoPlay} />
       </Frame>
     );
   }
 
   if (entry.pattern === 'particles') {
-    return <Frame><ParticlesThumb a={entry.colorA} b={entry.colorB} /></Frame>;
+    return <Frame ref={ref}><ParticlesThumb a={entry.colorA} b={entry.colorB} /></Frame>;
   }
 
   const PatternComponent = PATTERN_COMPONENTS[entry.pattern] || Wave;
   return (
-    <Frame>
+    <Frame ref={ref}>
       <PatternComponent $a={entry.colorA} $b={entry.colorB} />
     </Frame>
   );
