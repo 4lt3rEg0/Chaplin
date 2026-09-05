@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import styled from "styled-components";
 import { BookOpen, Pause, Play, Radio, Search, Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -49,14 +49,6 @@ export default function FloatingTopIcons() {
     isPlaybackOwner
   } = usePlayer();
 
-  const customizeTimeoutRef = useRef(null);
-
-  useEffect(() => () => {
-    if (customizeTimeoutRef.current) {
-      window.clearTimeout(customizeTimeoutRef.current);
-    }
-  }, []);
-
   const makePathWithFlags = (path, extras = {}) => {
     const currentParams = new URLSearchParams(location.search);
     const next = new URLSearchParams();
@@ -99,7 +91,7 @@ export default function FloatingTopIcons() {
   };
 
   const openDiary = () => {
-    navigate(makePathWithFlags("/feed", { compose: 1, mode: "diary" }));
+    navigate(makePathWithFlags("/editor", { type: "diary" }));
   };
 
   const openSearch = () => {
@@ -112,16 +104,7 @@ export default function FloatingTopIcons() {
   };
 
   const openCustomize = () => {
-    navigate(makePathWithFlags("/profile"));
-    if (customizeTimeoutRef.current) {
-      window.clearTimeout(customizeTimeoutRef.current);
-    }
-    customizeTimeoutRef.current = window.setTimeout(() => {
-      customizeTimeoutRef.current = null;
-      if (window.location.pathname === "/profile") {
-        window.location.hash = "customize";
-      }
-    }, 0);
+    navigate(makePathWithFlags("/settings"));
   };
 
   return (

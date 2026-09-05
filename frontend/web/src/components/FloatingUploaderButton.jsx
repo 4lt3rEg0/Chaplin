@@ -33,7 +33,7 @@ export default function FloatingUploaderButton({ mobilePreviewMode = false }) {
   return (
     <Button
       type="button"
-      onClick={() => navigate("/profile#customize")}
+      onClick={() => navigate("/settings")}
       aria-label="Personalizar"
     >
       <Sparkles size={24} />

@@ -48,8 +48,10 @@ const BackgroundFallback = () => <div aria-hidden="true" style={BACKGROUND_FALLB
 /* PÁGINAS */
 import Login from "./pages/Login";
 import Feed from "./pages/Feed";
+import Editor from "./pages/Editor";
+import Publish from "./pages/Publish";
 import Profile from "./pages/Profile";
-import ProfileCustomize from "./pages/ProfileCustomize";
+import Settings from "./pages/Settings";
 import Radio from "./pages/Radio";
 import Inbox from "./pages/Inbox";
 import Explore from "./pages/Explore";
@@ -342,13 +344,33 @@ const AppShell = () => {
             />
 
             <Route
-              path="/profile/customize"
+              path="/editor"
               element={
                 <PrivateRoute>
-                  <ProfileCustomize />
+                  <Editor />
                 </PrivateRoute>
               }
             />
+
+            <Route
+              path="/publish"
+              element={
+                <PrivateRoute>
+                  <Publish />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/settings"
+              element={
+                <PrivateRoute>
+                  <Settings />
+                </PrivateRoute>
+              }
+            />
+
+            <Route path="/profile/customize" element={<Navigate to="/settings" replace />} />
 
             <Route
               path="/radio"

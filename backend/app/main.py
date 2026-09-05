@@ -209,6 +209,10 @@ class Track(Base):
     artwork_url = Column(String, nullable=True)
     duration = Column(Integer, nullable=True)  # seconds; nullable until known
     visibility = Column(String, default="public", nullable=False)  # "public" | "private"
+    # "personal" (default — artist's own music only) | "pending" (submitted to
+    # Chaplin Radio, awaiting a curator) | "approved" | "rejected". Submitting
+    # never auto-adds to the chaplin_radio playlist — only a curator approval does.
+    radio_status = Column(String, default="personal", nullable=False)
 
     # Preserves the historical link to the audio Post it was backfilled from, if any.
     # Never used to duplicate or move the underlying media file.
@@ -515,6 +519,7 @@ class TrackResponse(BaseModel):
     artwork_url: Optional[str] = None
     duration: Optional[int] = None
     visibility: str
+    radio_status: str = "personal"
     source_post_id: Optional[int] = None
     created_at: datetime
 
@@ -1289,6 +1294,7 @@ def _serialize_track(track: "Track") -> TrackResponse:
         artwork_url=track.artwork_url,
         duration=track.duration,
         visibility=track.visibility,
+        radio_status=track.radio_status,
         source_post_id=track.source_post_id,
         created_at=track.created_at
     )
@@ -1398,6 +1404,110 @@ async def create_track_from_post(
         source_post_id=post.id
     )
     db.add(track)
+    db.commit()
+    db.refresh(track)
+    return _serialize_track(track)
+
+
+@api_router.post("/tracks/upload", response_model=TrackResponse)
+async def upload_track(
+        file: UploadFile = File(...),
+        title: str = Form(...),
+        artwork: Optional[UploadFile] = File(None),
+        target: str = Form("personal"),  # "personal" | "radio"
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    """Direct music upload for the artist profile — no longer requires
+    detouring through a Post first. `target` is the artist's own conscious
+    choice: "personal" keeps it in their own music only; "radio" submits it
+    to Chaplin Radio as a pending curator review (never auto-added)."""
+    if not file.filename or _media_type_for_ext(Path(file.filename).suffix.lower()) != "audio":
+        raise HTTPException(status_code=400, detail="El archivo debe ser un audio válido (mp3/wav)")
+
+    clean_title = title.strip()[:120]
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="El título es obligatorio")
+
+    media_url = await _save_uploaded_file(file, current_user.id)
+    artwork_url = None
+    if artwork and artwork.filename:
+        if _media_type_for_ext(Path(artwork.filename).suffix.lower()) != "image":
+            raise HTTPException(status_code=400, detail="La portada debe ser una imagen válida")
+        artwork_url = await _save_uploaded_file(artwork, current_user.id)
+
+    track = Track(
+        owner_id=current_user.id,
+        title=clean_title,
+        media_url=media_url,
+        artwork_url=artwork_url,
+        visibility="public",
+        radio_status="pending" if target == "radio" else "personal"
+    )
+    db.add(track)
+    db.commit()
+    db.refresh(track)
+    return _serialize_track(track)
+
+
+@api_router.get("/radio/submissions", response_model=List[TrackResponse])
+async def list_radio_submissions(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.username not in RADIO_CURATORS:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    tracks = (
+        db.query(Track)
+        .filter(Track.radio_status == "pending")
+        .order_by(Track.created_at.asc())
+        .all()
+    )
+    return [_serialize_track(t) for t in tracks]
+
+
+@api_router.post("/radio/submissions/{track_id}/approve", response_model=TrackResponse)
+async def approve_radio_submission(
+        track_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.username not in RADIO_CURATORS:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    track = db.query(Track).filter(Track.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track no encontrado")
+
+    track.radio_status = "approved"
+    radio_playlist = db.query(Playlist).filter(Playlist.kind == "chaplin_radio").first()
+    if not radio_playlist:
+        radio_playlist = Playlist(owner_id=current_user.id, name="Chaplin Radio", kind="chaplin_radio", visibility="public")
+        db.add(radio_playlist)
+        db.commit()
+        db.refresh(radio_playlist)
+
+    existing_item = db.query(PlaylistItem).filter(
+        PlaylistItem.playlist_id == radio_playlist.id, PlaylistItem.track_id == track_id
+    ).first()
+    if not existing_item:
+        next_position = db.query(PlaylistItem).filter(PlaylistItem.playlist_id == radio_playlist.id).count()
+        db.add(PlaylistItem(playlist_id=radio_playlist.id, track_id=track_id, position=next_position))
+
+    db.commit()
+    db.refresh(track)
+    return _serialize_track(track)
+
+
+@api_router.post("/radio/submissions/{track_id}/reject", response_model=TrackResponse)
+async def reject_radio_submission(
+        track_id: int,
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if current_user.username not in RADIO_CURATORS:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    track = db.query(Track).filter(Track.id == track_id).first()
+    if not track:
+        raise HTTPException(status_code=404, detail="Track no encontrado")
+
+    track.radio_status = "rejected"
     db.commit()
     db.refresh(track)
     return _serialize_track(track)
@@ -2263,6 +2373,7 @@ def startup():
         _ensure_column(connection, "posts", "track_id", "INTEGER")
         _ensure_column(connection, "users", "presence_status", "VARCHAR NOT NULL DEFAULT 'online'")
         _ensure_column(connection, "messages", "message_type", "VARCHAR NOT NULL DEFAULT 'text'")
+        _ensure_column(connection, "tracks", "radio_status", "VARCHAR NOT NULL DEFAULT 'personal'")
         _ensure_index(connection, "ix_posts_media_url", "posts", "media_url")
         _ensure_index(connection, "ix_tracks_media_url", "tracks", "media_url")
         # post_likes/comment_likes/messages are brand-new tables — create_all()
