@@ -1,12 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check, LogOut, Palette, Sparkles, User as UserIcon, X } from 'lucide-react';
+import {
+  ArrowLeft, Check, Headphones, Image as ImageIcon, LayoutGrid, LogOut,
+  Palette, User as UserIcon, Wand2, X
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
+import { useVortex } from '../context/VortexContext';
 import api, { uploadProfileMusic } from '../services/api';
 import { updateTheme } from '../services/themeService';
 import BackgroundConfigurator from '../components/BackgroundConfigurator';
+import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/playerSkins';
 import {
   resolveShapeClipPath,
   resolveShapeRadius,
@@ -85,6 +90,10 @@ const TabButton = styled.button`
   gap: 8px;
   font-size: 13px;
   white-space: nowrap;
+
+  @media (max-width: 760px) {
+    flex-shrink: 0;
+  }
 `;
 
 const Content = styled.section`
@@ -231,13 +240,131 @@ const StatusText = styled.span`
 
 const TABS = [
   { id: 'apariencia', label: 'Apariencia', icon: Palette },
-  { id: 'diseno', label: 'Diseño', icon: Sparkles },
-  { id: 'fondos', label: 'Fondos', icon: Sparkles },
-  { id: 'perfil', label: 'Perfil', icon: UserIcon },
+  { id: 'reproduccion', label: 'Reproducción', icon: Headphones },
+  { id: 'perfil', label: 'Otras preferencias', icon: UserIcon },
   { id: 'cuenta', label: 'Cuenta', icon: UserIcon }
 ];
 
-function AparienciaTab() {
+const InnerTabNav = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+`;
+
+const InnerTabButton = styled.button`
+  border: 1px solid ${({ $active, theme }) => ($active ? (theme.colors.primary || theme.colors.borderStrong) : theme.colors.border)};
+  background: ${({ $active, theme }) => ($active ? (theme.colors.accentSoft || 'rgba(255,255,255,0.08)') : 'transparent')};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+`;
+
+const APARIENCIA_INNER_TABS = [
+  { id: 'temas', label: 'Temas', icon: Palette },
+  { id: 'layouts', label: 'Layouts', icon: LayoutGrid },
+  { id: 'fondos', label: 'Fondos', icon: ImageIcon },
+  { id: 'slides', label: 'Slides de preview', icon: Wand2 }
+];
+
+/* ============== Apariencia: sesión de preview unificada ============== */
+/* Envuelve Temas/Layouts/Fondos/Slides en UN solo ciclo de preview
+   (tema + fondo a la vez), con un único Cancelar/Aplicar arriba — así
+   cambiar de sub-pestaña no rompe ni duplica la sesión de previsualización. */
+function AparienciaSection() {
+  const skin = useSkin();
+  const vortex = useVortex();
+  const [innerTab, setInnerTab] = useState('temas');
+  const [saveStatus, setSaveStatus] = useState('idle');
+  const committedRef = useRef(false);
+
+  useEffect(() => {
+    skin.beginThemePreview();
+    vortex.beginVortexPreview();
+    committedRef.current = false;
+    return () => {
+      if (!committedRef.current) {
+        skin.cancelThemePreview();
+        vortex.cancelVortexPreview();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-arms a fresh preview session immediately after Aplicar/Cancelar so the
+  // tab stays continuously previewable for as long as it's open — only truly
+  // leaving Apariencia (unmount) ends the session without a new one.
+  const rearm = () => {
+    skin.beginThemePreview();
+    vortex.beginVortexPreview();
+    committedRef.current = false;
+  };
+
+  const handleApply = () => {
+    setSaveStatus('saving');
+    skin.commitThemePreview();
+    vortex.commitVortexPreview();
+    committedRef.current = true;
+    setSaveStatus('saved');
+    rearm();
+  };
+
+  const handleCancel = () => {
+    skin.cancelThemePreview();
+    vortex.cancelVortexPreview();
+    committedRef.current = true;
+    setInnerTab('temas');
+    rearm();
+  };
+
+  return (
+    <>
+      {skin.isPreviewingTheme && (
+        <PreviewBar>
+          <span>Estás previsualizando temas, layouts, fondos y skin del reproductor. Nada se guarda todavía.</span>
+          <RowButtons>
+            <GhostBtn type="button" onClick={handleCancel}>
+              <X size={14} /> Cancelar
+            </GhostBtn>
+            <Btn type="button" onClick={handleApply}>
+              <Check size={14} /> Aplicar cambios
+            </Btn>
+          </RowButtons>
+        </PreviewBar>
+      )}
+
+      <SectionTitle>Apariencia</SectionTitle>
+      <SectionSub>Temas, layouts, fondos y el skin del reproductor de perfil viven juntos aquí — pruébalos y confirma o cancela una sola vez.</SectionSub>
+
+      <InnerTabNav>
+        {APARIENCIA_INNER_TABS.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <InnerTabButton key={tab.id} type="button" $active={innerTab === tab.id} onClick={() => setInnerTab(tab.id)}>
+              <Icon size={12} /> {tab.label}
+            </InnerTabButton>
+          );
+        })}
+      </InnerTabNav>
+
+      {innerTab === 'temas' && <TemasPanel />}
+      {innerTab === 'layouts' && <LayoutsPanel />}
+      {innerTab === 'fondos' && <FondosPanel />}
+      {innerTab === 'slides' && <SlidesPanel />}
+
+      {saveStatus === 'saved' && <StatusText>Guardado.</StatusText>}
+    </>
+  );
+}
+
+function TemasPanel() {
   const {
     skinId, setSkinId, skins,
     accentColor, setAccentColor,
@@ -251,56 +378,13 @@ function AparienciaTab() {
     ornament, setOrnament,
     materialIntensity, setMaterialIntensity,
     layoutOpacity, setLayoutOpacity,
-    animations, setAnimations,
-    isPreviewingTheme, beginThemePreview, cancelThemePreview, commitThemePreview
+    animations, setAnimations
   } = useSkin();
-
-  const committedRef = useRef(false);
-
-  useEffect(() => {
-    beginThemePreview();
-    committedRef.current = false;
-    return () => {
-      if (!committedRef.current) cancelThemePreview();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const [saveStatus, setSaveStatus] = useState('idle');
-
-  const handleApply = async () => {
-    setSaveStatus('saving');
-    commitThemePreview();
-    committedRef.current = true;
-    setSaveStatus('saved');
-  };
-
-  const handleCancel = () => {
-    cancelThemePreview();
-    committedRef.current = true;
-  };
 
   const variantOptions = Object.values(themeVariants || {});
 
   return (
     <>
-      {isPreviewingTheme && (
-        <PreviewBar>
-          <span>Estás previsualizando este tema. Los cambios no se guardan todavía.</span>
-          <RowButtons>
-            <GhostBtn type="button" onClick={handleCancel}>
-              <X size={14} /> Cancelar
-            </GhostBtn>
-            <Btn type="button" onClick={handleApply}>
-              <Check size={14} /> Aplicar cambios
-            </Btn>
-          </RowButtons>
-        </PreviewBar>
-      )}
-
-      <SectionTitle>Apariencia</SectionTitle>
-      <SectionSub>Elige un tema y pruébalo antes de confirmarlo. Nada se guarda hasta que pulses "Aplicar cambios".</SectionSub>
-
       <FieldGroup>
         <Label>Tema base</Label>
         <Select value={skinId} onChange={(e) => setSkinId(e.target.value)}>
@@ -408,14 +492,12 @@ function AparienciaTab() {
   );
 }
 
-function DisenoTab() {
+function LayoutsPanel() {
   const { layoutId, setLayoutId, layoutCompositions, appTheme } = useSkin();
 
   return (
     <>
-      <SectionTitle>Diseño</SectionTitle>
-      <SectionSub>La composición de tarjetas y estructura visual. Se aplica al instante y se guarda sola.</SectionSub>
-
+      <SectionSub>La composición de tarjetas y estructura visual del perfil.</SectionSub>
       <ChoiceGrid>
         {Object.values(layoutCompositions || {}).map((layoutOption) => (
           <ChoiceCard
@@ -433,13 +515,262 @@ function DisenoTab() {
   );
 }
 
-function FondosTab() {
+function FondosPanel() {
   return (
     <>
-      <SectionTitle>Fondos</SectionTitle>
-      <SectionSub>El fondo animado de toda la app. Se aplica al instante y se guarda sola.</SectionSub>
+      <SectionSub>El fondo animado de toda la app.</SectionSub>
       <BackgroundConfigurator />
     </>
+  );
+}
+
+/* ============== Slides de preview ============== */
+/* Curated preset combos (theme + layout + fondo + player skin) the user can
+   browse like a carousel and try live — all through the same preview session
+   AparienciaSection already opened, so Cancelar/Aplicar there covers this too. */
+const PRESET_SLIDES = [
+  {
+    id: 'chrome-y2k',
+    name: 'Y2K Chrome',
+    description: 'El clásico Chaplin: cromados, acento cian, fondo de vórtice.',
+    skinId: 'y2k', themeVariant: 'default', accentColor: '#7ee8ff', secondaryAccent: '#ff8ad8',
+    layoutId: 'classic', playerSkinId: 'daw',
+    vortex: { backgroundStyle: 'video01', finishType: 'pearlescent' }
+  },
+  {
+    id: 'cyberpunk-neon',
+    name: 'Cyberpunk Neon',
+    description: 'Contraste alto, magenta/verde ácido, HUD denso.',
+    skinId: 'cyberpunk', themeVariant: 'default', accentColor: '#ff2fd0', secondaryAccent: '#39ff88',
+    layoutId: 'grid', playerSkinId: 'blender3d',
+    vortex: { backgroundStyle: 'video02', finishType: 'glossy' }
+  },
+  {
+    id: 'retro-ipod',
+    name: 'MP3 Retro',
+    description: 'Paleta pastel, formas suaves, reproductor estilo iPod.',
+    skinId: 'chrome', themeVariant: 'soft', accentColor: '#ffb997', secondaryAccent: '#c9f2ff',
+    layoutId: 'classic', playerSkinId: 'ipod',
+    vortex: { backgroundStyle: 'sphere', finishType: 'chrome' }
+  },
+  {
+    id: 'hud-3d',
+    name: 'HUD 3D',
+    description: 'Rejillas neón y aire retro-futurista, consola de audio.',
+    skinId: 'void4d', themeVariant: 'default', accentColor: '#00e5ff', secondaryAccent: '#ff00c8',
+    layoutId: 'grid', playerSkinId: 'blender3d',
+    vortex: { backgroundStyle: 'video04', finishType: 'pearlescent' }
+  }
+];
+
+const SlideShell = styled.div`
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 14px;
+  padding: 16px;
+  background: ${({ theme }) => theme.gradients?.panel || theme.card?.bg};
+`;
+
+const SlideNav = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+`;
+
+const SlideDots = styled.div`
+  display: flex;
+  gap: 6px;
+`;
+
+const SlideDot = styled.button`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+`;
+
+const MockComposition = styled.div`
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.04)'};
+  margin-bottom: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 48px 1fr;
+  }
+`;
+
+const MockAvatar = styled.div`
+  width: 64px;
+  height: 64px;
+  border-radius: ${({ theme }) => theme.card?.radius || '50%'};
+  background: ${({ theme }) => theme.gradients?.chrome || theme.colors.accentSoft};
+
+  @media (max-width: 480px) {
+    width: 48px;
+    height: 48px;
+  }
+`;
+
+const MockName = styled.div`
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 4px;
+`;
+
+const MockBio = styled.div`
+  font-size: 12px;
+  opacity: 0.7;
+`;
+
+const MockCardRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+`;
+
+const MockCard = styled.div`
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 10px;
+  padding: 10px;
+  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.04)'};
+  font-size: 11px;
+`;
+
+const SkinChoiceRow = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+`;
+
+const SkinChoiceBtn = styled.button`
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  background: ${({ $active, theme }) => ($active ? theme.colors.accentSoft : 'transparent')};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+`;
+
+const SlideFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+`;
+
+const DEMO_TRACK = { title: 'Vista previa', owner_username: 'tu_perfil', artwork_url: null };
+
+function SlidesPanel() {
+  const {
+    setSkinId, setThemeVariant,
+    accentColor, setAccentColor, secondaryAccent, setSecondaryAccent, setLayoutId,
+    playerSkinId, setPlayerSkinId
+  } = useSkin();
+  const { setBackgroundStyle, setFinishType } = useVortex();
+  const [slideIndex, setSlideIndex] = useState(0);
+
+  const slide = PRESET_SLIDES[slideIndex];
+  const SkinComponent = (PLAYER_SKINS[playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN]).component;
+
+  const applyPreset = (preset) => {
+    setSkinId(preset.skinId);
+    setThemeVariant(preset.themeVariant);
+    setAccentColor(preset.accentColor);
+    setSecondaryAccent(preset.secondaryAccent);
+    setLayoutId(preset.layoutId);
+    setPlayerSkinId(preset.playerSkinId);
+    if (preset.vortex?.backgroundStyle) setBackgroundStyle(preset.vortex.backgroundStyle);
+    if (preset.vortex?.finishType) setFinishType(preset.vortex.finishType);
+  };
+
+  return (
+    <SlideShell>
+      <SlideNav>
+        <GhostBtn type="button" onClick={() => setSlideIndex((i) => (i - 1 + PRESET_SLIDES.length) % PRESET_SLIDES.length)}>
+          ‹ Anterior
+        </GhostBtn>
+        <SlideDots>
+          {PRESET_SLIDES.map((s, i) => (
+            <SlideDot key={s.id} type="button" $active={i === slideIndex} onClick={() => setSlideIndex(i)} aria-label={`Slide ${i + 1}`} />
+          ))}
+        </SlideDots>
+        <GhostBtn type="button" onClick={() => setSlideIndex((i) => (i + 1) % PRESET_SLIDES.length)}>
+          Siguiente ›
+        </GhostBtn>
+      </SlideNav>
+
+      <SectionTitle>{slide.name}</SectionTitle>
+      <SectionSub>{slide.description}</SectionSub>
+
+      <MockComposition>
+        <MockAvatar />
+        <div>
+          <MockName>Vista previa de composición</MockName>
+          <MockBio>Así lucirían tu nombre, bio y avatar con esta combinación.</MockBio>
+        </div>
+      </MockComposition>
+
+      <MockCardRow>
+        <MockCard>Publicación</MockCard>
+        <MockCard>Tarjeta</MockCard>
+        <MockCard>Metadato</MockCard>
+      </MockCardRow>
+
+      <FieldGroup>
+        <Label>Skin del reproductor de perfil</Label>
+        <SkinChoiceRow>
+          {PLAYER_SKIN_LIST.map((option) => (
+            <SkinChoiceBtn
+              key={option.id}
+              type="button"
+              $active={playerSkinId === option.id}
+              onClick={() => setPlayerSkinId(option.id)}
+            >
+              {option.label}
+            </SkinChoiceBtn>
+          ))}
+        </SkinChoiceRow>
+        <SkinComponent
+          track={DEMO_TRACK}
+          mode="all"
+          modeLabel="Vista previa"
+          isActive={false}
+          isPlaying={false}
+          hasQueue={false}
+          onToggleEar={() => {}}
+          onPrev={() => {}}
+          onNext={() => {}}
+          ariaLabel="Vista previa del reproductor"
+        />
+      </FieldGroup>
+
+      <FieldGroup>
+        <Label>Color primario</Label>
+        <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} />
+        {' '}
+        <Label style={{ display: 'inline-block', marginLeft: 12 }}>Color secundario</Label>
+        <Input type="color" value={secondaryAccent || '#7ee8ff'} onChange={(e) => setSecondaryAccent(e.target.value)} />
+      </FieldGroup>
+
+      <SlideFooter>
+        <StatusText>Slide {slideIndex + 1} de {PRESET_SLIDES.length}</StatusText>
+        <Btn type="button" onClick={() => applyPreset(slide)}>
+          <Wand2 size={14} /> Probar este estilo
+        </Btn>
+      </SlideFooter>
+    </SlideShell>
   );
 }
 
@@ -498,7 +829,7 @@ function PerfilTab() {
 
   return (
     <>
-      <SectionTitle>Perfil</SectionTitle>
+      <SectionTitle>Otras preferencias</SectionTitle>
       <SectionSub>Información pública y preferencias de tu perfil.</SectionSub>
 
       <FieldGroup>
@@ -535,6 +866,75 @@ function PerfilTab() {
           {pinned ? 'Ocultar del perfil' : 'Fijar en mi perfil'}
         </Btn>
       </FieldGroup>
+    </>
+  );
+}
+
+const PLAYBACK_MODE_OPTIONS = [
+  { id: 'all', label: 'Reproducir toda mi música', hint: 'Cualquier visitante escucha tus pistas públicas, de la más nueva a la más antigua.' },
+  { id: 'favorites', label: 'Solo favoritas', hint: 'Solo suenan las pistas que marques con la estrella en tu pestaña Música.' },
+  { id: 'radio', label: 'Radio Chaplin', hint: 'Tu reproductor de perfil usa la emisora global de Chaplin en vez de tu música personal.' }
+];
+
+const RadioOptionRow = styled.label`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  border-radius: 10px;
+  background: ${({ $active, theme }) => ($active ? theme.colors.accentSoft : 'transparent')};
+  cursor: pointer;
+  margin-bottom: 8px;
+`;
+
+const RadioOptionText = styled.div`
+  strong { display: block; font-size: 13px; }
+  span { display: block; font-size: 11px; opacity: 0.7; margin-top: 2px; }
+`;
+
+function ReproduccionTab() {
+  const { user, refreshUser } = useAuth();
+  const [mode, setMode] = useState(user?.profile_playback_mode || 'all');
+  const [saveStatus, setSaveStatus] = useState('idle');
+
+  const applyMode = async (nextMode) => {
+    setMode(nextMode);
+    setSaveStatus('saving');
+    try {
+      const form = new FormData();
+      form.append('profile_playback_mode', nextMode);
+      await api.put('/users/me', form);
+      await refreshUser();
+      setSaveStatus('saved');
+    } catch {
+      setSaveStatus('error');
+    }
+  };
+
+  return (
+    <>
+      <SectionTitle>Reproducción del perfil</SectionTitle>
+      <SectionSub>Elige qué suena cuando alguien visita tu perfil y toca el icono de oreja del reproductor.</SectionSub>
+
+      {PLAYBACK_MODE_OPTIONS.map((option) => (
+        <RadioOptionRow key={option.id} $active={mode === option.id}>
+          <input
+            type="radio"
+            name="profile-playback-mode"
+            checked={mode === option.id}
+            onChange={() => applyMode(option.id)}
+          />
+          <RadioOptionText>
+            <strong>{option.label}</strong>
+            <span>{option.hint}</span>
+          </RadioOptionText>
+        </RadioOptionRow>
+      ))}
+
+      <StatusText>
+        {saveStatus === 'saving' ? 'Guardando...' : saveStatus === 'saved' ? 'Guardado' : saveStatus === 'error' ? 'Error al guardar' : ''}
+      </StatusText>
     </>
   );
 }
@@ -615,9 +1015,8 @@ export default function Settings() {
         </TabNav>
 
         <Content>
-          {activeTab === 'apariencia' && <AparienciaTab />}
-          {activeTab === 'diseno' && <DisenoTab />}
-          {activeTab === 'fondos' && <FondosTab />}
+          {activeTab === 'apariencia' && <AparienciaSection />}
+          {activeTab === 'reproduccion' && <ReproduccionTab />}
           {activeTab === 'perfil' && <PerfilTab />}
           {activeTab === 'cuenta' && <CuentaTab />}
         </Content>

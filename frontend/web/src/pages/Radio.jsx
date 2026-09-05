@@ -2,22 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import styled from "styled-components";
 import api from "../services/api";
 import { usePlayer } from "../context/PlayerContext";
-import { useVortex, VISUALIZER_VIDEO_OPTIONS } from "../context/VortexContext";
+import { useVortex } from "../context/VortexContext";
 import { useSkin } from "../context/SkinContext";
 import RadioSubmissionsReview from "../components/RadioSubmissionsReview";
-
-const BACKGROUND_OPTIONS = [
-  { id: 'dataTunnel', label: 'Fractal Tunnel' },
-  ...VISUALIZER_VIDEO_OPTIONS.map(({ id, label }) => ({ id, label })),
-  { id: 'vortex', label: 'Vórtice' },
-  { id: 'hourglass', label: 'Arena' },
-  { id: 'rain', label: 'Lluvia' },
-  { id: 'sphere', label: 'Esfera' },
-  { id: 'lavaLamp', label: 'Lava' },
-  { id: 'aeroHalo', label: 'Halo Aero' },
-  { id: 'fluidCurtain', label: 'Cortina Fluida' },
-  { id: 'prismBloom', label: 'Prisma Bloom' }
-];
 
 const Wrapper = styled.div`
   background: ${({ theme }) => theme.gradients.page};
@@ -184,103 +171,9 @@ const ConfigTitle = styled.h2`
   }
 `;
 
-const ColorSection = styled.div`
-  margin-bottom: 30px;
-`;
-
-const SectionTitle = styled.h3`
-  font-size: 18px;
-  margin-bottom: 15px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-const ColorPicker = styled.div`
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  margin-bottom: 20px;
-
-  @media (max-width: 760px) {
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-`;
-
-const ColorInput = styled.input`
-  width: 60px;
-  height: 40px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-`;
-
-const ColorValue = styled.span`
-  font-family: monospace;
-  font-size: 14px;
-  min-width: 80px;
-`;
-
-const Slider = styled.input`
-  width: 100%;
-`;
-
-const SliderValue = styled.span`
-  font-family: monospace;
-  font-size: 0.85rem;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-const ToggleRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-`;
-
-const ToggleButton = styled.button`
-  background: ${({ $active, theme }) => $active ? theme.colors.accentSoft : theme.colors.surfaceAlt};
-  color: ${({ theme }) => theme.colors.text};
-  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.borderStrong : theme.colors.border};
-  padding: 8px 12px;
-  border-radius: 999px;
-  cursor: pointer;
-`;
-
-const SyncRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 24px;
-`;
-
 const SyncHint = styled.span`
   color: ${({ theme }) => theme.colors.textSecondary};
   font-size: 0.9rem;
-`;
-
-const FinishGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 15px;
-`;
-
-const FinishOption = styled.button`
-  background: ${({ $active, theme }) => $active ? theme.colors.accentSoft : 'rgba(255,255,255,0.05)'};
-  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.borderStrong : theme.colors.border};
-  color: ${({ theme }) => theme.colors.text};
-  padding: 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: ${({ theme }) => theme.colors.accentSoft};
-    transform: translateY(-2px);
-  }
 `;
 
 export default function Radio() {
@@ -290,33 +183,8 @@ export default function Radio() {
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('radio');
   const uploadInputRef = useRef(null);
-  const { skinId, accentColor, appTheme, themeVariant } = useSkin();
-  const {
-    vortexColor,
-    setVortexColor,
-    finishType,
-    setFinishType,
-    backgroundStyle,
-    setBackgroundStyle,
-    syncFromTheme,
-    autoSyncEnabled,
-    setAutoSyncEnabled,
-    animationEnabled,
-    setAnimationEnabled,
-    visualizerPreset,
-    setVisualizerPreset,
-    reactivity,
-    setReactivity,
-    deformIntensity,
-    setDeformIntensity,
-    motionIntensity,
-    setMotionIntensity,
-    bassBoost,
-    setBassBoost,
-    trebleBoost,
-    setTrebleBoost,
-    applyVisualizerPreset
-  } = useVortex();
+  const { skinId, appTheme, themeVariant } = useSkin();
+  const { backgroundStyle } = useVortex();
   const {
     play,
     current,
@@ -373,25 +241,6 @@ export default function Radio() {
     // safe to depend on directly here without risking a re-render feedback loop.
   }, [radioQueue, current?.id, chaplinRadioTracks.length, setChaplinRadioTracks, replaceQueue]);
 
-  const disableAutoSync = () => {
-    setAutoSyncEnabled(false);
-  };
-
-  const enableAutoSync = () => {
-    setAutoSyncEnabled(true);
-    syncFromTheme(skinId, accentColor);
-  };
-
-  const onPreset = (presetId) => {
-    disableAutoSync();
-    applyVisualizerPreset(presetId);
-  };
-
-  const onCustomAnimationChange = (setter, value) => {
-    disableAutoSync();
-    setVisualizerPreset('custom');
-    setter(Number(value));
-  };
 
   useEffect(() => {
     const loadTracks = async () => {
@@ -601,228 +450,12 @@ export default function Radio() {
 
         {activeTab === 'config' && (
           <ConfigContainer className="chaplin-theme-panel">
-            <ConfigTitle>Configuración del Reproductor</ConfigTitle>
-
-            <SyncRow>
-              <SyncHint>
-                Estado global: {autoSyncEnabled ? 'Sincronizado con tu tema' : 'Personalización manual activa'}.
-              </SyncHint>
-              <Button type="button" onClick={enableAutoSync}>
-                Sincronizar con mi tema
-              </Button>
-            </SyncRow>
-
-            <ColorSection>
-              <SectionTitle>Motor de Animación</SectionTitle>
-              <ToggleRow>
-                <SyncHint>Animación reactiva en todas las pestañas/rutas.</SyncHint>
-                <ToggleButton
-                  type="button"
-                  $active={animationEnabled}
-                  onClick={() => {
-                    disableAutoSync();
-                    setAnimationEnabled(!animationEnabled);
-                  }}
-                >
-                  {animationEnabled ? 'Activa' : 'Pausada'}
-                </ToggleButton>
-              </ToggleRow>
-
-              <FinishGrid>
-                <FinishOption
-                  $active={visualizerPreset === 'xp_frx'}
-                  onClick={() => onPreset('xp_frx')}
-                >
-                  XP FRX
-                </FinishOption>
-                <FinishOption
-                  $active={visualizerPreset === 'win7_aero'}
-                  onClick={() => onPreset('win7_aero')}
-                >
-                  Win7 Aero
-                </FinishOption>
-                <FinishOption
-                  $active={visualizerPreset === 'winamp_milk'}
-                  onClick={() => onPreset('winamp_milk')}
-                >
-                  Winamp Milk
-                </FinishOption>
-                <FinishOption
-                  $active={visualizerPreset === 'chaplin_hyper'}
-                  onClick={() => onPreset('chaplin_hyper')}
-                >
-                  Chaplin Hyper
-                </FinishOption>
-              </FinishGrid>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Intensidad Reactiva</SectionTitle>
-              <ColorPicker>
-                <Slider
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.01"
-                  value={reactivity}
-                  onChange={(e) => onCustomAnimationChange(setReactivity, e.target.value)}
-                />
-                <SliderValue>{reactivity.toFixed(2)}</SliderValue>
-              </ColorPicker>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Deformación</SectionTitle>
-              <ColorPicker>
-                <Slider
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.01"
-                  value={deformIntensity}
-                  onChange={(e) => onCustomAnimationChange(setDeformIntensity, e.target.value)}
-                />
-                <SliderValue>{deformIntensity.toFixed(2)}</SliderValue>
-              </ColorPicker>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Movimiento de Cámara y Giro</SectionTitle>
-              <ColorPicker>
-                <Slider
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.01"
-                  value={motionIntensity}
-                  onChange={(e) => onCustomAnimationChange(setMotionIntensity, e.target.value)}
-                />
-                <SliderValue>{motionIntensity.toFixed(2)}</SliderValue>
-              </ColorPicker>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Impulso de Graves</SectionTitle>
-              <ColorPicker>
-                <Slider
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.01"
-                  value={bassBoost}
-                  onChange={(e) => onCustomAnimationChange(setBassBoost, e.target.value)}
-                />
-                <SliderValue>{bassBoost.toFixed(2)}</SliderValue>
-              </ColorPicker>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Impulso de Agudos</SectionTitle>
-              <ColorPicker>
-                <Slider
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.01"
-                  value={trebleBoost}
-                  onChange={(e) => onCustomAnimationChange(setTrebleBoost, e.target.value)}
-                />
-                <SliderValue>{trebleBoost.toFixed(2)}</SliderValue>
-              </ColorPicker>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Color del Vortex</SectionTitle>
-              <ColorPicker>
-                <ColorInput
-                  type="color"
-                  value={vortexColor}
-                  onChange={(e) => {
-                    disableAutoSync();
-                    setVortexColor(e.target.value);
-                  }}
-                />
-                <ColorValue>{vortexColor.toUpperCase()}</ColorValue>
-              </ColorPicker>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Tipo de Acabado</SectionTitle>
-              <FinishGrid>
-                <FinishOption
-                  $active={finishType === 'pearlescent'}
-                  onClick={() => {
-                    disableAutoSync();
-                    setFinishType('pearlescent');
-                  }}
-                >
-                  Perlado
-                </FinishOption>
-                <FinishOption
-                  $active={finishType === 'metallic'}
-                  onClick={() => {
-                    disableAutoSync();
-                    setFinishType('metallic');
-                  }}
-                >
-                  Metálico
-                </FinishOption>
-                <FinishOption
-                  $active={finishType === 'metalized'}
-                  onClick={() => {
-                    disableAutoSync();
-                    setFinishType('metalized');
-                  }}
-                >
-                  Metalizado
-                </FinishOption>
-                <FinishOption
-                  $active={finishType === 'chrome'}
-                  onClick={() => {
-                    disableAutoSync();
-                    setFinishType('chrome');
-                  }}
-                >
-                  Cromado
-                </FinishOption>
-                <FinishOption
-                  $active={finishType === 'matte'}
-                  onClick={() => {
-                    disableAutoSync();
-                    setFinishType('matte');
-                  }}
-                >
-                  Mate
-                </FinishOption>
-                <FinishOption
-                  $active={finishType === 'glossy'}
-                  onClick={() => {
-                    disableAutoSync();
-                    setFinishType('glossy');
-                  }}
-                >
-                  Brillante
-                </FinishOption>
-              </FinishGrid>
-            </ColorSection>
-
-            <ColorSection>
-              <SectionTitle>Estilo de Fondo</SectionTitle>
-              <FinishGrid>
-                {BACKGROUND_OPTIONS.map(({ id, label }) => (
-                  <FinishOption
-                    key={id}
-                    $active={backgroundStyle === id}
-                    onClick={() => {
-                      disableAutoSync();
-                      setBackgroundStyle(id);
-                    }}
-                  >
-                    {label}
-                  </FinishOption>
-                ))}
-              </FinishGrid>
-            </ColorSection>
+            <ConfigTitle>Configuración de Radio</ConfigTitle>
+            <SyncHint>
+              La elección de temas, layouts y fondos vive en Configuración del Perfil → Apariencia.
+              Aquí solo hay opciones propias de Radio Chaplin.
+            </SyncHint>
+            <RadioSubmissionsReview />
           </ConfigContainer>
         )}
           </CenterArea>
@@ -837,8 +470,6 @@ export default function Radio() {
             </SidePanel>
           </RightArea>
         </RadioGrid>
-
-        <RadioSubmissionsReview />
       </Container>
     </Wrapper>
   );

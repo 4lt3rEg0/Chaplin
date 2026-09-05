@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getTheme, updateTheme } from '../services/themeService';
 
 const VortexContext = createContext();
@@ -167,6 +167,13 @@ export const VortexProvider = ({ children }) => {
   const [trebleBoost, setTrebleBoost] = useState(initialState.trebleBoost);
   const [loadedFromBackend, setLoadedFromBackend] = useState(false);
 
+  // ===== Fondo preview (Settings → Apariencia slides) =====
+  // Mirrors SkinContext's isPreviewingTheme/themeSnapshotRef mechanism so the
+  // unified preview carousel can recolor/re-fondo live without persisting
+  // anything until the user explicitly confirms.
+  const [isPreviewingVortex, setIsPreviewingVortex] = useState(false);
+  const vortexSnapshotRef = useRef(null);
+
   // Temporary override applied while viewing another user's public profile
   // (Profile Owner Environment). Shape matches the backend's PublicBackgroundEnvironment:
   // { style, finish, visualizerPreset, reactivity, deformIntensity, motionIntensity, bassBoost, trebleBoost }.
@@ -212,7 +219,7 @@ export const VortexProvider = ({ children }) => {
 
   /* ===== SAVE to backend once the initial load has settled ===== */
   useEffect(() => {
-    if (!loadedFromBackend) return;
+    if (!loadedFromBackend || isPreviewingVortex) return;
 
     updateTheme({
       vortex_color: vortexColor,
@@ -237,11 +244,12 @@ export const VortexProvider = ({ children }) => {
     deformIntensity,
     motionIntensity,
     bassBoost,
-    trebleBoost
+    trebleBoost,
+    isPreviewingVortex
   ]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || isPreviewingVortex) {
       return;
     }
 
@@ -271,7 +279,8 @@ export const VortexProvider = ({ children }) => {
     deformIntensity,
     motionIntensity,
     bassBoost,
-    trebleBoost
+    trebleBoost,
+    isPreviewingVortex
   ]);
 
   useEffect(() => {
@@ -330,6 +339,47 @@ export const VortexProvider = ({ children }) => {
     setTrebleBoost(preset.trebleBoost);
   }, []);
 
+  const vortexFieldSetters = {
+    vortexColor: setVortexColor,
+    finishType: setFinishType,
+    backgroundStyle: setBackgroundStyle,
+    autoSyncEnabled: setAutoSyncEnabled,
+    animationEnabled: setAnimationEnabled,
+    visualizerPreset: setVisualizerPreset,
+    reactivity: setReactivity,
+    deformIntensity: setDeformIntensity,
+    motionIntensity: setMotionIntensity,
+    bassBoost: setBassBoost,
+    trebleBoost: setTrebleBoost
+  };
+  const vortexFieldValues = {
+    vortexColor, finishType, backgroundStyle, autoSyncEnabled, animationEnabled,
+    visualizerPreset, reactivity, deformIntensity, motionIntensity, bassBoost, trebleBoost
+  };
+
+  const beginVortexPreview = useCallback(() => {
+    vortexSnapshotRef.current = { ...vortexFieldValues };
+    setIsPreviewingVortex(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vortexColor, finishType, backgroundStyle, autoSyncEnabled, animationEnabled, visualizerPreset, reactivity, deformIntensity, motionIntensity, bassBoost, trebleBoost]);
+
+  const cancelVortexPreview = useCallback(() => {
+    const snapshot = vortexSnapshotRef.current;
+    if (snapshot) {
+      Object.entries(snapshot).forEach(([key, value]) => {
+        vortexFieldSetters[key]?.(value);
+      });
+    }
+    vortexSnapshotRef.current = null;
+    setIsPreviewingVortex(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const commitVortexPreview = useCallback(() => {
+    vortexSnapshotRef.current = null;
+    setIsPreviewingVortex(false);
+  }, []);
+
   const effectiveFinishType = profileOverride?.finish || finishType;
   const effectiveBackgroundStyle = (profileOverride?.style && BACKGROUND_STYLE_OPTIONS.includes(profileOverride.style))
     ? profileOverride.style
@@ -368,7 +418,11 @@ export const VortexProvider = ({ children }) => {
     trebleBoost: effectiveTrebleBoost,
     setTrebleBoost,
     applyVisualizerPreset,
-    visualizerPresets: VISUALIZER_PRESETS
+    visualizerPresets: VISUALIZER_PRESETS,
+    isPreviewingVortex,
+    beginVortexPreview,
+    cancelVortexPreview,
+    commitVortexPreview
   }), [
     vortexColor,
     effectiveFinishType,
@@ -383,7 +437,11 @@ export const VortexProvider = ({ children }) => {
     effectiveMotionIntensity,
     effectiveBassBoost,
     effectiveTrebleBoost,
-    applyVisualizerPreset
+    applyVisualizerPreset,
+    isPreviewingVortex,
+    beginVortexPreview,
+    cancelVortexPreview,
+    commitVortexPreview
   ]);
 
   return (

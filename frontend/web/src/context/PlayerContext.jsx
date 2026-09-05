@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { normalizeTrackSrc, areSameSrc } from "../utils/mediaUrl";
 
 const PlayerContext = createContext(null);
 
@@ -47,36 +48,6 @@ const writePlaylist = (key, value) => {
   } catch {
     // ignore storage errors
   }
-};
-
-const resolveMediaBase = () => {
-  const env = import.meta.env.VITE_MEDIA_BASE_URL || import.meta.env.VITE_API_TARGET || "";
-  if (env) {
-    return env.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
-  }
-
-  if (typeof window === "undefined") {
-    return "";
-  }
-
-  return `${window.location.protocol}//${window.location.hostname}:8000`;
-};
-
-const normalizeTrackSrc = (src) => {
-  if (!src || typeof src !== "string") return src;
-  if (/^(https?:)?\/\//i.test(src) || src.startsWith("blob:") || src.startsWith("data:")) {
-    return src;
-  }
-
-  if (src.startsWith("/media/")) {
-    if (import.meta.env.DEV) {
-      return src;
-    }
-
-    return `${resolveMediaBase()}${src}`;
-  }
-
-  return src;
 };
 
 export const PlayerProvider = ({ children }) => {
@@ -128,17 +99,6 @@ export const PlayerProvider = ({ children }) => {
   const chaplinRadioTracksRef = useRef(chaplinRadioTracks);
   const mutedRef = useRef(muted);
   const durationRef = useRef(duration);
-
-  const areSameSrc = (currentAudioSrc, nextSrc) => {
-    if (!currentAudioSrc || !nextSrc) return false;
-    try {
-      const currentUrl = new URL(currentAudioSrc, window.location.origin);
-      const nextUrl = new URL(nextSrc, window.location.origin);
-      return currentUrl.href === nextUrl.href;
-    } catch {
-      return currentAudioSrc === nextSrc;
-    }
-  };
 
   const isLocalOwner = useCallback(() => (
     !ENABLE_PLAYER_SYNC || !playbackOwnerRef.current || playbackOwnerRef.current === tabIdRef.current

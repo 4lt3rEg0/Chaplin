@@ -133,6 +133,10 @@ class User(Base):
     last_seen = Column(DateTime(timezone=True), nullable=True)
     presence_status = Column(String, default="online", nullable=False)  # "online" | "away" | "invisible"
     social_goal = Column(Text, nullable=False)
+    # What plays in this user's profile player when a visitor taps the ear icon.
+    # "all" (every public track) | "favorites" (only Track.is_favorited=True) |
+    # "radio" (the global Radio Chaplin source instead of personal tracks).
+    profile_playback_mode = Column(String, default="all", nullable=False)
     # JSON-encoded blob (theme/skin/background/visualizer settings). Kept as a single
     # column instead of one-per-field so the client's preference shape can evolve
     # without further schema migrations.
@@ -213,6 +217,9 @@ class Track(Base):
     # Chaplin Radio, awaiting a curator) | "approved" | "rejected". Submitting
     # never auto-adds to the chaplin_radio playlist — only a curator approval does.
     radio_status = Column(String, default="personal", nullable=False)
+    # Marked by the owner as a favorite — real playback effect (not cosmetic):
+    # gates which tracks play when profile_playback_mode == "favorites".
+    is_favorited = Column(Boolean, default=False, nullable=False)
 
     # Preserves the historical link to the audio Post it was backfilled from, if any.
     # Never used to duplicate or move the underlying media file.
@@ -370,6 +377,7 @@ class UserResponse(UserBase):
     avatar_url: Optional[str] = None
     role: str = "user"
     preferences: Optional[str] = None
+    profile_playback_mode: str = "all"
     follower_count: int = 0
     following_count: int = 0
     post_count: int = 0
@@ -396,6 +404,7 @@ class PublicUserResponse(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     role: str = "user"
+    profile_playback_mode: str = "all"
     follower_count: int = 0
     following_count: int = 0
     post_count: int = 0
@@ -520,6 +529,7 @@ class TrackResponse(BaseModel):
     duration: Optional[int] = None
     visibility: str
     radio_status: str = "personal"
+    is_favorited: bool = False
     source_post_id: Optional[int] = None
     created_at: datetime
 
@@ -537,6 +547,7 @@ class TrackUpdate(BaseModel):
     artwork_url: Optional[str] = None
     duration: Optional[int] = None
     visibility: Optional[str] = None
+    is_favorited: Optional[bool] = None
 
 
 class PlaylistResponse(BaseModel):
@@ -551,6 +562,15 @@ class PlaylistResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProfilePlaybackResponse(BaseModel):
+    """Resolved source for a profile's player: which mode is active and the
+    actual track list that mode plays, so the frontend never re-implements
+    the all/favorites/radio selection logic itself."""
+    mode: str  # "all" | "favorites" | "radio"
+    owner_username: str
+    tracks: List[TrackResponse] = []
 
 
 class PlaylistCreate(BaseModel):
@@ -794,6 +814,7 @@ def _serialize_user(user: "User", db: Session) -> UserResponse:
         avatar_url=user.avatar_url,
         role=user.role,
         preferences=user.preferences,
+        profile_playback_mode=user.profile_playback_mode,
         follower_count=_follower_count(db, user.id),
         following_count=_following_count(db, user.id),
         post_count=_post_count(db, user.id, public_only=False),
@@ -816,6 +837,7 @@ def _serialize_public_user(user: "User", viewer: Optional["User"], db: Session) 
         bio=user.bio,
         avatar_url=user.avatar_url,
         role=user.role,
+        profile_playback_mode=user.profile_playback_mode,
         follower_count=_follower_count(db, user.id),
         following_count=_following_count(db, user.id),
         post_count=_post_count(db, user.id, public_only=True),
@@ -1295,6 +1317,7 @@ def _serialize_track(track: "Track") -> TrackResponse:
         duration=track.duration,
         visibility=track.visibility,
         radio_status=track.radio_status,
+        is_favorited=track.is_favorited,
         source_post_id=track.source_post_id,
         created_at=track.created_at
     )
@@ -1534,6 +1557,8 @@ async def update_track(
         track.duration = payload.duration
     if payload.visibility is not None and payload.visibility in ("public", "private"):
         track.visibility = payload.visibility
+    if payload.is_favorited is not None:
+        track.is_favorited = payload.is_favorited
 
     db.commit()
     db.refresh(track)
@@ -1602,6 +1627,48 @@ async def get_user_profile_playlist(username: str, db: Session = Depends(get_db)
             created_at=datetime.utcnow(), tracks=[]
         )
     return _serialize_playlist(playlist, only_public_tracks=True)
+
+
+@api_router.get("/users/{username}/profile-playback", response_model=ProfilePlaybackResponse)
+async def get_profile_playback(username: str, db: Session = Depends(get_db)):
+    """Resolves what the visited profile's player should actually play, based
+    on the owner's profile_playback_mode — the frontend just renders whatever
+    track list comes back, it never re-decides the mode itself."""
+    owner = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    mode = owner.profile_playback_mode if owner.profile_playback_mode in ("all", "favorites", "radio") else "all"
+
+    if mode == "radio":
+        playlist = db.query(Playlist).filter(Playlist.kind == "chaplin_radio", Playlist.visibility == "public").first()
+        tracks = []
+        if playlist:
+            ordered_items = sorted(playlist.items, key=lambda item: item.position)
+            tracks = [
+                _serialize_track(item.track)
+                for item in ordered_items
+                if item.track and item.track.visibility == "public"
+            ]
+    elif mode == "favorites":
+        rows = (
+            db.query(Track)
+            .filter(Track.owner_id == owner.id, Track.visibility == "public", Track.is_favorited == True)
+            .order_by(Track.created_at.desc())
+            .all()
+        )
+        tracks = [_serialize_track(t) for t in rows]
+    else:
+        rows = (
+            db.query(Track)
+            .filter(Track.owner_id == owner.id, Track.visibility == "public")
+            .order_by(Track.created_at.desc())
+            .limit(200)
+            .all()
+        )
+        tracks = [_serialize_track(t) for t in rows]
+
+    return ProfilePlaybackResponse(mode=mode, owner_username=owner.username, tracks=tracks)
 
 
 @api_router.get("/playlists/chaplin-radio", response_model=PlaylistResponse)
@@ -2178,6 +2245,7 @@ async def update_user(
         preferences: Optional[str] = Form(None),
         role: Optional[str] = Form(None),
         presence_status: Optional[str] = Form(None),
+        profile_playback_mode: Optional[str] = Form(None),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
@@ -2195,6 +2263,10 @@ async def update_user(
         if role not in ("user", "artist"):
             raise HTTPException(status_code=422, detail="role debe ser 'user' o 'artist'")
         current_user.role = role
+    if profile_playback_mode is not None:
+        if profile_playback_mode not in ("all", "favorites", "radio"):
+            raise HTTPException(status_code=422, detail="profile_playback_mode debe ser 'all', 'favorites' o 'radio'")
+        current_user.profile_playback_mode = profile_playback_mode
     if preferences is not None:
         # Validate it's actually JSON before persisting, but store the raw string
         # so the client owns the shape of its own preferences blob. Copilot's
@@ -2374,6 +2446,8 @@ def startup():
         _ensure_column(connection, "users", "presence_status", "VARCHAR NOT NULL DEFAULT 'online'")
         _ensure_column(connection, "messages", "message_type", "VARCHAR NOT NULL DEFAULT 'text'")
         _ensure_column(connection, "tracks", "radio_status", "VARCHAR NOT NULL DEFAULT 'personal'")
+        _ensure_column(connection, "tracks", "is_favorited", "BOOLEAN NOT NULL DEFAULT 0")
+        _ensure_column(connection, "users", "profile_playback_mode", "VARCHAR NOT NULL DEFAULT 'all'")
         _ensure_index(connection, "ix_posts_media_url", "posts", "media_url")
         _ensure_index(connection, "ix_tracks_media_url", "tracks", "media_url")
         # post_likes/comment_likes/messages are brand-new tables — create_all()

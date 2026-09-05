@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { Heart, Music, Pause, Pin, PinOff, Play, Radio, Upload, Video, X } from 'lucide-react';
+import { Heart, Music, Pause, Pin, PinOff, Play, Radio, Star, Upload, Video, X } from 'lucide-react';
 import { useSkin } from '../context/SkinContext';
 import api from '../services/api';
 import { Z_INDEX } from '../styles/zIndexScale';
@@ -112,7 +112,7 @@ const LikeButton = styled.button`
 
 const TrackRow = styled.div`
   display: grid;
-  grid-template-columns: 36px 1fr auto;
+  grid-template-columns: 36px 1fr auto auto;
   align-items: center;
   gap: 10px;
   border: 1px solid ${({ $borderColor }) => $borderColor};
@@ -173,6 +173,21 @@ const PinBtn = styled.button`
   background: none;
   cursor: pointer;
   color: ${({ $pinned, $accentColor, theme }) => ($pinned ? $accentColor : theme.colors?.textSecondary || '#999')};
+  display: grid;
+  place-items: center;
+  padding: 6px;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const FavBtn = styled.button`
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: ${({ $favorited, $accentColor, theme }) => ($favorited ? $accentColor : theme.colors?.textSecondary || '#999')};
   display: grid;
   place-items: center;
   padding: 6px;
@@ -307,6 +322,7 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
   const audioRef = useRef(null);
   const [profilePlaylist, setProfilePlaylist] = useState(null);
   const [pinBusyId, setPinBusyId] = useState(null);
+  const [favBusyId, setFavBusyId] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadFile, setUploadFile] = useState(null);
@@ -377,6 +393,17 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
       setProfilePlaylist(data);
     } finally {
       setPinBusyId(null);
+    }
+  };
+
+  const toggleFavorite = async (track) => {
+    if (favBusyId) return;
+    setFavBusyId(track.id);
+    try {
+      const { data } = await api.put(`/tracks/${track.id}`, { is_favorited: !track.is_favorited });
+      setTracks((prev) => prev.map((t) => (t.id === track.id ? data : t)));
+    } finally {
+      setFavBusyId(null);
     }
   };
 
@@ -564,6 +591,18 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
                       </TrackMeta>
                     )}
                   </div>
+                  {isOwnProfile && (
+                    <FavBtn
+                      type="button"
+                      $favorited={track.is_favorited}
+                      $accentColor={accentColor}
+                      disabled={favBusyId === track.id}
+                      onClick={() => toggleFavorite(track)}
+                      title={track.is_favorited ? 'Quitar de favoritas' : 'Marcar como favorita'}
+                    >
+                      <Star size={14} fill={track.is_favorited ? accentColor : 'none'} />
+                    </FavBtn>
+                  )}
                   {isOwnProfile && (
                     <PinBtn
                       type="button"

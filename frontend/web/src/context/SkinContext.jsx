@@ -52,6 +52,9 @@ export const SkinProvider = ({ children }) => {
   const [layoutOpacity, setLayoutOpacity] = useState(
     Number(localStorage.getItem('chaplin_layout_opacity') || '0.92')
   );
+  const [playerSkinId, setPlayerSkinId] = useState(
+    localStorage.getItem('chaplin_player_skin_id') || 'daw'
+  );
 
   const [animations, setAnimations] = useState(
     localStorage.getItem('chaplin_fx') !== 'off'
@@ -117,6 +120,9 @@ export const SkinProvider = ({ children }) => {
               setLayoutOpacity(Math.max(0.1, Math.min(1, nextOpacity)));
             }
           }
+          if (typeof data.player_skin_id === 'string' && data.player_skin_id) {
+            setPlayerSkinId(data.player_skin_id);
+          }
         }
       } catch (err) {
         console.log("No theme loaded (user not logged?)");
@@ -156,7 +162,8 @@ export const SkinProvider = ({ children }) => {
           shape_language_id: shapeId,
           visual_density: density,
           ornament_level: ornament,
-          material_intensity: materialIntensity
+          material_intensity: materialIntensity,
+          player_skin_id: playerSkinId
         });
       } catch (err) {
         console.log("Theme not saved (not logged?)");
@@ -186,6 +193,7 @@ export const SkinProvider = ({ children }) => {
     localStorage.setItem('chaplin_density', density);
     localStorage.setItem('chaplin_ornament', String(ornament));
     localStorage.setItem('chaplin_material_intensity', String(materialIntensity));
+    localStorage.setItem('chaplin_player_skin_id', playerSkinId);
 
   }, [
     skinId,
@@ -209,6 +217,7 @@ export const SkinProvider = ({ children }) => {
     density,
     ornament,
     materialIntensity,
+    playerSkinId,
     loadedFromBackend,
     isPreviewingTheme
   ]);
@@ -236,13 +245,14 @@ export const SkinProvider = ({ children }) => {
     fontUi: setFontUi,
     fontMono: setFontMono,
     layoutOpacity: setLayoutOpacity,
-    animations: setAnimations
+    animations: setAnimations,
+    playerSkinId: setPlayerSkinId
   };
   const themeFieldValues = {
     skinId, accentColor, secondaryAccent, themeVariant, materialId, hudId,
     layoutId, typographyId, shapeId, density, ornament, materialIntensity,
     layoutBackground, layoutBorder, layoutText, fontPrimary, fontSecondary,
-    fontUi, fontMono, layoutOpacity, animations
+    fontUi, fontMono, layoutOpacity, animations, playerSkinId
   };
 
   const beginThemePreview = () => {
@@ -389,6 +399,8 @@ export const SkinProvider = ({ children }) => {
     setAnimations,
     skins: THEME_PRESETS,
     appTheme,
+    playerSkinId,
+    setPlayerSkinId,
     isPreviewingTheme,
     beginThemePreview,
     cancelThemePreview,
@@ -418,6 +430,7 @@ export const SkinProvider = ({ children }) => {
     materialIntensity,
     animations,
     appTheme,
+    playerSkinId,
     isPreviewingTheme
   ]);
 
