@@ -2,21 +2,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Check, Headphones, Image as ImageIcon, LayoutGrid, LogOut,
-  Palette, User as UserIcon, Wand2, X
+  ArrowLeft, Check, Headphones, LogOut, Palette, User as UserIcon, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
 import { useVortex } from '../context/VortexContext';
 import api, { uploadProfileMusic } from '../services/api';
 import { updateTheme } from '../services/themeService';
-import BackgroundConfigurator from '../components/BackgroundConfigurator';
-import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/playerSkins';
-import {
-  resolveShapeClipPath,
-  resolveShapeRadius,
-  resolveWidgetRadius
-} from '../styles/hudTokens';
+import { PLAYER_SKIN_LIST } from '../components/ProfilePlayer/playerSkins';
+import AppearanceDemo from '../components/AppearanceStudio/AppearanceDemo';
+import LayoutThumb from '../components/AppearanceStudio/LayoutThumb';
+import BackgroundThumb from '../components/AppearanceStudio/BackgroundThumb';
+import { BACKGROUND_CATALOG } from '../components/AppearanceStudio/backgroundCatalog';
+import { resolveWidgetRadius } from '../styles/hudTokens';
 
 const Wrapper = styled.div`
   background: ${({ theme }) => theme.gradients.page};
@@ -165,31 +163,6 @@ const CheckRow = styled.label`
   margin-bottom: 10px;
 `;
 
-const ChoiceGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
-  gap: 8px;
-`;
-
-const ChoiceCard = styled.button.attrs((props) => ({ 'data-shape': props.$shape || 'rounded' }))`
-  min-height: 76px;
-  border: 1px solid ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.border)};
-  border-radius: ${({ theme, $shape }) => resolveShapeRadius($shape, theme.card?.radius || '10px')};
-  clip-path: ${({ $shape }) => resolveShapeClipPath($shape)};
-  padding: 10px;
-  color: ${({ theme }) => theme.colors.text};
-  background: ${({ theme }) => theme.card?.bg || theme.gradients.panel};
-  box-shadow: ${({ theme, $active }) => ($active ? `inset 0 0 0 1px ${theme.colors.primary}` : 'none')};
-  cursor: pointer;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-
-  strong { font-size: 12px; display: block; }
-  span { font-size: 10px; opacity: 0.7; display: block; margin-top: 4px; }
-`;
-
 const Btn = styled.button`
   border: 1px solid ${({ theme }) => theme.colors.borderStrong};
   background: ${({ theme }) => theme.colors.accentSoft};
@@ -211,28 +184,6 @@ const GhostBtn = styled(Btn)`
   background: transparent;
 `;
 
-const PreviewBar = styled.div`
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: ${({ theme }) => theme.colors.primary}22;
-  border: 1px solid ${({ theme }) => theme.colors.primary};
-  border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  font-size: 12px;
-  flex-wrap: wrap;
-`;
-
-const RowButtons = styled.div`
-  display: flex;
-  gap: 8px;
-`;
-
 const StatusText = styled.span`
   font-size: 12px;
   color: ${({ theme }) => theme.colors.textSecondary};
@@ -245,532 +196,309 @@ const TABS = [
   { id: 'cuenta', label: 'Cuenta', icon: UserIcon }
 ];
 
-const InnerTabNav = styled.div`
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-`;
-
-const InnerTabButton = styled.button`
-  border: 1px solid ${({ $active, theme }) => ($active ? (theme.colors.primary || theme.colors.borderStrong) : theme.colors.border)};
-  background: ${({ $active, theme }) => ($active ? (theme.colors.accentSoft || 'rgba(255,255,255,0.08)') : 'transparent')};
-  color: ${({ theme }) => theme.colors.text};
-  border-radius: 999px;
-  padding: 6px 12px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  white-space: nowrap;
-  flex-shrink: 0;
-`;
-
-const APARIENCIA_INNER_TABS = [
-  { id: 'temas', label: 'Temas', icon: Palette },
-  { id: 'layouts', label: 'Layouts', icon: LayoutGrid },
-  { id: 'fondos', label: 'Fondos', icon: ImageIcon },
-  { id: 'slides', label: 'Slides de preview', icon: Wand2 }
+const FONT_OPTIONS = [
+  { id: '', label: 'Recomendada por tema' },
+  { id: "'Segoe UI', sans-serif", label: 'Segoe UI (moderna)' },
+  { id: "'Georgia', serif", label: 'Georgia (editorial)' },
+  { id: "'Consolas', monospace", label: 'Consolas (técnica)' },
+  { id: "'Trebuchet MS', sans-serif", label: 'Trebuchet (suave)' },
+  { id: "'Arial Narrow', sans-serif", label: 'Arial Narrow (compacta)' },
+  { id: "'Courier New', monospace", label: 'Courier (máquina de escribir)' },
+  { id: "'Comic Sans MS', sans-serif", label: 'Comic Sans (juguetona)' }
 ];
 
-/* ============== Apariencia: sesión de preview unificada ============== */
-/* Envuelve Temas/Layouts/Fondos/Slides en UN solo ciclo de preview
-   (tema + fondo a la vez), con un único Cancelar/Aplicar arriba — así
-   cambiar de sub-pestaña no rompe ni duplica la sesión de previsualización. */
+const buildAppearanceSnapshot = (skin, vortex) => ({
+  skinId: skin.skinId,
+  accentColor: skin.accentColor,
+  secondaryAccent: skin.secondaryAccent || '#7ee8ff',
+  themeVariant: skin.themeVariant,
+  animations: skin.animations,
+  layoutId: skin.layoutId || skin.appTheme?.profile?.layout?.id || 'balanced',
+  fontPrimary: skin.fontPrimary || '',
+  textColor: skin.layoutText || '',
+  playerSkinId: skin.playerSkinId,
+  backgroundStyle: vortex.backgroundStyle,
+  finishType: vortex.finishType,
+  vortexColor: vortex.vortexColor
+});
+
+const StudioGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const DemoCol = styled.div`
+  position: sticky;
+  top: 60px;
+
+  @media (max-width: 900px) {
+    position: static;
+    order: -1;
+  }
+`;
+
+const ConfigCol = styled.div`
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+`;
+
+const StudioSection = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+const StudioSectionTitle = styled.h3`
+  margin: 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: ${({ theme }) => theme.colors.textSecondary};
+`;
+
+const CatalogGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  max-height: ${({ $scroll }) => ($scroll ? '340px' : 'none')};
+  overflow-y: ${({ $scroll }) => ($scroll ? 'auto' : 'visible')};
+  padding-right: ${({ $scroll }) => ($scroll ? '4px' : '0')};
+`;
+
+const CatalogCard = styled.button`
+  border: 2px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #05070b;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  box-shadow: ${({ $active, theme }) => ($active ? `0 0 0 2px ${theme.colors.primary}55` : 'none')};
+`;
+
+const CatalogThumbBox = styled.div`
+  width: 100%;
+  aspect-ratio: 4 / 3;
+`;
+
+const CatalogLabel = styled.span`
+  font-size: 10px;
+  padding: 5px 6px;
+  color: ${({ theme }) => theme.colors.text};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const ThemeSwatch = styled.div`
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: ${({ $bg }) => $bg};
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: ${({ $accent }) => $accent};
+    box-shadow: 0 0 6px ${({ $accent }) => $accent};
+  }
+`;
+
+const PlayerSkinCardWrap = styled.div`
+  transform: scale(0.82);
+  transform-origin: top left;
+  width: 122%;
+  pointer-events: none;
+`;
+
+const StudioActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+`;
+
 function AparienciaSection() {
   const skin = useSkin();
   const vortex = useVortex();
-  const [innerTab, setInnerTab] = useState('temas');
+  const savedRef = useRef(buildAppearanceSnapshot(skin, vortex));
+  const [draft, setDraft] = useState(savedRef.current);
   const [saveStatus, setSaveStatus] = useState('idle');
-  const committedRef = useRef(false);
 
-  useEffect(() => {
-    skin.beginThemePreview();
-    vortex.beginVortexPreview();
-    committedRef.current = false;
-    return () => {
-      if (!committedRef.current) {
-        skin.cancelThemePreview();
-        vortex.cancelVortexPreview();
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(savedRef.current);
 
-  // Re-arms a fresh preview session immediately after Aplicar/Cancelar so the
-  // tab stays continuously previewable for as long as it's open — only truly
-  // leaving Apariencia (unmount) ends the session without a new one.
-  const rearm = () => {
-    skin.beginThemePreview();
-    vortex.beginVortexPreview();
-    committedRef.current = false;
+  const patch = (fields) => {
+    setDraft((prev) => ({ ...prev, ...fields }));
+    setSaveStatus('idle');
   };
 
   const handleApply = () => {
     setSaveStatus('saving');
-    skin.commitThemePreview();
-    vortex.commitVortexPreview();
-    committedRef.current = true;
+    skin.setSkinId(draft.skinId);
+    skin.setAccentColor(draft.accentColor);
+    skin.setSecondaryAccent(draft.secondaryAccent);
+    skin.setThemeVariant(draft.themeVariant);
+    skin.setAnimations(draft.animations);
+    skin.setLayoutId(draft.layoutId);
+    skin.setLayoutText(draft.textColor);
+    skin.setFontPrimary(draft.fontPrimary);
+    skin.setFontSecondary(draft.fontPrimary);
+    skin.setFontUi(draft.fontPrimary);
+    skin.setPlayerSkinId(draft.playerSkinId);
+    vortex.setBackgroundStyle(draft.backgroundStyle);
+    vortex.setFinishType(draft.finishType);
+    vortex.setVortexColor(draft.vortexColor);
+    savedRef.current = draft;
     setSaveStatus('saved');
-    rearm();
   };
 
   const handleCancel = () => {
-    skin.cancelThemePreview();
-    vortex.cancelVortexPreview();
-    committedRef.current = true;
-    setInnerTab('temas');
-    rearm();
+    setDraft(savedRef.current);
+    setSaveStatus('idle');
   };
+
+  const themeOptions = Object.values(skin.skins || {});
+  const layoutOptions = Object.values(skin.layoutCompositions || {});
 
   return (
     <>
-      {skin.isPreviewingTheme && (
-        <PreviewBar>
-          <span>Estás previsualizando temas, layouts, fondos y skin del reproductor. Nada se guarda todavía.</span>
-          <RowButtons>
-            <GhostBtn type="button" onClick={handleCancel}>
+      <SectionTitle>Apariencia</SectionTitle>
+      <SectionSub>
+        Layout, tema, fondo, fuente, colores y el reproductor de tu perfil, todo en un mismo configurador —
+        la demo de al lado se actualiza al instante con la combinación completa. Nada se guarda hasta pulsar Aplicar.
+      </SectionSub>
+
+      <StudioGrid>
+        <ConfigCol>
+          <StudioSection>
+            <StudioSectionTitle>Layout</StudioSectionTitle>
+            <CatalogGrid>
+              {layoutOptions.map((layout) => (
+                <CatalogCard key={layout.id} type="button" $active={draft.layoutId === layout.id} onClick={() => patch({ layoutId: layout.id })}>
+                  <CatalogThumbBox>
+                    <LayoutThumb archetype={layout.desktop} colorA={draft.accentColor} colorB={draft.secondaryAccent} />
+                  </CatalogThumbBox>
+                  <CatalogLabel>{layout.name}</CatalogLabel>
+                </CatalogCard>
+              ))}
+            </CatalogGrid>
+          </StudioSection>
+
+          <StudioSection>
+            <StudioSectionTitle>Tema</StudioSectionTitle>
+            <CatalogGrid>
+              {themeOptions.map((preset) => (
+                <CatalogCard
+                  key={preset.id}
+                  type="button"
+                  $active={draft.skinId === preset.id}
+                  onClick={() => patch({ skinId: preset.id, accentColor: preset.accent })}
+                >
+                  <ThemeSwatch $bg={preset.background || '#111'} $accent={preset.accent} />
+                  <CatalogLabel>{preset.name}</CatalogLabel>
+                </CatalogCard>
+              ))}
+            </CatalogGrid>
+          </StudioSection>
+
+          <StudioSection>
+            <StudioSectionTitle>Fondo</StudioSectionTitle>
+            <CatalogGrid $scroll>
+              {BACKGROUND_CATALOG.map((bg) => (
+                <CatalogCard key={bg.id} type="button" $active={draft.backgroundStyle === bg.id} onClick={() => patch({ backgroundStyle: bg.id })}>
+                  <CatalogThumbBox><BackgroundThumb id={bg.id} /></CatalogThumbBox>
+                  <CatalogLabel>{bg.label}</CatalogLabel>
+                </CatalogCard>
+              ))}
+            </CatalogGrid>
+          </StudioSection>
+
+          <StudioSection>
+            <StudioSectionTitle>Fuente y colores</StudioSectionTitle>
+            <FieldGroup>
+              <Label>Fuente</Label>
+              <Select value={draft.fontPrimary} onChange={(e) => patch({ fontPrimary: e.target.value })}>
+                {FONT_OPTIONS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+              </Select>
+            </FieldGroup>
+            <FieldGroup>
+              <Label>Color primario</Label>
+              <Input type="color" value={draft.accentColor} onChange={(e) => patch({ accentColor: e.target.value })} />
+              {' '}
+              <Label style={{ display: 'inline-block', marginLeft: 12 }}>Color secundario</Label>
+              <Input type="color" value={draft.secondaryAccent} onChange={(e) => patch({ secondaryAccent: e.target.value })} />
+              {' '}
+              <Label style={{ display: 'inline-block', marginLeft: 12 }}>Color de texto</Label>
+              <Input type="color" value={draft.textColor || '#ffffff'} onChange={(e) => patch({ textColor: e.target.value })} />
+            </FieldGroup>
+            <FieldGroup>
+              <CheckRow>
+                <input type="checkbox" checked={draft.animations} onChange={(e) => patch({ animations: e.target.checked })} />
+                Fondo animado activo
+              </CheckRow>
+            </FieldGroup>
+          </StudioSection>
+
+          <StudioSection>
+            <StudioSectionTitle>Skin del reproductor de perfil</StudioSectionTitle>
+            <CatalogGrid>
+              {PLAYER_SKIN_LIST.map((option) => {
+                const SkinComp = option.component;
+                return (
+                  <CatalogCard key={option.id} type="button" $active={draft.playerSkinId === option.id} onClick={() => patch({ playerSkinId: option.id })}>
+                    <CatalogThumbBox style={{ background: '#0a0a10', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+                      <PlayerSkinCardWrap>
+                        <SkinComp
+                          track={{ title: 'Demo', owner_username: 'tu' }}
+                          mode="all"
+                          modeLabel=""
+                          isActive={false}
+                          isPlaying={false}
+                          hasQueue={false}
+                          onToggleEar={() => {}}
+                          onPrev={() => {}}
+                          onNext={() => {}}
+                          ariaLabel="preview"
+                        />
+                      </PlayerSkinCardWrap>
+                    </CatalogThumbBox>
+                    <CatalogLabel>{option.label}</CatalogLabel>
+                  </CatalogCard>
+                );
+              })}
+            </CatalogGrid>
+          </StudioSection>
+        </ConfigCol>
+
+        <DemoCol>
+          <AppearanceDemo draft={draft} />
+          <StudioActions>
+            <GhostBtn type="button" onClick={handleCancel} disabled={!isDirty}>
               <X size={14} /> Cancelar
             </GhostBtn>
-            <Btn type="button" onClick={handleApply}>
+            <Btn type="button" onClick={handleApply} disabled={!isDirty}>
               <Check size={14} /> Aplicar cambios
             </Btn>
-          </RowButtons>
-        </PreviewBar>
-      )}
-
-      <SectionTitle>Apariencia</SectionTitle>
-      <SectionSub>Temas, layouts, fondos y el skin del reproductor de perfil viven juntos aquí — pruébalos y confirma o cancela una sola vez.</SectionSub>
-
-      <InnerTabNav>
-        {APARIENCIA_INNER_TABS.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <InnerTabButton key={tab.id} type="button" $active={innerTab === tab.id} onClick={() => setInnerTab(tab.id)}>
-              <Icon size={12} /> {tab.label}
-            </InnerTabButton>
-          );
-        })}
-      </InnerTabNav>
-
-      {innerTab === 'temas' && <TemasPanel />}
-      {innerTab === 'layouts' && <LayoutsPanel />}
-      {innerTab === 'fondos' && <FondosPanel />}
-      {innerTab === 'slides' && <SlidesPanel />}
-
-      {saveStatus === 'saved' && <StatusText>Guardado.</StatusText>}
+          </StudioActions>
+          {saveStatus === 'saved' && <StatusText>Guardado.</StatusText>}
+        </DemoCol>
+      </StudioGrid>
     </>
-  );
-}
-
-function TemasPanel() {
-  const {
-    skinId, setSkinId, skins,
-    accentColor, setAccentColor,
-    secondaryAccent, setSecondaryAccent,
-    themeVariant, setThemeVariant, themeVariants,
-    materialId, setMaterialId, materials,
-    hudId, setHudId, hudGrammars,
-    typographyId, setTypographyId, typographyProfiles,
-    shapeId, setShapeId,
-    density, setDensity,
-    ornament, setOrnament,
-    materialIntensity, setMaterialIntensity,
-    layoutOpacity, setLayoutOpacity,
-    animations, setAnimations
-  } = useSkin();
-
-  const variantOptions = Object.values(themeVariants || {});
-
-  return (
-    <>
-      <FieldGroup>
-        <Label>Tema base</Label>
-        <Select value={skinId} onChange={(e) => setSkinId(e.target.value)}>
-          {Object.values(skins).map((skin) => (
-            <option key={skin.id} value={skin.id}>{skin.name} — {skin.tagline}</option>
-          ))}
-        </Select>
-      </FieldGroup>
-
-      <FieldGroup>
-        <Label>Variante / textura</Label>
-        <Select value={themeVariant} onChange={(e) => setThemeVariant(e.target.value)}>
-          {variantOptions.map((variant) => (
-            <option key={variant.id} value={variant.id}>{variant.name} — {variant.texture}</option>
-          ))}
-        </Select>
-      </FieldGroup>
-
-      <FieldGroup>
-        <Label>Color de acento</Label>
-        <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} />
-      </FieldGroup>
-
-      <FieldGroup>
-        <Label>Acento secundario</Label>
-        <Input type="color" value={secondaryAccent || '#7ee8ff'} onChange={(e) => setSecondaryAccent(e.target.value)} />
-      </FieldGroup>
-
-      <FieldGroup>
-        <CheckRow>
-          <input type="checkbox" checked={animations} onChange={(e) => setAnimations(e.target.checked)} />
-          Fondo animado activo
-        </CheckRow>
-      </FieldGroup>
-
-      <details>
-        <summary style={{ cursor: 'pointer', marginBottom: 12 }}>Avanzado</summary>
-
-        <FieldGroup>
-          <Label>Superficie / material</Label>
-          <ChoiceGrid>
-            {Object.values(materials || {}).map((material) => (
-              <ChoiceCard type="button" key={material.id} $active={materialId === material.id} onClick={() => setMaterialId(material.id)}>
-                <strong>{material.name}</strong>
-                <span>{material.family}</span>
-              </ChoiceCard>
-            ))}
-          </ChoiceGrid>
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>HUD</Label>
-          <ChoiceGrid>
-            {Object.values(hudGrammars || {}).map((hud) => (
-              <ChoiceCard type="button" key={hud.id} $active={hudId === hud.id} onClick={() => setHudId(hud.id)}>
-                <strong>{hud.name}</strong>
-                <span>{hud.density}</span>
-              </ChoiceCard>
-            ))}
-          </ChoiceGrid>
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>Perfil tipográfico</Label>
-          <Select value={typographyId} onChange={(e) => setTypographyId(e.target.value)}>
-            <option value="">Recomendado por tema</option>
-            {Object.values(typographyProfiles || {}).map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}
-          </Select>
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>Lenguaje de forma</Label>
-          <Select value={shapeId} onChange={(e) => setShapeId(e.target.value)}>
-            <option value="">Recomendado por tema</option>
-            {['rounded', 'squircle', 'sharp', 'chamfer', 'pill', 'organic', 'faceted', 'oval'].map((shape) => <option key={shape} value={shape}>{shape}</option>)}
-          </Select>
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>Densidad</Label>
-          <Select value={density} onChange={(e) => setDensity(e.target.value)}>
-            <option value="">Recomendada por tema</option>
-            <option value="airy">Airy</option>
-            <option value="balanced">Balanced</option>
-            <option value="compact">Compact</option>
-          </Select>
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>Ornamento ({ornament})</Label>
-          <input type="range" min="0" max="3" step="1" value={ornament} onChange={(e) => setOrnament(Number(e.target.value))} style={{ width: '100%', maxWidth: 360 }} />
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>Intensidad material ({Math.round(materialIntensity * 100)}%)</Label>
-          <input type="range" min="0" max="1" step="0.01" value={materialIntensity} onChange={(e) => setMaterialIntensity(Number(e.target.value))} style={{ width: '100%', maxWidth: 360 }} />
-        </FieldGroup>
-
-        <FieldGroup>
-          <Label>Transparencia de layout ({Math.round(layoutOpacity * 100)}%)</Label>
-          <input type="range" min="0.1" max="1" step="0.01" value={layoutOpacity} onChange={(e) => setLayoutOpacity(Number(e.target.value))} style={{ width: '100%', maxWidth: 360 }} />
-        </FieldGroup>
-      </details>
-    </>
-  );
-}
-
-function LayoutsPanel() {
-  const { layoutId, setLayoutId, layoutCompositions, appTheme } = useSkin();
-
-  return (
-    <>
-      <SectionSub>La composición de tarjetas y estructura visual del perfil.</SectionSub>
-      <ChoiceGrid>
-        {Object.values(layoutCompositions || {}).map((layoutOption) => (
-          <ChoiceCard
-            type="button"
-            key={layoutOption.id}
-            $active={(layoutId || appTheme.profile?.layout?.id) === layoutOption.id}
-            onClick={() => setLayoutId(layoutOption.id)}
-          >
-            <strong>{layoutOption.name}</strong>
-            <span>{layoutOption.mobile}</span>
-          </ChoiceCard>
-        ))}
-      </ChoiceGrid>
-    </>
-  );
-}
-
-function FondosPanel() {
-  return (
-    <>
-      <SectionSub>El fondo animado de toda la app.</SectionSub>
-      <BackgroundConfigurator />
-    </>
-  );
-}
-
-/* ============== Slides de preview ============== */
-/* Curated preset combos (theme + layout + fondo + player skin) the user can
-   browse like a carousel and try live — all through the same preview session
-   AparienciaSection already opened, so Cancelar/Aplicar there covers this too. */
-const PRESET_SLIDES = [
-  {
-    id: 'chrome-y2k',
-    name: 'Y2K Chrome',
-    description: 'El clásico Chaplin: cromados, acento cian, fondo de vórtice.',
-    skinId: 'y2k', themeVariant: 'default', accentColor: '#7ee8ff', secondaryAccent: '#ff8ad8',
-    layoutId: 'classic', playerSkinId: 'daw',
-    vortex: { backgroundStyle: 'video01', finishType: 'pearlescent' }
-  },
-  {
-    id: 'cyberpunk-neon',
-    name: 'Cyberpunk Neon',
-    description: 'Contraste alto, magenta/verde ácido, HUD denso.',
-    skinId: 'cyberpunk', themeVariant: 'default', accentColor: '#ff2fd0', secondaryAccent: '#39ff88',
-    layoutId: 'grid', playerSkinId: 'blender3d',
-    vortex: { backgroundStyle: 'video02', finishType: 'glossy' }
-  },
-  {
-    id: 'retro-ipod',
-    name: 'MP3 Retro',
-    description: 'Paleta pastel, formas suaves, reproductor estilo iPod.',
-    skinId: 'chrome', themeVariant: 'soft', accentColor: '#ffb997', secondaryAccent: '#c9f2ff',
-    layoutId: 'classic', playerSkinId: 'ipod',
-    vortex: { backgroundStyle: 'sphere', finishType: 'chrome' }
-  },
-  {
-    id: 'hud-3d',
-    name: 'HUD 3D',
-    description: 'Rejillas neón y aire retro-futurista, consola de audio.',
-    skinId: 'void4d', themeVariant: 'default', accentColor: '#00e5ff', secondaryAccent: '#ff00c8',
-    layoutId: 'grid', playerSkinId: 'blender3d',
-    vortex: { backgroundStyle: 'video04', finishType: 'pearlescent' }
-  }
-];
-
-const SlideShell = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 14px;
-  padding: 16px;
-  background: ${({ theme }) => theme.gradients?.panel || theme.card?.bg};
-`;
-
-const SlideNav = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-`;
-
-const SlideDots = styled.div`
-  display: flex;
-  gap: 6px;
-`;
-
-const SlideDot = styled.button`
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
-`;
-
-const MockComposition = styled.div`
-  display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 12px;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.04)'};
-  margin-bottom: 12px;
-
-  @media (max-width: 480px) {
-    grid-template-columns: 48px 1fr;
-  }
-`;
-
-const MockAvatar = styled.div`
-  width: 64px;
-  height: 64px;
-  border-radius: ${({ theme }) => theme.card?.radius || '50%'};
-  background: ${({ theme }) => theme.gradients?.chrome || theme.colors.accentSoft};
-
-  @media (max-width: 480px) {
-    width: 48px;
-    height: 48px;
-  }
-`;
-
-const MockName = styled.div`
-  font-weight: 700;
-  font-size: 15px;
-  margin-bottom: 4px;
-`;
-
-const MockBio = styled.div`
-  font-size: 12px;
-  opacity: 0.7;
-`;
-
-const MockCardRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 12px;
-`;
-
-const MockCard = styled.div`
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 10px;
-  padding: 10px;
-  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.04)'};
-  font-size: 11px;
-`;
-
-const SkinChoiceRow = styled.div`
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-`;
-
-const SkinChoiceBtn = styled.button`
-  border: 1px solid ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
-  background: ${({ $active, theme }) => ($active ? theme.colors.accentSoft : 'transparent')};
-  color: ${({ theme }) => theme.colors.text};
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-`;
-
-const SlideFooter = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-`;
-
-const DEMO_TRACK = { title: 'Vista previa', owner_username: 'tu_perfil', artwork_url: null };
-
-function SlidesPanel() {
-  const {
-    setSkinId, setThemeVariant,
-    accentColor, setAccentColor, secondaryAccent, setSecondaryAccent, setLayoutId,
-    playerSkinId, setPlayerSkinId
-  } = useSkin();
-  const { setBackgroundStyle, setFinishType } = useVortex();
-  const [slideIndex, setSlideIndex] = useState(0);
-
-  const slide = PRESET_SLIDES[slideIndex];
-  const SkinComponent = (PLAYER_SKINS[playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN]).component;
-
-  const applyPreset = (preset) => {
-    setSkinId(preset.skinId);
-    setThemeVariant(preset.themeVariant);
-    setAccentColor(preset.accentColor);
-    setSecondaryAccent(preset.secondaryAccent);
-    setLayoutId(preset.layoutId);
-    setPlayerSkinId(preset.playerSkinId);
-    if (preset.vortex?.backgroundStyle) setBackgroundStyle(preset.vortex.backgroundStyle);
-    if (preset.vortex?.finishType) setFinishType(preset.vortex.finishType);
-  };
-
-  return (
-    <SlideShell>
-      <SlideNav>
-        <GhostBtn type="button" onClick={() => setSlideIndex((i) => (i - 1 + PRESET_SLIDES.length) % PRESET_SLIDES.length)}>
-          ‹ Anterior
-        </GhostBtn>
-        <SlideDots>
-          {PRESET_SLIDES.map((s, i) => (
-            <SlideDot key={s.id} type="button" $active={i === slideIndex} onClick={() => setSlideIndex(i)} aria-label={`Slide ${i + 1}`} />
-          ))}
-        </SlideDots>
-        <GhostBtn type="button" onClick={() => setSlideIndex((i) => (i + 1) % PRESET_SLIDES.length)}>
-          Siguiente ›
-        </GhostBtn>
-      </SlideNav>
-
-      <SectionTitle>{slide.name}</SectionTitle>
-      <SectionSub>{slide.description}</SectionSub>
-
-      <MockComposition>
-        <MockAvatar />
-        <div>
-          <MockName>Vista previa de composición</MockName>
-          <MockBio>Así lucirían tu nombre, bio y avatar con esta combinación.</MockBio>
-        </div>
-      </MockComposition>
-
-      <MockCardRow>
-        <MockCard>Publicación</MockCard>
-        <MockCard>Tarjeta</MockCard>
-        <MockCard>Metadato</MockCard>
-      </MockCardRow>
-
-      <FieldGroup>
-        <Label>Skin del reproductor de perfil</Label>
-        <SkinChoiceRow>
-          {PLAYER_SKIN_LIST.map((option) => (
-            <SkinChoiceBtn
-              key={option.id}
-              type="button"
-              $active={playerSkinId === option.id}
-              onClick={() => setPlayerSkinId(option.id)}
-            >
-              {option.label}
-            </SkinChoiceBtn>
-          ))}
-        </SkinChoiceRow>
-        <SkinComponent
-          track={DEMO_TRACK}
-          mode="all"
-          modeLabel="Vista previa"
-          isActive={false}
-          isPlaying={false}
-          hasQueue={false}
-          onToggleEar={() => {}}
-          onPrev={() => {}}
-          onNext={() => {}}
-          ariaLabel="Vista previa del reproductor"
-        />
-      </FieldGroup>
-
-      <FieldGroup>
-        <Label>Color primario</Label>
-        <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} />
-        {' '}
-        <Label style={{ display: 'inline-block', marginLeft: 12 }}>Color secundario</Label>
-        <Input type="color" value={secondaryAccent || '#7ee8ff'} onChange={(e) => setSecondaryAccent(e.target.value)} />
-      </FieldGroup>
-
-      <SlideFooter>
-        <StatusText>Slide {slideIndex + 1} de {PRESET_SLIDES.length}</StatusText>
-        <Btn type="button" onClick={() => applyPreset(slide)}>
-          <Wand2 size={14} /> Probar este estilo
-        </Btn>
-      </SlideFooter>
-    </SlideShell>
   );
 }
 

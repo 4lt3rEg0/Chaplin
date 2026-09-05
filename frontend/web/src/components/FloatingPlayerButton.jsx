@@ -192,7 +192,7 @@ const fmtTime = (value) => {
   return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 };
 
-export default function FloatingPlayerButton({ mobilePreviewMode = false, hideFab = false }) {
+export default function FloatingPlayerButton({ mobilePreviewMode = false }) {
   const [expanded, setExpanded] = useSyncedLocalState("chaplin_player_panel_expanded", false);
   const [manuallyCollapsedDuringPlayback, setManuallyCollapsedDuringPlayback] = useSyncedLocalState("chaplin_player_panel_hidden", false);
   const [floatingMode, setFloatingMode] = useSyncedLocalState("chaplin_floating_mode", "fixed");
@@ -316,7 +316,7 @@ export default function FloatingPlayerButton({ mobilePreviewMode = false, hideFa
 
   return (
     <>
-      {!showPanel && !hideFab && (
+      {!showPanel && (
         <Fab
           type="button"
           onClick={() => {
