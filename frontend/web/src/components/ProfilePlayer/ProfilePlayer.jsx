@@ -4,7 +4,7 @@ import api from '../../services/api';
 import { usePlayer } from '../../context/PlayerContext';
 import { useSkin } from '../../context/SkinContext';
 import { normalizeTrackSrc, areSameSrc } from '../../utils/mediaUrl';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN } from './playerSkins';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './skins';
 
 const MODE_LABELS = {
   all: 'Reproduciendo toda la música',
@@ -27,6 +27,12 @@ const Wrapper = styled.div`
  * global player is doing. `previousPlaybackSnapshotRef` is the only bridge
  * back to the global player: it remembers exactly what to restore once the
  * profile listening session ends.
+ *
+ * "Profile listening" (isActive, toggled by the ear/LISTEN control) and
+ * "playing" (isPlaying, toggled by the skin's own play/pause transport) are
+ * deliberately separate: a skin's play/pause button can pause the profile's
+ * own audio without handing playback back to the global player — only the
+ * ear control fully engages/disengages the handoff.
  */
 export default function ProfilePlayer({ username }) {
   const {
@@ -37,17 +43,21 @@ export default function ProfilePlayer({ username }) {
     play: playGlobal,
     setVolume: setGlobalVolume
   } = usePlayer();
-  const { playerSkinId } = useSkin();
+  const { playerSkinId, playerColorMode, playerCustomPalettes, appTheme } = useSkin();
 
   const [source, setSource] = useState(null); // { mode, owner_username, tracks }
   const [trackIndex, setTrackIndex] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.8);
 
   const audioElRef = useRef(null);
   if (!audioElRef.current && typeof window !== 'undefined') {
     audioElRef.current = new Audio();
     audioElRef.current.preload = 'none';
+    audioElRef.current.volume = 0.8;
   }
 
   const previousPlaybackSnapshotRef = useRef(null);
@@ -138,6 +148,24 @@ export default function ProfilePlayer({ username }) {
     }
   }, [activate, deactivate]);
 
+  // Distinct from the ear control: pauses/resumes the profile's own audio
+  // without ever touching the global player's handoff/snapshot. If the
+  // session isn't engaged yet, pressing play engages it (same as the ear).
+  const togglePlayPause = useCallback(() => {
+    if (!isActiveRef.current) {
+      activate();
+      return;
+    }
+    const audio = audioElRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+    } else {
+      audio.pause();
+      setIsPlaying(false);
+    }
+  }, [activate]);
+
   const goToOffset = useCallback((offset) => {
     if (tracks.length === 0) return;
     const nextIndex = (trackIndex + offset + tracks.length) % tracks.length;
@@ -146,6 +174,20 @@ export default function ProfilePlayer({ username }) {
       playOwnTrackAt(nextIndex);
     }
   }, [tracks.length, trackIndex, playOwnTrackAt]);
+
+  const handleSeek = useCallback((time) => {
+    const audio = audioElRef.current;
+    if (!audio || !Number.isFinite(time)) return;
+    audio.currentTime = time;
+    setCurrentTime(time);
+  }, []);
+
+  const handleVolumeChange = useCallback((next) => {
+    const clamped = Math.max(0, Math.min(1, next));
+    const audio = audioElRef.current;
+    if (audio) audio.volume = clamped;
+    setVolume(clamped);
+  }, []);
 
   // Leaving the profile (unmount) or switching to a different profile
   // (username change) must never leave the profile audio "ghosting" in the
@@ -171,8 +213,16 @@ export default function ProfilePlayer({ username }) {
       }
       goToOffset(1);
     };
+    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const onLoadedMetadata = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
     audio.addEventListener('ended', onEnded);
-    return () => audio.removeEventListener('ended', onEnded);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    return () => {
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks.length, goToOffset]);
 
@@ -182,7 +232,12 @@ export default function ProfilePlayer({ username }) {
     audioElRef.current?.pause();
   }, []);
 
-  const SkinComponent = (PLAYER_SKINS[playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN]).component;
+  const skinEntry = PLAYER_SKINS[playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
+  const SkinComponent = skinEntry.component;
+  const palette = useMemo(
+    () => resolvePlayerPalette(skinEntry.id, playerColorMode, playerCustomPalettes, appTheme),
+    [skinEntry.id, playerColorMode, playerCustomPalettes, appTheme]
+  );
 
   const ariaLabel = useMemo(() => (
     isActive ? 'Detener reproducción del perfil' : 'Escuchar la música de este perfil'
@@ -202,9 +257,16 @@ export default function ProfilePlayer({ username }) {
         isPlaying={isPlaying}
         hasQueue={tracks.length > 1}
         onToggleEar={toggleEar}
+        onTogglePlay={togglePlayPause}
         onPrev={() => goToOffset(-1)}
         onNext={() => goToOffset(1)}
         ariaLabel={ariaLabel}
+        currentTime={currentTime}
+        duration={duration}
+        volume={volume}
+        onVolumeChange={handleVolumeChange}
+        onSeek={handleSeek}
+        palette={palette}
       />
     </Wrapper>
   );

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { buildAppTheme } from '../../styles/Y2KTheme';
 import BackgroundThumb from './BackgroundThumb';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN } from '../ProfilePlayer/playerSkins';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from '../ProfilePlayer/skins';
 
 /*
  * Self-contained live preview sandbox: a miniature, fully composed profile
@@ -176,8 +176,15 @@ export default function AppearanceDemo({ draft }) {
     }
   ), [draft.skinId, draft.accentColor, draft.animations, draft.themeVariant, draft.textColor, draft.fontPrimary, draft.secondaryAccent, draft.layoutId]);
 
-  const SkinComponent = (PLAYER_SKINS[draft.playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN]).component;
+  const skinEntry = PLAYER_SKINS[draft.playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
+  const SkinComponent = skinEntry.component;
   const arrangement = LAYOUT_ARRANGEMENTS[draft.layoutId] || 'centered';
+  const demoPalette = useMemo(() => resolvePlayerPalette(
+    skinEntry.id,
+    draft.playerColorMode || 'default',
+    { [skinEntry.id]: draft.playerCustomPalette || {} },
+    draftTheme
+  ), [skinEntry.id, draft.playerColorMode, draft.playerCustomPalette, draftTheme]);
 
   const player = (
     <PlayerWrap>
@@ -189,9 +196,16 @@ export default function AppearanceDemo({ draft }) {
         isPlaying={false}
         hasQueue={false}
         onToggleEar={() => {}}
+        onTogglePlay={() => {}}
         onPrev={() => {}}
         onNext={() => {}}
         ariaLabel="Vista previa del reproductor"
+        currentTime={97}
+        duration={214}
+        volume={0.7}
+        onVolumeChange={() => {}}
+        onSeek={() => {}}
+        palette={demoPalette}
       />
     </PlayerWrap>
   );
