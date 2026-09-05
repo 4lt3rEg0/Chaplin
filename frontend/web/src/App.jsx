@@ -308,7 +308,7 @@ const AppShell = () => {
           }}
         >
           <FloatingTopIcons />
-          <FloatingPlayerButton mobilePreviewMode={mobilePreviewMode} hideFab />
+          <FloatingPlayerButton mobilePreviewMode={mobilePreviewMode} />
           <GlobalMobileDock />
 
           <Routes>

@@ -53,7 +53,7 @@ export const SkinProvider = ({ children }) => {
     Number(localStorage.getItem('chaplin_layout_opacity') || '0.92')
   );
   const [playerSkinId, setPlayerSkinId] = useState(
-    localStorage.getItem('chaplin_player_skin_id') || 'daw'
+    localStorage.getItem('chaplin_player_skin_id') || 'plugin'
   );
 
   const [animations, setAnimations] = useState(
