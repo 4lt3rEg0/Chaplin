@@ -2,8 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { useSkin } from '../context/SkinContext';
-import { Mail, MapPin, Link as LinkIcon, Calendar, Music } from 'lucide-react';
-import BackgroundConfigurator from './BackgroundConfigurator';
+import { Mail, MapPin, Link as LinkIcon, Calendar, Music, Settings as SettingsIcon } from 'lucide-react';
 import ProfilePlaylistCard from './ProfilePlaylistCard';
 import {
   resolveCardTexture,
@@ -247,22 +246,18 @@ const ProfileSidebarLeftComponent = ({ user, isOwnProfile }) => {
         <Card key="actions" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
           <CardTitle $accentColor={accentColor}>Acciones</CardTitle>
           <LinkList>
-            <LinkButton type="button" onClick={() => navigate('/profile#customize')} $accentColor={accentColor} $widgetShape={widgetShape}>Editar Perfil</LinkButton>
-            <LinkButton type="button" onClick={() => navigate('/profile#customize')} $accentColor={accentColor} $widgetShape={widgetShape}>Configuracion</LinkButton>
-            <LinkButton type="button" onClick={() => navigate('/profile#customize')} $accentColor={accentColor} $widgetShape={widgetShape}>Personalizar Tema</LinkButton>
+            <LinkButton type="button" onClick={() => navigate('/settings')} $accentColor={accentColor} $widgetShape={widgetShape}>
+              <SettingsIcon size={16} />
+              Configuración
+            </LinkButton>
           </LinkList>
         </Card>
       );
     }
 
     if (sectionId === 'background') {
-      if (!isOwnProfile) return null;
-      return (
-        <Card key="background" id="profile-background-card" $cardBg={cardBg} $borderColor={borderColor} $accentColor={accentColor} $cardRadius={cardRadius} $cardPadding={cardPadding} $cardFrame={cardFrame} $cardShadow={cardShadow} $shape={cardShape} $material={material}>
-          <CardTitle $accentColor={accentColor}>Fondos & Efectos</CardTitle>
-          <BackgroundConfigurator />
-        </Card>
-      );
+      // Moved to Configuración → Fondos, so it no longer clutters the profile.
+      return null;
     }
 
     if (sectionId === 'playlist') {

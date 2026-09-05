@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
@@ -11,7 +11,6 @@ import ProfileHeader from '../components/ProfileHeader';
 import ProfileSidebarLeft from '../components/ProfileSidebarLeft';
 import ProfileTabs from '../components/ProfileTabs';
 import ProfileSidebarRight from '../components/ProfileSidebarRight';
-import ProfileCustomizePanel from '../components/ProfileCustomizePanel';
 
 const PageWrapper = styled.div`
   position: relative;
@@ -143,14 +142,12 @@ const RightArea = styled.div`
 const ProfilePage = () => {
   const { user, refreshUser } = useAuth();
   const { username: routeUsername } = useParams();
-  const location = useLocation();
   const { skinData, appTheme, setProfileOverride: setSkinOverride } = useSkin();
   const { setProfileOverride: setVortexOverride } = useVortex();
   const { pause } = usePlayer();
 
   const [viewedUser, setViewedUser] = useState(null);
   const [viewedUserError, setViewedUserError] = useState(false);
-  const [showCustomize, setShowCustomize] = useState(() => window.location.hash === '#customize');
 
   const isOwnProfile = !routeUsername || (user && routeUsername === user.username);
 
@@ -236,27 +233,6 @@ const ProfilePage = () => {
     }
   };
 
-  useEffect(() => {
-    if (location.hash === '#customize') {
-      setShowCustomize(true);
-    }
-  }, [location.hash]);
-
-  useEffect(() => {
-    if (!showCustomize || window.location.hash !== '#customize') {
-      return;
-    }
-
-    const target = window.document.getElementById('customize');
-    if (!target) {
-      return;
-    }
-
-    requestAnimationFrame(() => {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [showCustomize]);
-
   if (!user) {
     return (
       <PageWrapper className="chaplin-page-frame" $bgColor={appTheme.colors.background} $textColor={appTheme.colors.text}>
@@ -320,7 +296,6 @@ const ProfilePage = () => {
         </FeedArea>
         <RightArea data-profile-rail="right">
           <ProfileSidebarRight user={displayUser} isOwnProfile={isOwnProfile} />
-          {isOwnProfile && showCustomize ? <ProfileCustomizePanel embedded /> : null}
         </RightArea>
       </Container>
     </PageWrapper>

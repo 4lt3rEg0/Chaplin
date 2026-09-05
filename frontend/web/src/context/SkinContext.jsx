@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { getTheme, updateTheme } from '../services/themeService';
 import { buildAppTheme, resolveThemeId, THEME_PRESETS, THEME_VARIANTS } from '../styles/Y2KTheme';
 import { CHAPLIN_LAYOUT_SYSTEMS, CHAPLIN_LAYOUT_SYSTEM_LIST } from '../styles/ChaplinLayoutSystems';
@@ -65,6 +65,16 @@ export const SkinProvider = ({ children }) => {
   // changes what `skinData`/`appTheme` resolve to for as long as it's set.
   const [profileOverride, setProfileOverride] = useState(null);
 
+  // ===== Theme preview (Settings → Temas) =====
+  // While isPreviewingTheme is true, the save-to-backend/localStorage effect
+  // below is skipped entirely, so setters can be called freely for a live
+  // preview without persisting anything. `beginThemePreview` snapshots every
+  // themeable field; `cancelThemePreview` restores that exact snapshot;
+  // `commitThemePreview` just stops skipping the save effect, which then
+  // persists whatever is currently live (the previewed values).
+  const [isPreviewingTheme, setIsPreviewingTheme] = useState(false);
+  const themeSnapshotRef = useRef(null);
+
   /* ===================== LOAD FROM BACKEND ===================== */
 
   useEffect(() => {
@@ -121,7 +131,7 @@ export const SkinProvider = ({ children }) => {
   /* ===================== SAVE TO BACKEND ===================== */
 
   useEffect(() => {
-    if (!loadedFromBackend) return;
+    if (!loadedFromBackend || isPreviewingTheme) return;
 
     const saveTheme = async () => {
       try {
@@ -199,8 +209,62 @@ export const SkinProvider = ({ children }) => {
     density,
     ornament,
     materialIntensity,
-    loadedFromBackend
+    loadedFromBackend,
+    isPreviewingTheme
   ]);
+
+  /* ===================== THEME PREVIEW CONTROLS ===================== */
+
+  const themeFieldSetters = {
+    skinId: setSkinId,
+    accentColor: setAccentColor,
+    secondaryAccent: setSecondaryAccent,
+    themeVariant: setThemeVariant,
+    materialId: setMaterialId,
+    hudId: setHudId,
+    layoutId: setLayoutId,
+    typographyId: setTypographyId,
+    shapeId: setShapeId,
+    density: setDensity,
+    ornament: setOrnament,
+    materialIntensity: setMaterialIntensity,
+    layoutBackground: setLayoutBackground,
+    layoutBorder: setLayoutBorder,
+    layoutText: setLayoutText,
+    fontPrimary: setFontPrimary,
+    fontSecondary: setFontSecondary,
+    fontUi: setFontUi,
+    fontMono: setFontMono,
+    layoutOpacity: setLayoutOpacity,
+    animations: setAnimations
+  };
+  const themeFieldValues = {
+    skinId, accentColor, secondaryAccent, themeVariant, materialId, hudId,
+    layoutId, typographyId, shapeId, density, ornament, materialIntensity,
+    layoutBackground, layoutBorder, layoutText, fontPrimary, fontSecondary,
+    fontUi, fontMono, layoutOpacity, animations
+  };
+
+  const beginThemePreview = () => {
+    themeSnapshotRef.current = { ...themeFieldValues };
+    setIsPreviewingTheme(true);
+  };
+
+  const cancelThemePreview = () => {
+    const snapshot = themeSnapshotRef.current;
+    if (snapshot) {
+      Object.entries(snapshot).forEach(([key, value]) => {
+        themeFieldSetters[key]?.(value);
+      });
+    }
+    themeSnapshotRef.current = null;
+    setIsPreviewingTheme(false);
+  };
+
+  const commitThemePreview = () => {
+    themeSnapshotRef.current = null;
+    setIsPreviewingTheme(false);
+  };
 
   const baseResolvedSkinId = resolveThemeId(skinId);
   const resolvedSkinId = profileOverride?.baseTheme
@@ -324,7 +388,11 @@ export const SkinProvider = ({ children }) => {
     animations,
     setAnimations,
     skins: THEME_PRESETS,
-    appTheme
+    appTheme,
+    isPreviewingTheme,
+    beginThemePreview,
+    cancelThemePreview,
+    commitThemePreview
   }), [
     resolvedSkinId,
     skinData,
@@ -349,7 +417,8 @@ export const SkinProvider = ({ children }) => {
     ornament,
     materialIntensity,
     animations,
-    appTheme
+    appTheme,
+    isPreviewingTheme
   ]);
 
   return (

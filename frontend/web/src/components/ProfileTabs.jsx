@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { Heart, Music, Pause, Play, Video, X } from 'lucide-react';
+import { Heart, Music, Pause, Pin, PinOff, Play, Radio, Upload, Video, X } from 'lucide-react';
 import { useSkin } from '../context/SkinContext';
 import api from '../services/api';
 import { Z_INDEX } from '../styles/zIndexScale';
@@ -112,7 +112,7 @@ const LikeButton = styled.button`
 
 const TrackRow = styled.div`
   display: grid;
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 36px 1fr auto;
   align-items: center;
   gap: 10px;
   border: 1px solid ${({ $borderColor }) => $borderColor};
@@ -139,6 +139,111 @@ const TrackTitle = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const TrackMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+`;
+
+const StatusPill = styled.span`
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: ${({ $tone }) => (
+    $tone === 'approved' ? 'rgba(61,220,132,0.18)'
+      : $tone === 'pending' ? 'rgba(245,166,35,0.18)'
+        : $tone === 'rejected' ? 'rgba(255,107,107,0.18)'
+          : 'rgba(255,255,255,0.08)'
+  )};
+  color: ${({ $tone }) => (
+    $tone === 'approved' ? '#3ddc84'
+      : $tone === 'pending' ? '#f5a623'
+        : $tone === 'rejected' ? '#ff6b6b'
+          : 'inherit'
+  )};
+`;
+
+const PinBtn = styled.button`
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: ${({ $pinned, $accentColor, theme }) => ($pinned ? $accentColor : theme.colors?.textSecondary || '#999')};
+  display: grid;
+  place-items: center;
+  padding: 6px;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const UploadToggleBtn = styled.button`
+  border: 1px solid ${({ $accentColor }) => $accentColor};
+  background: transparent;
+  color: ${({ $accentColor }) => $accentColor};
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+`;
+
+const UploadForm = styled.form`
+  border: 1px dashed ${({ $borderColor }) => $borderColor};
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+`;
+
+const UploadInput = styled.input`
+  border: 1px solid ${({ $borderColor }) => $borderColor};
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+`;
+
+const UploadCheckRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+`;
+
+const UploadSubmitBtn = styled.button`
+  border: 1px solid ${({ $accentColor }) => $accentColor};
+  background: ${({ $accentColor }) => $accentColor};
+  color: #05070b;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const UploadError = styled.p`
+  margin: 0;
+  font-size: 12px;
+  color: #ff6b6b;
 `;
 
 const Lightbox = styled.div`
@@ -200,6 +305,15 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
   const [selectedPost, setSelectedPost] = useState(null);
   const [playingTrackId, setPlayingTrackId] = useState(null);
   const audioRef = useRef(null);
+  const [profilePlaylist, setProfilePlaylist] = useState(null);
+  const [pinBusyId, setPinBusyId] = useState(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadArtwork, setUploadArtwork] = useState(null);
+  const [uploadToRadio, setUploadToRadio] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const textColor = appTheme.colors?.text || '#fff';
   const accentColor = skinData?.accent || '#ff00ff';
@@ -230,12 +344,69 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
         .catch(() => setTextPosts([]))
         .finally(markLoaded);
     } else if (activeTab === 'musica') {
-      api.get(`/tracks/by-user/${user.username}`)
-        .then(({ data }) => setTracks(data))
-        .catch(() => setTracks([]))
-        .finally(markLoaded);
+      if (isOwnProfile) {
+        Promise.all([
+          api.get('/tracks/mine'),
+          api.get('/playlists/mine/profile').catch(() => ({ data: null }))
+        ])
+          .then(([tracksRes, playlistRes]) => {
+            setTracks(tracksRes.data);
+            setProfilePlaylist(playlistRes.data);
+          })
+          .catch(() => setTracks([]))
+          .finally(markLoaded);
+      } else {
+        api.get(`/playlists/profile/${user.username}`)
+          .then(({ data }) => setTracks(data.tracks || []))
+          .catch(() => setTracks([]))
+          .finally(markLoaded);
+      }
     }
-  }, [activeTab, user?.username, loaded]);
+  }, [activeTab, user?.username, loaded, isOwnProfile]);
+
+  const pinnedTrackIds = new Set((profilePlaylist?.tracks || []).map((t) => t.id));
+
+  const togglePin = async (track) => {
+    if (!profilePlaylist || pinBusyId) return;
+    setPinBusyId(track.id);
+    try {
+      const isPinned = pinnedTrackIds.has(track.id);
+      const { data } = isPinned
+        ? await api.delete(`/playlists/${profilePlaylist.id}/items/${track.id}`)
+        : await api.post(`/playlists/${profilePlaylist.id}/items`, { track_id: track.id });
+      setProfilePlaylist(data);
+    } finally {
+      setPinBusyId(null);
+    }
+  };
+
+  const submitUpload = async (event) => {
+    event.preventDefault();
+    if (!uploadFile || !uploadTitle.trim()) {
+      setUploadError('Elige un archivo de audio y escribe un título.');
+      return;
+    }
+    setUploadBusy(true);
+    setUploadError('');
+    try {
+      const form = new FormData();
+      form.append('file', uploadFile);
+      form.append('title', uploadTitle.trim());
+      form.append('target', uploadToRadio ? 'radio' : 'personal');
+      if (uploadArtwork) form.append('artwork', uploadArtwork);
+      const { data: newTrack } = await api.post('/tracks/upload', form, { timeout: 60000 });
+      setTracks((prev) => [newTrack, ...prev]);
+      setUploadTitle('');
+      setUploadFile(null);
+      setUploadArtwork(null);
+      setUploadToRadio(false);
+      setUploadOpen(false);
+    } catch (err) {
+      setUploadError(err?.response?.data?.detail || 'No se pudo subir la canción. Inténtalo de nuevo.');
+    } finally {
+      setUploadBusy(false);
+    }
+  };
 
   const toggleTrack = (track) => {
     const el = audioRef.current;
@@ -320,21 +491,97 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
       )}
 
       {activeTab === 'musica' && (
-        tracks.length === 0 && loaded.musica ? (
-          <EmptyState>{isOwnProfile ? 'Todavía no subiste canciones.' : 'Sin música todavía.'}</EmptyState>
-        ) : (
-          <BitacoraList>
-            {tracks.map((track) => (
-              <TrackRow key={track.id} $borderColor={borderColor}>
-                <PlayBtn type="button" $accentColor={accentColor} onClick={() => toggleTrack(track)}>
-                  {playingTrackId === track.id ? <Pause size={14} /> : <Play size={14} />}
-                </PlayBtn>
-                <TrackTitle>{track.title}</TrackTitle>
-              </TrackRow>
-            ))}
-            <audio ref={audioRef} onEnded={() => setPlayingTrackId(null)} style={{ display: 'none' }} />
-          </BitacoraList>
-        )
+        <>
+          {isOwnProfile && (
+            <>
+              <UploadToggleBtn type="button" $accentColor={accentColor} onClick={() => setUploadOpen((prev) => !prev)}>
+                <Upload size={14} />
+                {uploadOpen ? 'Cerrar' : 'Subir canción'}
+              </UploadToggleBtn>
+
+              {uploadOpen && (
+                <UploadForm onSubmit={submitUpload} $borderColor={borderColor}>
+                  <UploadInput
+                    type="text"
+                    placeholder="Título de la canción"
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                    $borderColor={borderColor}
+                    disabled={uploadBusy}
+                  />
+                  <UploadInput
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    $borderColor={borderColor}
+                    disabled={uploadBusy}
+                  />
+                  <div>
+                    <StatusPill $tone="idle">Portada (opcional)</StatusPill>
+                  </div>
+                  <UploadInput
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setUploadArtwork(e.target.files?.[0] || null)}
+                    $borderColor={borderColor}
+                    disabled={uploadBusy}
+                  />
+                  <UploadCheckRow>
+                    <input
+                      type="checkbox"
+                      checked={uploadToRadio}
+                      onChange={(e) => setUploadToRadio(e.target.checked)}
+                      disabled={uploadBusy}
+                    />
+                    <Radio size={14} />
+                    Enviar también a Radio Chaplin (queda pendiente de revisión)
+                  </UploadCheckRow>
+                  {uploadError && <UploadError>{uploadError}</UploadError>}
+                  <UploadSubmitBtn type="submit" $accentColor={accentColor} disabled={uploadBusy}>
+                    {uploadBusy ? 'Subiendo...' : 'Publicar canción'}
+                  </UploadSubmitBtn>
+                </UploadForm>
+              )}
+            </>
+          )}
+
+          {tracks.length === 0 && loaded.musica ? (
+            <EmptyState>{isOwnProfile ? 'Todavía no subiste canciones.' : 'Sin música fijada en este perfil.'}</EmptyState>
+          ) : (
+            <BitacoraList>
+              {tracks.map((track) => (
+                <TrackRow key={track.id} $borderColor={borderColor}>
+                  <PlayBtn type="button" $accentColor={accentColor} onClick={() => toggleTrack(track)}>
+                    {playingTrackId === track.id ? <Pause size={14} /> : <Play size={14} />}
+                  </PlayBtn>
+                  <div>
+                    <TrackTitle>{track.title}</TrackTitle>
+                    {isOwnProfile && (
+                      <TrackMeta>
+                        {track.radio_status === 'pending' && <StatusPill $tone="pending">En revisión</StatusPill>}
+                        {track.radio_status === 'approved' && <StatusPill $tone="approved">En Radio Chaplin</StatusPill>}
+                        {track.radio_status === 'rejected' && <StatusPill $tone="rejected">Radio: rechazada</StatusPill>}
+                      </TrackMeta>
+                    )}
+                  </div>
+                  {isOwnProfile && (
+                    <PinBtn
+                      type="button"
+                      $pinned={pinnedTrackIds.has(track.id)}
+                      $accentColor={accentColor}
+                      disabled={pinBusyId === track.id}
+                      onClick={() => togglePin(track)}
+                      title={pinnedTrackIds.has(track.id) ? 'Quitar de mi perfil' : 'Fijar en mi perfil'}
+                    >
+                      {pinnedTrackIds.has(track.id) ? <Pin size={14} /> : <PinOff size={14} />}
+                    </PinBtn>
+                  )}
+                </TrackRow>
+              ))}
+              <audio ref={audioRef} onEnded={() => setPlayingTrackId(null)} style={{ display: 'none' }} />
+            </BitacoraList>
+          )}
+        </>
       )}
 
       {selectedPost && (

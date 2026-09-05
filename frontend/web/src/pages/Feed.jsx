@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useMemo, useRef, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import {
   MessageCircle,
@@ -7,26 +6,14 @@ import {
   PlusSquare,
   Video,
   Music,
-  Type,
-  Image,
-  Inbox,
-  X,
-  Camera,
-  Sliders,
-  Eye,
-  EyeOff,
   BookOpen,
   Play,
   Pause
 } from 'lucide-react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useSkin } from '../context/SkinContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Z_INDEX } from '../styles/zIndexScale';
-import MediaEditor from '../components/MediaEditor';
-
-const CREATOR_MODES = ['feed', 'historia', 'reel', 'directo', 'camara'];
 
 const Shell = styled.div`
   max-width: min(var(--chaplin-shell-max, 1220px), 100%);
@@ -414,173 +401,6 @@ const CommentInput = styled.input`
   font-size: 12px;
 `;
 
-const ComposerBackdrop = styled.div`
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(52, 87, 123, 0.38), rgba(0, 0, 0, 0.72));
-  display: grid;
-  place-items: center;
-  z-index: ${Z_INDEX.MODAL};
-  padding: 12px;
-`;
-
-const Composer = styled.form`
-  width: min(690px, 100%);
-  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.borderStrong};
-  border-radius: 18px;
-  padding: 12px;
-  background: ${({ theme }) => theme.card?.bg || theme.gradients.panel};
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    ${({ theme }) => theme.card?.shadow || '0 24px 62px rgba(0, 0, 0, 0.65)'};
-`;
-
-const CreatorShell = styled.form`
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  background: ${({ theme }) => theme.card?.bg || theme.gradients.panel};
-  box-shadow: none;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  overflow: hidden;
-`;
-
-const CreatorTopBar = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
-  background: linear-gradient(180deg, rgba(6, 10, 16, 0.92), rgba(6, 10, 16, 0.4));
-`;
-
-const CreatorStage = styled.div`
-  position: relative;
-  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.border};
-  border-radius: 16px;
-  min-height: min(58vh, 620px);
-  background: radial-gradient(circle at 50% 30%, rgba(124, 190, 255, 0.14), rgba(4, 7, 12, 0.95));
-  overflow: hidden;
-  margin: 0;
-`;
-
-const CameraPreview = styled.video`
-  width: 100%;
-  height: min(58vh, 620px);
-  object-fit: cover;
-  display: block;
-`;
-
-const CameraPlaceholder = styled.div`
-  width: 100%;
-  height: min(58vh, 620px);
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 20px;
-  color: ${({ theme }) => theme.colors.textSecondary};
-`;
-
-const CreatorTools = styled.div`
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  bottom: 12px;
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  z-index: 3;
-`;
-
-const ToolButton = styled.button`
-  border: none;
-  background: transparent;
-  color: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.text)};
-  padding: 2px;
-  cursor: pointer;
-  opacity: ${({ $active }) => ($active ? 1 : 0.84)};
-  display: grid;
-  place-items: center;
-
-  &:hover {
-    opacity: 1;
-    transform: scale(1.06);
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-    transform: none;
-  }
-`;
-
-const CreatorModeRail = styled.div`
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: grid;
-  gap: 6px;
-  z-index: 3;
-  touch-action: none;
-  user-select: none;
-  padding: 0;
-`;
-
-const ModeItem = styled.div`
-  font-size: 9px;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-  color: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.text)};
-  opacity: ${({ $active }) => ($active ? 1 : 0.58)};
-  transform: ${({ $active }) => ($active ? 'scale(1.12)' : 'scale(1)')};
-  text-shadow:
-    0 0 6px rgba(0, 0, 0, 0.9),
-    0 0 12px rgba(0, 0, 0, 0.66);
-  transition: opacity 0.2s ease, transform 0.2s ease;
-`;
-
-const CreatorFooter = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(0deg, rgba(6, 10, 16, 0.94), rgba(6, 10, 16, 0.45));
-`;
-
-const DiaryWidget = styled.button`
-  position: absolute;
-  /* Bottom-right, not bottom-left — CreatorTools is a full-height icon
-     column anchored at left:12/top:12/bottom:12, so bottom-left is
-     guaranteed to overlap it whenever the icon stack's real height reaches
-     the bottom (routine on short/mobile viewports). */
-  right: 12px;
-  bottom: 12px;
-  z-index: 4;
-  border: 1px solid ${({ theme }) => theme.colors.borderStrong};
-  border-radius: 14px;
-  background:
-    linear-gradient(165deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06)),
-    ${({ theme }) => theme.card?.bg || theme.gradients.panel};
-  color: ${({ theme }) => theme.colors.text};
-  padding: 8px 10px;
-  font-size: 10px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-`;
-
 const DiaryNotice = styled.p`
   margin: 0 0 10px;
   font-size: 12px;
@@ -588,79 +408,11 @@ const DiaryNotice = styled.p`
   color: ${({ theme }) => theme.colors.textSecondary};
 `;
 
-const CameraError = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #ff9db0;
-`;
-
-const ComposerHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-`;
-
-const ComposerTitle = styled.h2`
-  margin: 0;
-  font-size: 13px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-`;
-
-const ComposerText = styled.textarea`
-  width: 100%;
-  min-height: 130px;
-  resize: vertical;
-  border-radius: 0;
-  clip-path: polygon(2% 0, 100% 0, 98% 100%, 0 100%);
-  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.border};
-  background: ${({ theme }) => theme.card?.bg || theme.gradients.panel};
-  color: ${({ theme }) => theme.colors.text};
-  padding: 11px;
-`;
-
 const FileInput = styled.input`
   display: block;
   width: 100%;
   margin-top: 10px;
   color: ${({ theme }) => theme.colors.text};
-`;
-
-const Preview = styled.div`
-  margin-top: 10px;
-  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.border};
-  border-radius: 12px;
-  padding: 10px;
-  background: ${({ theme }) => theme.card?.bg || 'rgba(9, 12, 17, 0.82)'};
-`;
-
-const CancelPublishButton = styled.button`
-  margin-top: 12px;
-  width: 100%;
-  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.borderStrong};
-  border-radius: 12px;
-  background: transparent;
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 12px;
-  cursor: pointer;
-`;
-
-const PublishButton = styled.button`
-  margin-top: 12px;
-  width: 100%;
-  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.borderStrong};
-  border-radius: 12px;
-  background: ${({ theme }) => theme.colors.accentSoft};
-  color: ${({ theme }) => theme.colors.text};
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 12px;
-  cursor: pointer;
 `;
 
 const EmptyState = styled.p`
@@ -691,21 +443,12 @@ const composerTitleByType = (type) => {
 
 export default function Feed() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { appTheme } = useSkin();
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [publishType, setPublishType] = useState('text');
-  const [draftText, setDraftText] = useState('');
-  const [draftFile, setDraftFile] = useState(null);
-  const [draftTrackId, setDraftTrackId] = useState(null);
   const [playingTrackPostId, setPlayingTrackPostId] = useState(null);
   const trackAudioRef = useRef(null);
-  const [filePreview, setFilePreview] = useState('');
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [sending, setSending] = useState(false);
   const [openComments, setOpenComments] = useState({});
   const [commentsByPost, setCommentsByPost] = useState({});
   const [commentDrafts, setCommentDrafts] = useState({});
@@ -713,49 +456,12 @@ export default function Feed() {
   const [editDraft, setEditDraft] = useState('');
   const [editFile, setEditFile] = useState(null);
   const [editRemoveMedia, setEditRemoveMedia] = useState(false);
-  const [creatorModeIndex, setCreatorModeIndex] = useState(0);
-  const [creatorToolsVisible, setCreatorToolsVisible] = useState(true);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState('');
-  const creatorTouchStartRef = useRef(null);
-  const cameraVideoRef = useRef(null);
-  const cameraStreamRef = useRef(null);
 
   useEffect(() => {
     loadPosts();
   }, []);
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('compose') !== '1') {
-      return;
-    }
-
-    const requestedMode = params.get('mode');
-    setPublishType(requestedMode === 'diary' ? 'diary' : 'photo');
-    setComposerOpen(true);
-    setCreatorModeIndex(0);
-
-    params.delete('compose');
-    params.delete('mode');
-    const nextQuery = params.toString();
-    navigate(`${location.pathname}${nextQuery ? `?${nextQuery}` : ''}`, { replace: true });
-  }, [location.pathname, location.search, navigate]);
-
   const layoutTemplate = appTheme.profile?.layoutTemplate || 'classic';
-
-  useEffect(() => () => {
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview);
-    }
-  }, [filePreview]);
-
-  useEffect(() => () => {
-    if (cameraStreamRef.current) {
-      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
-      cameraStreamRef.current = null;
-    }
-  }, []);
 
   const ecos = useMemo(() => {
     const byOwner = [];
@@ -796,93 +502,8 @@ export default function Feed() {
     }
   };
 
-  const openComposer = (type) => {
-    setPublishType(type);
-    setComposerOpen(true);
-    setCreatorModeIndex(0);
-  };
-
-  const closeComposer = () => {
-    setComposerOpen(false);
-    setDraftText('');
-    setDraftFile(null);
-    setDraftTrackId(null);
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview);
-    }
-    setFilePreview('');
-    setSending(false);
-    setCameraReady(false);
-    setCameraError('');
-    if (cameraStreamRef.current) {
-      cameraStreamRef.current.getTracks().forEach((track) => track.stop());
-      cameraStreamRef.current = null;
-    }
-  };
-
-  const startCamera = async () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Tu navegador no permite cámara en este modo.');
-      return;
-    }
-
-    try {
-      if (cameraStreamRef.current) {
-        cameraStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false
-      });
-
-      cameraStreamRef.current = stream;
-      if (cameraVideoRef.current) {
-        cameraVideoRef.current.srcObject = stream;
-      }
-      setCameraReady(true);
-      setCameraError('');
-    } catch {
-      setCameraReady(false);
-      setCameraError('No se pudo abrir la cámara. Revisa permisos del navegador.');
-    }
-  };
-
-  const switchCreatorMode = (delta) => {
-    setCreatorModeIndex((prev) => {
-      const total = CREATOR_MODES.length;
-      return (prev + delta + total) % total;
-    });
-  };
-
-  const onCreatorTouchStart = (event) => {
-    creatorTouchStartRef.current = event.touches?.[0]?.clientY || null;
-  };
-
-  const onCreatorTouchEnd = (event) => {
-    const start = creatorTouchStartRef.current;
-    const end = event.changedTouches?.[0]?.clientY;
-    creatorTouchStartRef.current = null;
-    if (start == null || end == null) return;
-
-    const delta = end - start;
-    if (Math.abs(delta) < 24) return;
-    switchCreatorMode(delta < 0 ? 1 : -1);
-  };
-
-  const handleFileChange = (event) => {
-    const nextFile = event.target.files?.[0] || null;
-    setDraftFile(nextFile);
-
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview);
-    }
-
-    if (nextFile) {
-      setFilePreview(URL.createObjectURL(nextFile));
-    } else {
-      setFilePreview('');
-    }
+  const openEditor = (type) => {
+    navigate(`/editor?type=${type}`);
   };
 
   const toggleTrackPlayback = (post) => {
@@ -896,56 +517,6 @@ export default function Feed() {
     audioEl.src = post.track_media_url;
     audioEl.play();
     setPlayingTrackPostId(post.id);
-  };
-
-  const applyEditedFile = (editedFile, { trackId } = {}) => {
-    setDraftFile(editedFile);
-    setDraftTrackId(trackId || null);
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview);
-    }
-    setFilePreview(URL.createObjectURL(editedFile));
-    setEditorOpen(false);
-  };
-
-  const publishPost = async (event) => {
-    event.preventDefault();
-
-    const isDiary = publishType === 'diary';
-    const needsFile = !isDiary;
-    if (needsFile && !draftFile) return;
-
-    setSending(true);
-    const formData = new FormData();
-    const content = isDiary
-      ? (draftText.trim() || 'Entrada de diario')
-      : draftText;
-    formData.append('content', content);
-    formData.append('is_public', 'true');
-    if (draftFile) {
-      formData.append('file', draftFile);
-    }
-    if (draftTrackId) {
-      formData.append('track_id', String(draftTrackId));
-    }
-
-    try {
-      const res = await fetch('/api/v1/posts/', {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: formData
-      });
-
-      if (!res.ok) {
-        throw new Error('No se pudo publicar');
-      }
-
-      await loadPosts();
-      closeComposer();
-    } catch (error) {
-      console.error(error);
-      setSending(false);
-    }
   };
 
   const toggleLike = async (postId) => {
@@ -1092,7 +663,7 @@ export default function Feed() {
         <SidePanel className="chaplin-theme-panel">
           <EcosTitle>Ecos</EcosTitle>
           <EcosRail>
-            <EcoShard type="button" onClick={() => openComposer('photo')}>
+            <EcoShard type="button" onClick={() => openEditor('photo')}>
               <EcoCore>+</EcoCore>
               <EcoLabel>tu eco</EcoLabel>
             </EcoShard>
@@ -1281,172 +852,25 @@ export default function Feed() {
       >
         <SidePanel className="chaplin-theme-panel">
           <SideTitle>Publicar</SideTitle>
-          <ActionButton type="button" onClick={() => openComposer('photo')}>
+          <ActionButton type="button" onClick={() => openEditor('photo')}>
             <PlusSquare size={14} />
             foto
           </ActionButton>
-          <ActionButton type="button" onClick={() => openComposer('video')}>
+          <ActionButton type="button" onClick={() => openEditor('video')}>
             <Video size={14} />
             video
           </ActionButton>
-          <ActionButton type="button" onClick={() => openComposer('song')}>
+          <ActionButton type="button" onClick={() => openEditor('song')}>
             <Music size={14} />
             audio
           </ActionButton>
-          <ActionButton type="button" onClick={() => openComposer('diary')}>
+          <ActionButton type="button" onClick={() => openEditor('diary')}>
             <BookOpen size={14} />
             diario
           </ActionButton>
         </SidePanel>
       </FeedRightRail>
       </FeedGrid>
-
-      {composerOpen && createPortal(
-        <ComposerBackdrop>
-          <CreatorShell className="chaplin-theme-panel" onSubmit={publishPost}>
-            <CreatorTopBar>
-              <ComposerTitle>
-                <Camera size={14} style={{ marginRight: 8, verticalAlign: 'middle' }} />
-                publicar studio / {CREATOR_MODES[creatorModeIndex]}
-              </ComposerTitle>
-              <ActionButton type="button" onClick={closeComposer}>
-                <X size={14} />
-              </ActionButton>
-            </CreatorTopBar>
-
-            <CreatorStage>
-              {cameraReady ? (
-                <CameraPreview ref={cameraVideoRef} autoPlay muted playsInline />
-              ) : filePreview ? (
-                publishType === 'video' ? (
-                  <MediaVideo src={filePreview} controls />
-                ) : publishType === 'song' ? (
-                  <CameraPlaceholder>
-                    <div>
-                      <Music size={28} style={{ marginBottom: 8 }} />
-                      <p>Audio listo para publicar</p>
-                    </div>
-                  </CameraPlaceholder>
-                ) : (
-                  <MediaImg src={filePreview} alt="preview foto" />
-                )
-              ) : (
-                <CameraPlaceholder>
-                  <div>
-                    <Camera size={28} style={{ marginBottom: 8 }} />
-                    <p>Abre cámara o sube un archivo para publicar.</p>
-                  </div>
-                </CameraPlaceholder>
-              )}
-
-              {creatorToolsVisible && (
-                <CreatorTools>
-                  <ToolButton
-                    type="button"
-                    $active={publishType === 'photo'}
-                    onClick={() => setPublishType('photo')}
-                  >
-                    <Image size={18} />
-                  </ToolButton>
-
-                  <ToolButton
-                    type="button"
-                    $active={publishType === 'video'}
-                    onClick={() => setPublishType('video')}
-                  >
-                    <Video size={18} />
-                  </ToolButton>
-
-                  <ToolButton
-                    type="button"
-                    $active={publishType === 'song'}
-                    onClick={() => setPublishType('song')}
-                  >
-                    <Music size={18} />
-                  </ToolButton>
-
-                  <ToolButton
-                    type="button"
-                    disabled={!draftFile || publishType === 'song'}
-                    onClick={() => setEditorOpen(true)}
-                  >
-                    <Sliders size={18} />
-                  </ToolButton>
-                </CreatorTools>
-              )}
-
-              <DiaryWidget type="button" onClick={() => setPublishType('diary')}>
-                <BookOpen size={14} />
-                querido diario
-              </DiaryWidget>
-
-              <CreatorModeRail
-                onTouchStart={onCreatorTouchStart}
-                onTouchEnd={onCreatorTouchEnd}
-                onWheel={(event) => {
-                  if (event.deltaY > 0) switchCreatorMode(1);
-                  if (event.deltaY < 0) switchCreatorMode(-1);
-                }}
-              >
-                {CREATOR_MODES.map((mode, index) => (
-                  <ModeItem key={mode} $active={creatorModeIndex === index}>
-                    {mode}
-                  </ModeItem>
-                ))}
-              </CreatorModeRail>
-            </CreatorStage>
-
-            <CreatorFooter>
-              <ActionButton type="button" onClick={startCamera}>
-                <Camera size={14} />
-                {cameraReady ? 'reiniciar camara' : 'abrir camara'}
-              </ActionButton>
-
-              <ActionButton type="button" onClick={() => setCreatorToolsVisible((prev) => !prev)}>
-                {creatorToolsVisible ? <EyeOff size={14} /> : <Eye size={14} />}
-                {creatorToolsVisible ? 'ocultar iconos' : 'mostrar iconos'}
-              </ActionButton>
-
-              {(publishType === 'photo' || publishType === 'video' || publishType === 'song') ? (
-                <FileInput type="file" accept={publishType === 'photo' ? 'image/*' : publishType === 'video' ? 'video/*' : 'audio/*'} onChange={handleFileChange} />
-              ) : (
-                <ActionButton type="button" onClick={() => setPublishType('diary')}>
-                  <BookOpen size={14} />
-                  modo diario
-                </ActionButton>
-              )}
-
-              {draftTrackId && (
-                <ActionButton type="button" onClick={() => setDraftTrackId(null)}>
-                  <Music size={14} />
-                  quitar cancion
-                </ActionButton>
-              )}
-
-              <CancelPublishButton type="button" onClick={closeComposer} disabled={sending}>
-                cancelar
-              </CancelPublishButton>
-
-              <PublishButton type="submit" disabled={sending}>
-                {sending ? 'publicando...' : 'confirmar publicacion'}
-              </PublishButton>
-            </CreatorFooter>
-
-            {cameraError && <CameraError>{cameraError}</CameraError>}
-          </CreatorShell>
-
-          {editorOpen && draftFile && (publishType === 'photo' || publishType === 'video') && (
-            <MediaEditor
-              file={draftFile}
-              mediaType={publishType}
-              initialTrackId={draftTrackId}
-              onApply={applyEditedFile}
-              onClose={() => setEditorOpen(false)}
-            />
-          )}
-        </ComposerBackdrop>,
-        document.body
-      )}
       </Shell>
     </div>
   );

@@ -4,6 +4,7 @@ import api from "../services/api";
 import { usePlayer } from "../context/PlayerContext";
 import { useVortex, VISUALIZER_VIDEO_OPTIONS } from "../context/VortexContext";
 import { useSkin } from "../context/SkinContext";
+import RadioSubmissionsReview from "../components/RadioSubmissionsReview";
 
 const BACKGROUND_OPTIONS = [
   { id: 'dataTunnel', label: 'Fractal Tunnel' },
@@ -836,6 +837,8 @@ export default function Radio() {
             </SidePanel>
           </RightArea>
         </RadioGrid>
+
+        <RadioSubmissionsReview />
       </Container>
     </Wrapper>
   );

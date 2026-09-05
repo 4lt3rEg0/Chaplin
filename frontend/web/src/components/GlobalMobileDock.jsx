@@ -118,7 +118,7 @@ export default function GlobalMobileDock() {
         inbox
       </DockButton>
 
-      <PublishDockButton type="button" onClick={() => navigate(makePathWithFlags("/feed", { compose: 1 }))}>
+      <PublishDockButton type="button" onClick={() => navigate(makePathWithFlags("/editor"))}>
         <PlusSquare size={14} />
         publicar
       </PublishDockButton>
