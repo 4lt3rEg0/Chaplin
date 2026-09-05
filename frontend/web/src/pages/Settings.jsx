@@ -9,7 +9,7 @@ import { useSkin } from '../context/SkinContext';
 import { useVortex } from '../context/VortexContext';
 import api, { uploadProfileMusic } from '../services/api';
 import { updateTheme } from '../services/themeService';
-import { PLAYER_SKIN_LIST } from '../components/ProfilePlayer/playerSkins';
+import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/skins';
 import AppearanceDemo from '../components/AppearanceStudio/AppearanceDemo';
 import LayoutThumb from '../components/AppearanceStudio/LayoutThumb';
 import BackgroundThumb from '../components/AppearanceStudio/BackgroundThumb';
@@ -217,6 +217,8 @@ const buildAppearanceSnapshot = (skin, vortex) => ({
   fontPrimary: skin.fontPrimary || '',
   textColor: skin.layoutText || '',
   playerSkinId: skin.playerSkinId,
+  playerColorMode: skin.playerColorMode || 'default',
+  playerCustomPalette: skin.playerCustomPalettes?.[skin.playerSkinId] || {},
   backgroundStyle: vortex.backgroundStyle,
   finishType: vortex.finishType,
   vortexColor: vortex.vortexColor
@@ -333,6 +335,113 @@ const StudioActions = styled.div`
   justify-content: flex-end;
 `;
 
+const ColorModeRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 5px 0;
+  cursor: pointer;
+`;
+
+const TokenRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+`;
+
+const TokenSwatch = styled.input`
+  width: 32px;
+  height: 26px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+`;
+
+const TokenLabel = styled.span`
+  font-size: 12px;
+  flex: 1;
+`;
+
+const PaletteDotsRow = styled.div`
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 4px;
+  flex-wrap: wrap;
+`;
+
+const PaletteDot = styled.span`
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: ${({ $c }) => $c};
+  border: 1px solid rgba(255, 255, 255, 0.25);
+`;
+
+/* Per-skin color customization (Default / Theme / Custom). Reads
+   `skin.colorSchema` off whichever skin is currently selected in the
+   catalog, so it scales to future skins without new UI code. */
+function PlayerColorEditor({ draft, patch, patchCustomColor, appTheme }) {
+  const skinEntry = PLAYER_SKINS[draft.playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
+  if (!skinEntry) return null;
+
+  const modeOptions = [
+    { id: 'default', label: 'Diseño predeterminado' },
+    { id: 'theme', label: 'Sincronizar con tema' },
+    { id: 'custom', label: 'Paleta libre' }
+  ];
+
+  const mappedFromTheme = skinEntry.themeMapping(appTheme || {});
+
+  return (
+    <FieldGroup style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 14, marginTop: 4 }}>
+      <Label>Color del reproductor ({skinEntry.label})</Label>
+
+      {modeOptions.map((m) => (
+        <ColorModeRow key={m.id}>
+          <input
+            type="radio"
+            name="player-color-mode"
+            checked={(draft.playerColorMode || 'default') === m.id}
+            onChange={() => patch({ playerColorMode: m.id })}
+          />
+          {m.label}
+        </ColorModeRow>
+      ))}
+
+      {draft.playerColorMode === 'theme' ? (
+        <PaletteDotsRow>
+          {Object.values(mappedFromTheme).map((c, i) => <PaletteDot key={i} $c={c} />)}
+        </PaletteDotsRow>
+      ) : draft.playerColorMode === 'custom' ? (
+        <div style={{ marginTop: 8 }}>
+          {skinEntry.colorSchema.map((token) => (
+            <TokenRow key={token.key}>
+              <TokenSwatch
+                type="color"
+                value={draft.playerCustomPalette?.[token.key] || skinEntry.defaultPalette[token.key]}
+                onChange={(e) => patchCustomColor(token.key, e.target.value)}
+              />
+              <TokenLabel>{token.label}</TokenLabel>
+            </TokenRow>
+          ))}
+        </div>
+      ) : (
+        <PaletteDotsRow>
+          {Object.values(skinEntry.defaultPalette).map((c, i) => <PaletteDot key={i} $c={c} />)}
+        </PaletteDotsRow>
+      )}
+
+      <GhostBtn type="button" onClick={() => patch({ playerColorMode: 'default', playerCustomPalette: {} })} style={{ marginTop: 6 }}>
+        Restablecer diseño original
+      </GhostBtn>
+    </FieldGroup>
+  );
+}
+
 function AparienciaSection() {
   const skin = useSkin();
   const vortex = useVortex();
@@ -345,6 +454,18 @@ function AparienciaSection() {
   const patch = (fields) => {
     setDraft((prev) => ({ ...prev, ...fields }));
     setSaveStatus('idle');
+  };
+
+  // Switching the catalog selection must re-point playerCustomPalette at
+  // whatever custom palette (if any) is already saved for THAT skin, so
+  // Custom mode edits never bleed from one skin's tokens into another's.
+  const selectPlayerSkin = (newId) => {
+    const existing = skin.playerCustomPalettes?.[newId] || {};
+    patch({ playerSkinId: newId, playerCustomPalette: existing });
+  };
+
+  const patchCustomColor = (key, value) => {
+    patch({ playerCustomPalette: { ...draft.playerCustomPalette, [key]: value } });
   };
 
   const handleApply = () => {
@@ -360,6 +481,8 @@ function AparienciaSection() {
     skin.setFontSecondary(draft.fontPrimary);
     skin.setFontUi(draft.fontPrimary);
     skin.setPlayerSkinId(draft.playerSkinId);
+    skin.setPlayerColorMode(draft.playerColorMode);
+    skin.setPlayerCustomPalettes((prev) => ({ ...prev, [draft.playerSkinId]: draft.playerCustomPalette }));
     vortex.setBackgroundStyle(draft.backgroundStyle);
     vortex.setFinishType(draft.finishType);
     vortex.setVortexColor(draft.vortexColor);
@@ -460,7 +583,7 @@ function AparienciaSection() {
               {PLAYER_SKIN_LIST.map((option) => {
                 const SkinComp = option.component;
                 return (
-                  <CatalogCard key={option.id} type="button" $active={draft.playerSkinId === option.id} onClick={() => patch({ playerSkinId: option.id })}>
+                  <CatalogCard key={option.id} type="button" $active={draft.playerSkinId === option.id} onClick={() => selectPlayerSkin(option.id)}>
                     <CatalogThumbBox style={{ background: '#0a0a10', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
                       <PlayerSkinCardWrap>
                         <SkinComp
@@ -471,9 +594,16 @@ function AparienciaSection() {
                           isPlaying={false}
                           hasQueue={false}
                           onToggleEar={() => {}}
+                          onTogglePlay={() => {}}
                           onPrev={() => {}}
                           onNext={() => {}}
                           ariaLabel="preview"
+                          currentTime={0}
+                          duration={0}
+                          volume={0.8}
+                          onVolumeChange={() => {}}
+                          onSeek={() => {}}
+                          palette={option.defaultPalette}
                         />
                       </PlayerSkinCardWrap>
                     </CatalogThumbBox>
@@ -482,6 +612,8 @@ function AparienciaSection() {
                 );
               })}
             </CatalogGrid>
+
+            <PlayerColorEditor draft={draft} patch={patch} patchCustomColor={patchCustomColor} appTheme={skin.appTheme} />
           </StudioSection>
         </ConfigCol>
 
