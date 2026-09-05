@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
+import { Play } from 'lucide-react';
 import { findBackgroundEntry } from './backgroundCatalog';
 
 const Frame = styled.div`
@@ -15,7 +16,10 @@ const Frame = styled.div`
    up constrained browsers (mobile Safari in particular caps concurrent media
    elements hard). Each card only mounts its real preview once it has
    scrolled into view at least once, then keeps it (no re-teardown on scroll
-   away, to avoid flicker). */
+   away, to avoid flicker). Playback itself (see VideoThumb below) only
+   starts on hover (desktop) or tap (mobile) — mounted cards otherwise just
+   show one static decoded frame, so no more than one video ever actually
+   plays at a time. */
 function useMountOnceVisible(skip) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(skip);
@@ -47,23 +51,78 @@ const VideoEl = styled.video`
   pointer-events: none;
 `;
 
-/* Real decoded frame from the actual asset file — seeked once metadata loads,
-   never played continuously in a catalog grid (kept cheap for ~38 entries). */
+const HoverHint = styled.div`
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  opacity: ${({ $show }) => ($show ? 1 : 0)};
+  transition: opacity 120ms ease;
+  pointer-events: none;
+`;
+
+/* Real decoded frame from the actual asset file, seeked once metadata loads —
+   never playing on its own in a catalog grid. Actual playback only happens
+   while the pointer hovers the card (desktop) or after a tap (mobile, where
+   hover doesn't exist), so dozens of catalog cards never decode video at the
+   same time — only the one the user is actively looking at. */
 function VideoThumb({ src, autoPlay }) {
   const ref = useRef(null);
+  const [previewing, setPreviewing] = useState(false);
+
+  if (autoPlay) {
+    return (
+      <VideoEl
+        ref={ref}
+        src={src}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        autoPlay
+      />
+    );
+  }
+
+  const play = () => {
+    ref.current?.play().catch(() => {});
+    setPreviewing(true);
+  };
+  const stop = () => {
+    const el = ref.current;
+    if (el) {
+      el.pause();
+      el.currentTime = 1;
+    }
+    setPreviewing(false);
+  };
+
   return (
-    <VideoEl
-      ref={ref}
-      src={src}
-      muted
-      loop
-      playsInline
-      preload="metadata"
-      autoPlay={autoPlay}
-      onLoadedMetadata={(e) => {
-        if (!autoPlay) e.currentTarget.currentTime = 1;
-      }}
-    />
+    <>
+      <VideoEl
+        ref={ref}
+        src={src}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={(e) => { e.currentTarget.currentTime = 1; }}
+        onMouseEnter={play}
+        onMouseLeave={stop}
+        onClick={() => (previewing ? stop() : play())}
+        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+      />
+      <HoverHint $show={!previewing}>
+        <Play size={18} fill="currentColor" />
+      </HoverHint>
+    </>
   );
 }
 
