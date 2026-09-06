@@ -3,16 +3,36 @@
   "label": "Holographic Prism",
   "sourceSheet": "g3ry50",
   "sourceCell": "r2c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/holographic-prism-g3ry50-b/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.7513,
+  "maxWidth": 460,
+  "notes": "Segunda variante de Holographic Prism (arte de facetas triangulares distinto al primero). Mismo criterio de mapping: rueda secundaria decorativa a la derecha, botones lineales principales para transporte, barra 'Title/Artist' como Progreso, barra inferior como Volumen.",
+  "controls": {
+    "previous": { "x": 0.3696, "y": 0.6472, "w": 0.0652, "h": 0.1015 },
+    "playPause": { "x": 0.4420, "y": 0.6345, "w": 0.0652, "h": 0.1142 },
+    "next": { "x": 0.5145, "y": 0.6472, "w": 0.0652, "h": 0.1015 },
+    "progress": { "x": 0.3551, "y": 0.5584, "w": 0.3116, "h": 0.0330, "color": "#8fd8ff" },
+    "volume": { "x": 0.2826, "y": 0.7741, "w": 0.3841, "h": 0.0381, "color": "#8fd8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.2754, "y": 0.1066, "w": 0.4058, "h": 0.1396,
+      "align": "flex-start", "justify": "center",
+      "color": "#8fd8ff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.8vw,12px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.4vw,9px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }

@@ -3,16 +3,35 @@
   "label": "Raw Concrete Neo-Brutalism",
   "sourceSheet": "g3ry50",
   "sourceCell": "r2c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/raw-concrete-neo-brutalism/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 2.0,
+  "maxWidth": 560,
+  "notes": "Sin iconos de anterior/siguiente reales: se reutilizan los dos knobs grises a la derecha del knob rojo (que se usa como Play/Pause por ser el mas prominente/central) como Previous/Next por posicion. El slider 'Artist' se usa como Progreso; el slider 'Album' (junto a la foto y el osciloscopio) se usa como Volumen. La miniatura de foto es una imagen generica de stock (no una celebridad identificable) pero se neutralizo igual por consistencia y precaucion.",
+  "controls": {
+    "playPause": { "x": 0.5659, "y": 0.5588, "w": 0.0573, "h": 0.1146 },
+    "previous": { "x": 0.6733, "y": 0.5731, "w": 0.0501, "h": 0.1003 },
+    "next": { "x": 0.7378, "y": 0.5731, "w": 0.0501, "h": 0.1003 },
+    "progress": { "x": 0.2221, "y": 0.4154, "w": 0.4011, "h": 0.0430, "color": "#ff3b3b" },
+    "volume": { "x": 0.1433, "y": 0.7163, "w": 0.3868, "h": 0.0430, "color": "#ff3b3b" }
+  },
+  "displayRegions": [
+    {
+      "id": "ledDisplay",
+      "x": 0.0602, "y": 0.1576, "w": 0.5773, "h": 0.2579,
+      "align": "flex-start", "justify": "center",
+      "color": "#ff3b3b",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(12px,2.4vw,17px)", "weight": 700 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }

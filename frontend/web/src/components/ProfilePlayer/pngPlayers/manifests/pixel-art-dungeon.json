@@ -3,16 +3,35 @@
   "label": "Pixel Art Dungeon",
   "sourceSheet": "g3ry50",
   "sourceCell": "r2c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/pixel-art-dungeon/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6278,
+  "maxWidth": 460,
+  "notes": "Se recorto el titulo de catalogo. Los personajes pixel-art son genericos (no personas reales), se conservan. Los 3 botones de transporte usan iconos reales. La barra 'Artist' se usa como Progreso, la barra 'Album' como Volumen. El D-pad y el cluster de diamantes rojos son decorativos.",
+  "controls": {
+    "previous": { "x": 0.4063, "y": 0.5381, "w": 0.0551, "h": 0.0785 },
+    "playPause": { "x": 0.4683, "y": 0.5269, "w": 0.0620, "h": 0.1009 },
+    "next": { "x": 0.5372, "y": 0.5381, "w": 0.0551, "h": 0.0785 },
+    "progress": { "x": 0.3857, "y": 0.4821, "w": 0.2548, "h": 0.0291, "color": "#3fd8ff" },
+    "volume": { "x": 0.3857, "y": 0.6278, "w": 0.2548, "h": 0.0336, "color": "#3fd8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.3375, "y": 0.0740, "w": 0.3995, "h": 0.0874,
+      "align": "flex-start", "justify": "center",
+      "color": "#3fd8ff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.8vw,12px)", "weight": 700 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }
