@@ -6,8 +6,30 @@
   "_CRITICAL_NOTE": "Assets (6).png is an ASSET SHEET, not a picture of the assembled player. A sheet deliberately lays pieces out side by side so every piece is visible/selectable — its layout is a CATALOG arrangement, not the player's real mounted geometry. Every x/y below is a sourceSheetPosition (where a piece was physically found on the sheet) and MUST NOT be read as assembledPlayerPosition. No assembledPlayerCoordinates exist yet for this player — see assembledPlayerCoordinates below. Do not attempt another visual composition pass until a real assembled-reference (a picture of the ACTUAL mounted device) is supplied. asset-sheet-cropped.png (formerly misnamed assembled-reference.png) is the asset sheet with catalog metadata masked out — it is a piece-library contact sheet, not a mounting plan, and Player Lab must not present it as a composition-accuracy reference.",
 
   "assembledPlayerCoordinates": {
-    "available": false,
-    "note": "Not supplied. Until it is, this manifest's x/y/width/height only describe sourceSheetPosition — where each piece sits in Assets (6).png's catalog layout — not where it belongs in a real mounted player. BubblegumGlossSkin.jsx currently renders using sourceSheetPosition (unchanged, per explicit instruction not to touch Live again) and therefore visually reads as a parts sheet, not an assembled device, until real assembledPlayerCoordinates replace these values."
+    "available": true,
+    "canvas": { "width": 483, "height": 400 },
+    "referenceSource": "User-supplied assembled mockup, 'Bubble Gum Pop' cell (top-left) — provided as pasted chat images, not a file this project can pixel-sample. Positions below are estimated from VISUAL proportions of that reference (one continuous device: screen near the top, control row directly beneath with minimal gap, slider directly beneath that, decorations distributed across/near the body rather than isolated in a corner) — not measured pixel-for-pixel, since no file access to that exact reference exists.",
+    "note": "Closes the ~75px dead gap that existed between the button row and the slider under sourceSheetPosition (the actual cause of the 'floating parts' look), and trims the sheet's own empty top margin. Does NOT add any shell/material — every id below is the same real asset, only x/y differ from sourceSheetPosition; width/height are unchanged. positions: { assetId: {x, y} }",
+    "positions": {
+      "screen-fused": { "x": 23, "y": 0 },
+      "screen-background-alt": { "x": 328, "y": 17 },
+      "mini-prev": { "x": 41, "y": 21 },
+      "mini-pause": { "x": 41, "y": 75 },
+      "mini-next": { "x": 41, "y": 138 },
+      "prev": { "x": 23, "y": 219 },
+      "play": { "x": 96, "y": 219 },
+      "pause": { "x": 170, "y": 218 },
+      "next": { "x": 248, "y": 219 },
+      "volume": { "x": 323, "y": 219 },
+      "slider-track": { "x": 24, "y": 309 },
+      "slider-thumb": { "x": 229, "y": 309 },
+      "bubble-01": { "x": 396, "y": 284 },
+      "bubble-02": { "x": 416, "y": 212 },
+      "bubble-03": { "x": 358, "y": 325 },
+      "bubble-04": { "x": 441, "y": 357 },
+      "bubble-05": { "x": 334, "y": 311 },
+      "bubble-06": { "x": 336, "y": 339 }
+    }
   },
 
   "source": {

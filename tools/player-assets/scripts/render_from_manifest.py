@@ -13,7 +13,10 @@ def render(player_dir, out_path):
     with open(os.path.join(player_dir, "manifest.json"), encoding="utf-8") as f:
         manifest = json.load(f)
 
-    canvas = Image.new("RGBA", (manifest["canvas"]["width"], manifest["canvas"]["height"]), (0, 0, 0, 0))
+    apc = manifest.get("assembledPlayerCoordinates")
+    use_apc = bool(apc and apc.get("available"))
+    canvas_size = (apc["canvas"]["width"], apc["canvas"]["height"]) if use_apc else (manifest["canvas"]["width"], manifest["canvas"]["height"])
+    canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
 
     assets = sorted(manifest["assets"], key=lambda a: a["zIndex"])
     for a in assets:
@@ -21,10 +24,11 @@ def render(player_dir, out_path):
         piece = Image.open(path).convert("RGBA")
         if piece.size != (a["width"], a["height"]):
             piece = piece.resize((a["width"], a["height"]), Image.LANCZOS)
-        canvas.alpha_composite(piece, (a["x"], a["y"]))
+        xy = apc["positions"][a["id"]] if use_apc and a["id"] in apc["positions"] else a
+        canvas.alpha_composite(piece, (xy["x"], xy["y"]))
 
     canvas.save(out_path)
-    print(f"reconstructed {len(assets)} assets -> {out_path}")
+    print(f"reconstructed {len(assets)} assets -> {out_path} ({'assembledPlayerCoordinates' if use_apc else 'sourceSheetPosition'})")
     return manifest
 
 
