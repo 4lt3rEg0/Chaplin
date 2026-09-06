@@ -2,18 +2,27 @@
   "id": "bubblegum-gloss",
   "label": "Y2K Bubblegum Gloss",
   "canvas": { "width": 483, "height": 560 },
+
+  "_CRITICAL_NOTE": "Assets (6).png is an ASSET SHEET, not a picture of the assembled player. A sheet deliberately lays pieces out side by side so every piece is visible/selectable — its layout is a CATALOG arrangement, not the player's real mounted geometry. Every x/y below is a sourceSheetPosition (where a piece was physically found on the sheet) and MUST NOT be read as assembledPlayerPosition. No assembledPlayerCoordinates exist yet for this player — see assembledPlayerCoordinates below. Do not attempt another visual composition pass until a real assembled-reference (a picture of the ACTUAL mounted device) is supplied. asset-sheet-cropped.png (formerly misnamed assembled-reference.png) is the asset sheet with catalog metadata masked out — it is a piece-library contact sheet, not a mounting plan, and Player Lab must not present it as a composition-accuracy reference.",
+
+  "assembledPlayerCoordinates": {
+    "available": false,
+    "note": "Not supplied. Until it is, this manifest's x/y/width/height only describe sourceSheetPosition — where each piece sits in Assets (6).png's catalog layout — not where it belongs in a real mounted player. BubblegumGlossSkin.jsx currently renders using sourceSheetPosition (unchanged, per explicit instruction not to touch Live again) and therefore visually reads as a parts sheet, not an assembled device, until real assembledPlayerCoordinates replace these values."
+  },
+
   "source": {
     "sheet": "Assets (6).png",
     "sheetOriginalPath": "O:\\ODriveO\\OneDrive\\Desktop\\repros\\Assets\\Assets (6).png",
+    "sheetKind": "ASSET_SHEET — catalog layout of available pieces, not a picture of the assembled player",
     "region": [0, 0, 483, 560],
-    "assembledReference": "assembled-reference.png",
+    "assetSheetCropped": "asset-sheet-cropped.png",
     "extractionScripts": [
       "tools/player-assets/scripts/extract_bubblegum_gloss.py",
       "tools/player-assets/scripts/separate_mini_transport.py",
       "tools/player-assets/scripts/build_assembled_reference.py"
     ],
     "extractedAt": "2026-09-06",
-    "note": "assembled-reference.png is the real sheet cell with ONLY non-player metadata masked to transparent (catalog label, unused icon-row, recolor-swatch legend) — it is the ABSOLUTE authority for x/y/width/height below. Every coordinate is in this same 483x560 canvas. assembled-reference.png itself is never rendered as the player (reference/validation only) — render_from_manifest.py + BubblegumGlossSkin.jsx compose the player from the separate asset files below."
+    "note": "asset-sheet-cropped.png is the real sheet cell with ONLY non-player metadata masked to transparent (catalog label, unused icon-row, recolor-swatch legend). It shows the piece LIBRARY at its catalog layout — it is NOT evidence of correct final composition and must not be used as a position/overlay validation target. render_from_manifest.py + BubblegumGlossSkin.jsx currently compose the player using sourceSheetPosition (x/y below), which is why the Live render currently looks like a parts sheet rather than a mounted device — this is accurately documented, not hidden, pending a true assembled reference."
   },
 
   "assets": [

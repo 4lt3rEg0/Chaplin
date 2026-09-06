@@ -10,7 +10,12 @@ export const referenceWidth = rawManifest.canvas.width;
 export const referenceHeight = rawManifest.canvas.height;
 export const sourceFile = rawManifest.source.sheet;
 export const sourceCell = 'r0c0';
-export const referenceImage = '/dev-reference/bubblegum-gloss/reference.png';
+// NOT a picture of the assembled player — Assets (6).png is an asset
+// sheet (catalog layout of available pieces). Player Lab must not treat
+// this as a composition-accuracy reference. See manifest.json's
+// assembledPlayerCoordinates (currently unavailable) and _CRITICAL_NOTE.
+export const referenceImage = '/dev-reference/bubblegum-gloss/asset-sheet-cropped.png';
+export const referenceIsAssetSheet = true;
 
 // Measured directly from the sheet's own RECOLOR MASK / ACCENT swatch
 // legend (extract_bubblegum_gloss.py) — not invented. No shell-shaped

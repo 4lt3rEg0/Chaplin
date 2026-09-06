@@ -98,6 +98,17 @@ const Info = styled.pre`
   white-space: pre-wrap;
 `;
 
+const AssetSheetWarning = styled.div`
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  background: #3a2508;
+  border: 1px solid #a86a1a;
+  border-radius: 8px;
+  color: #ffcf8a;
+  font-size: 12.5px;
+  line-height: 1.5;
+`;
+
 export default function PlayerLab() {
   const { skinId } = useParams();
   const skin = PLAYER_SKINS[skinId];
@@ -125,13 +136,23 @@ export default function PlayerLab() {
   return (
     <Page>
       <h2 style={{ marginTop: 0 }}>Player Lab — {skin.label} <span style={{ color: '#666', fontSize: 13 }}>({skinId})</span></h2>
+      {skin.referenceIsAssetSheet && mode !== 'live' && (
+        <AssetSheetWarning>
+          ⚠ {skin.sourceFile} is an ASSET SHEET (a catalog layout of available pieces), not a picture of the
+          assembled player. Piece positions on the sheet are NOT the player's real mounted geometry — this mode is
+          for inspecting/tracing individual pieces only, not for validating composition/layout accuracy. No real
+          assembled-reference exists yet for {skin.label}.
+        </AssetSheetWarning>
+      )}
       <Toolbar>
-        {['live', 'reference', 'overlay', 'contours', 'blink'].map((m) => (
-          <ModeBtn key={m} type="button" $active={mode === m} onClick={() => setMode(m)}>{m.toUpperCase()}</ModeBtn>
-        ))}
+        {['live', skin.referenceIsAssetSheet ? 'asset-sheet' : 'reference', 'overlay', 'contours', 'blink'].map((m) => {
+          const key = m === 'asset-sheet' ? 'reference' : m;
+          const displayLabel = m === 'asset-sheet' ? 'ASSET SHEET' : m.toUpperCase();
+          return <ModeBtn key={key} type="button" $active={mode === key} onClick={() => setMode(key)}>{displayLabel}</ModeBtn>;
+        })}
         {mode === 'overlay' && (
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-            reference opacity
+            {skin.referenceIsAssetSheet ? 'asset sheet opacity' : 'reference opacity'}
             <input type="range" min="0" max="100" value={overlayOpacity} onChange={(e) => setOverlayOpacity(Number(e.target.value))} />
             {overlayOpacity}%
           </label>

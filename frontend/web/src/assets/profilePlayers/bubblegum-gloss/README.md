@@ -1,4 +1,27 @@
-# Y2K Bubblegum Gloss — asset pack (Golden Master)
+# Y2K Bubblegum Gloss — asset pack (piece library, NOT yet assembled)
+
+## ⚠ CORRECCIÓN CONCEPTUAL CRÍTICA (leer antes que nada)
+`Assets (6).png` es un **ASSET SHEET** (catálogo de piezas dispuestas para
+que se vean/seleccionen todas), **no una foto del reproductor ya montado**.
+Su disposición es de catálogo, no la geometría real del dispositivo final.
+
+Cada `x`/`y` en `manifest.json` es `sourceSheetPosition` (dónde se
+encontró la pieza en la sheet) — **no** es `assembledPlayerPosition`. Ese
+segundo sistema de coordenadas **no existe todavía** (ver
+`manifest.json#assembledPlayerCoordinates`, `available: false`).
+
+`BubblegumGlossSkin.jsx` sigue renderizando con `sourceSheetPosition` sin
+cambios (orden explícita: no tocar el Live) — por eso el Live se ve como
+un despiece (bloque de pantalla, botones más abajo, slider más abajo,
+burbujas aparte) y no como un producto físico único. Esto está documentado
+a propósito, no oculto. No se hará ninguna composición nueva hasta recibir
+una referencia real del player YA MONTADO.
+
+`asset-sheet-cropped.png` (antes mal llamado `assembled-reference.png`)
+es la celda de la sheet con la metadata de catálogo enmascarada — es un
+contact-sheet de piezas, no un plano de montaje. Player Lab ya no lo
+presenta como "REFERENCE"; el modo se llama "ASSET SHEET" y muestra un
+aviso explícito.
 
 ## Fuente
 `Assets (6).png` (master sheet original, ya no existe en disco — fue

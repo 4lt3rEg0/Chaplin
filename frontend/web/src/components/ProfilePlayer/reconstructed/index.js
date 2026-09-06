@@ -31,6 +31,7 @@ export const PLAYER_SKINS = SKIN_MODULES.reduce((acc, mod) => {
     sourceFile: mod.sourceFile,
     sourceCell: mod.sourceCell,
     referenceImage: mod.referenceImage,
+    referenceIsAssetSheet: mod.referenceIsAssetSheet || false,
     colorSchema: mod.colorSchema,
     defaultPalette: mod.defaultPalette,
     themeMapping: mod.themeMapping
