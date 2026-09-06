@@ -3,12 +3,13 @@ import styled, { css, keyframes } from 'styled-components';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Ear } from 'lucide-react';
 import { defaultPalette } from './palette';
 import { fmtTime } from '../shared';
+import { glossPlastic, matteRubber, bevelRaised, bevelSunken, screwCss } from '../materials';
 
 /*
- * PAGER//BEAT — skin #5. Monochrome pixel-LCD pager. The D-pad has real
- * transport functions (left/right = prev/next, up/down = volume, center =
- * play/pause) instead of being decorative, long titles marquee-scroll like
- * a real dot-matrix pager, and the LED tells real state (off/blink/solid).
+ * PAGER//BEAT — skin #6. A chunky ABS-plastic pager: asymmetric molded
+ * corners, a belt clip tab physically protruding from the case, a deeply
+ * recessed dot-matrix LCD, rubber D-pad buttons that actually depress, and
+ * a speaker grille of real drilled holes — not a green rectangle in a card.
  */
 
 const scrollText = keyframes`
@@ -23,22 +24,39 @@ const blink = keyframes`
 
 const MARQUEE_THRESHOLD = 18;
 
-const Shell = styled.div`
-  --pb-case: ${({ $p }) => $p.caseColor};
-  --pb-lcd: ${({ $p }) => $p.lcdBack};
-  --pb-pixel: ${({ $p }) => $p.pixelColor};
-  --pb-led: ${({ $p }) => $p.ledColor};
-  --pb-button: ${({ $p }) => $p.buttonColor};
-  --pb-dpad: ${({ $p }) => $p.dpadColor};
-  --pb-accent: ${({ $p }) => $p.accentColor};
-
+const Wrap = styled.div`
   position: relative;
+  padding-left: 14px;
+
+  @media (max-width: 480px) {
+    padding-left: 10px;
+  }
+`;
+
+const ClipTab = styled.div`
+  position: absolute;
+  left: 0;
+  top: 22px;
+  width: 16px;
+  height: 46px;
+  border-radius: 5px 0 0 5px;
+  background: ${({ $p }) => matteRubber($p.caseColor)};
+  box-shadow: -2px 2px 6px rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.08);
+  z-index: 0;
+
+  @media (max-width: 480px) {
+    height: 38px;
+  }
+`;
+
+const Case = styled.div`
+  position: relative;
+  z-index: 1;
+  border-radius: 10px 16px 26px 26px;
   padding: 14px;
-  border-radius: 16px;
-  background: linear-gradient(160deg, rgba(255,255,255,0.06), transparent 35%), var(--pb-case);
-  border: 1px solid rgba(0,0,0,0.6);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 20px rgba(0,0,0,0.4);
-  color: var(--pb-accent);
+  background: ${({ $p }) => glossPlastic($p.caseColor)};
+  box-shadow: ${bevelRaised(1)}, 0 12px 22px rgba(0,0,0,0.4);
+  color: ${({ $p }) => $p.accentColor};
   font-family: 'Segoe UI', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
@@ -56,28 +74,47 @@ const HeaderRow = styled.div`
   justify-content: space-between;
   font-size: 9px;
   letter-spacing: 0.08em;
-  opacity: 0.7;
+  opacity: 0.8;
+`;
+
+const SpeakerGrille = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 3px);
+  grid-auto-rows: 3px;
+  gap: 2px;
+`;
+
+const SpeakerHole = styled.span`
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.15), #000 70%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.7);
 `;
 
 const Led = styled.span`
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: ${({ $on }) => ($on ? 'var(--pb-led)' : 'rgba(255,255,255,0.15)')};
-  box-shadow: ${({ $on }) => ($on ? '0 0 5px var(--pb-led)' : 'none')};
+  background: ${({ $on, $c }) => ($on ? $c : 'rgba(255,255,255,0.15)')};
+  box-shadow: ${({ $on, $c }) => ($on ? `0 0 5px ${$c}` : 'none')};
   animation: ${({ $blink }) => ($blink ? css`${blink} 1s steps(1) infinite` : 'none')};
+`;
+
+const LcdBezel = styled.div`
+  padding: 4px;
+  border-radius: 4px;
+  background: ${({ $p }) => matteRubber($p.dpadColor)};
+  box-shadow: ${bevelSunken(0.9)};
 `;
 
 const Lcd = styled.div`
   position: relative;
   padding: 8px 8px 10px;
-  border-radius: 4px;
+  border-radius: 2px;
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 3px),
-    var(--pb-lcd);
-  border: 2px solid #14150f;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.35);
-  color: var(--pb-pixel);
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0px, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 3px),
+    ${({ $p }) => $p.lcdBack};
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.45);
+  color: ${({ $p }) => $p.pixelColor};
   font-family: 'Consolas', 'Courier New', monospace;
   overflow: hidden;
 `;
@@ -93,9 +130,7 @@ const MarqueeInner = styled.div`
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  ${({ $scroll }) => $scroll && css`
-    animation: ${scrollText} 6s linear infinite;
-  `}
+  ${({ $scroll }) => $scroll && css`animation: ${scrollText} 6s linear infinite;`}
 `;
 
 const SubLine = styled.div`
@@ -126,8 +161,8 @@ const ProgressDots = styled.div`
 const Dot = styled.span`
   flex: 1;
   height: 4px;
-  background: ${({ $lit }) => ($lit ? 'var(--pb-pixel)' : 'transparent')};
-  border: 1px solid var(--pb-pixel);
+  background: ${({ $lit, $p }) => ($lit ? $p.pixelColor : 'transparent')};
+  border: 1px solid ${({ $p }) => $p.pixelColor};
   opacity: ${({ $lit }) => ($lit ? 0.9 : 0.35)};
 `;
 
@@ -143,36 +178,32 @@ const DPad = styled.div`
   width: 68px;
   height: 68px;
   flex-shrink: 0;
+  border-radius: 50%;
+  background: ${({ $p }) => matteRubber($p.dpadColor)};
+  box-shadow: ${bevelSunken(0.5)};
 `;
 
 const DButton = styled.button`
   position: absolute;
   width: 24px;
   height: 22px;
-  border: 1px solid rgba(0,0,0,0.6);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pb-dpad) 150%, #555), var(--pb-dpad));
-  color: var(--pb-accent);
+  border: none;
+  background: ${({ $p }) => glossPlastic($p.dpadColor)};
+  color: ${({ $p }) => $p.accentColor};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-shadow: ${bevelRaised(0.7)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.7)}; transform: translateY(1px); }
   &:disabled { opacity: 0.3; cursor: not-allowed; }
 `;
 
-const DUp = styled(DButton)`
-  top: 0; left: 22px; border-radius: 4px 4px 0 0;
-`;
-const DDown = styled(DButton)`
-  bottom: 0; left: 22px; border-radius: 0 0 4px 4px;
-`;
-const DLeft = styled(DButton)`
-  left: 0; top: 23px; border-radius: 4px 0 0 4px;
-`;
-const DRight = styled(DButton)`
-  right: 0; top: 23px; border-radius: 0 4px 4px 0;
-`;
+const DUp = styled(DButton)`top: 2px; left: 22px; border-radius: 4px 4px 0 0;`;
+const DDown = styled(DButton)`bottom: 2px; left: 22px; border-radius: 0 0 4px 4px;`;
+const DLeft = styled(DButton)`left: 2px; top: 23px; border-radius: 4px 0 0 4px;`;
+const DRight = styled(DButton)`right: 2px; top: 23px; border-radius: 0 4px 4px 0;`;
 const DCenter = styled.button`
   position: absolute;
   left: 22px;
@@ -180,14 +211,15 @@ const DCenter = styled.button`
   width: 24px;
   height: 22px;
   border-radius: 3px;
-  border: 1px solid rgba(0,0,0,0.6);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pb-led) 60%, #222), color-mix(in srgb, var(--pb-led) 25%, #111));
+  border: none;
+  background: ${({ $p }) => `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${$p.ledColor} 60%, #222), color-mix(in srgb, ${$p.ledColor} 30%, #111))`};
   color: #fff;
   font-size: 8px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: ${bevelRaised(0.7)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.7)}; transform: translateY(1px); }
   &:disabled { opacity: 0.3; cursor: not-allowed; }
 `;
 
@@ -195,18 +227,19 @@ const ListenButton = styled.button`
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--pb-led) 55%, #000);
-  background: ${({ $active }) => ($active
-    ? 'linear-gradient(180deg, var(--pb-led), color-mix(in srgb, var(--pb-led) 50%, #000))'
-    : 'linear-gradient(180deg, color-mix(in srgb, var(--pb-button) 140%, #666), var(--pb-button))')};
-  color: ${({ $active }) => ($active ? '#210a00' : 'var(--pb-accent)')};
+  border: none;
+  background: ${({ $active, $p }) => ($active
+    ? `radial-gradient(circle at 35% 30%, ${$p.ledColor}, color-mix(in srgb, ${$p.ledColor} 50%, #000))`
+    : glossPlastic($p.buttonColor))};
+  color: ${({ $active }) => ($active ? '#210a00' : 'inherit')};
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
+  box-shadow: ${bevelRaised(0.9)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.9)}; transform: translateY(1px); }
 `;
 
 const SEGMENTS = 12;
@@ -249,63 +282,69 @@ export default function PagerBeatSkin({
   };
 
   return (
-    <Shell $p={palette}>
-      <HeaderRow>
-        <span>PAGER//BEAT</span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Led $on={isActive} $blink={playing} />
-          {isActive ? (playing ? 'ON AIR' : 'HOLD') : 'STANDBY'}
-        </span>
-      </HeaderRow>
+    <Wrap>
+      <ClipTab $p={palette} />
+      <Case $p={palette}>
+        <HeaderRow>
+          <SpeakerGrille>{Array.from({ length: 8 }, (_, i) => <SpeakerHole key={i} />)}</SpeakerGrille>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Led $on={isActive} $blink={playing} $c={palette.ledColor} />
+            {isActive ? (playing ? 'ON AIR' : 'HOLD') : 'STANDBY'}
+          </span>
+        </HeaderRow>
 
-      <Lcd>
-        <MarqueeWrap>
-          <MarqueeInner $scroll={needsMarquee}>{marqueeText}</MarqueeInner>
-        </MarqueeWrap>
-        {track && <SubLine>{modeLabel}{track.owner_username ? ` · ${track.owner_username}` : ''}</SubLine>}
-        <StatusLine>
-          <span>{fmtTime(currentTime)}</span>
-          <span>{fmtTime(duration)}</span>
-        </StatusLine>
-        <ProgressDots ref={dotsRef} role="slider" aria-label="Progreso" aria-valuemin={0} aria-valuemax={duration || 0} aria-valuenow={currentTime} onClick={(e) => seekFromDots(e.clientX)}>
-          {Array.from({ length: SEGMENTS }, (_, i) => <Dot key={i} $lit={i < litDots} />)}
-        </ProgressDots>
-      </Lcd>
+        <LcdBezel $p={palette}>
+          <Lcd $p={palette}>
+            <MarqueeWrap>
+              <MarqueeInner $scroll={needsMarquee}>{marqueeText}</MarqueeInner>
+            </MarqueeWrap>
+            {track && <SubLine>{modeLabel}{track.owner_username ? ` · ${track.owner_username}` : ''}</SubLine>}
+            <StatusLine>
+              <span>{fmtTime(currentTime)}</span>
+              <span>{fmtTime(duration)}</span>
+            </StatusLine>
+            <ProgressDots ref={dotsRef} role="slider" aria-label="Progreso" aria-valuemin={0} aria-valuemax={duration || 0} aria-valuenow={currentTime} onClick={(e) => seekFromDots(e.clientX)}>
+              {Array.from({ length: SEGMENTS }, (_, i) => <Dot key={i} $lit={i < litDots} $p={palette} />)}
+            </ProgressDots>
+          </Lcd>
+        </LcdBezel>
 
-      <BottomRow>
-        <DPad>
-          <DUp type="button" onClick={() => onVolumeChange(Math.min(1, volume + VOL_STEP))} aria-label="Subir volumen">
-            <ChevronUp size={12} />
-          </DUp>
-          <DDown type="button" onClick={() => onVolumeChange(Math.max(0, volume - VOL_STEP))} aria-label="Bajar volumen">
-            <ChevronDown size={12} />
-          </DDown>
-          <DLeft type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
-            <ChevronLeft size={12} />
-          </DLeft>
-          <DRight type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
-            <ChevronRight size={12} />
-          </DRight>
-          <DCenter type="button" onClick={onTogglePlay} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
-            {playing ? 'II' : '>'}
-          </DCenter>
-        </DPad>
+        <BottomRow>
+          <DPad $p={palette}>
+            <DUp $p={palette} type="button" onClick={() => onVolumeChange(Math.min(1, volume + VOL_STEP))} aria-label="Subir volumen">
+              <ChevronUp size={12} />
+            </DUp>
+            <DDown $p={palette} type="button" onClick={() => onVolumeChange(Math.max(0, volume - VOL_STEP))} aria-label="Bajar volumen">
+              <ChevronDown size={12} />
+            </DDown>
+            <DLeft $p={palette} type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
+              <ChevronLeft size={12} />
+            </DLeft>
+            <DRight $p={palette} type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
+              <ChevronRight size={12} />
+            </DRight>
+            <DCenter $p={palette} type="button" onClick={onTogglePlay} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
+              {playing ? 'II' : '>'}
+            </DCenter>
+          </DPad>
 
-        <span style={{ fontSize: 8, opacity: 0.55, textAlign: 'center', letterSpacing: '0.06em' }}>
-          {Math.round(volume * 100)}%
-        </span>
+          <span style={{ fontSize: 8, opacity: 0.65, textAlign: 'center', letterSpacing: '0.06em' }}>
+            {Math.round(volume * 100)}%
+          </span>
 
-        <ListenButton
-          type="button"
-          onClick={onToggleEar}
-          $active={isActive}
-          aria-label={ariaLabel}
-          aria-pressed={isActive}
-          title="Profile Listen"
-        >
-          <Ear size={17} />
-        </ListenButton>
-      </BottomRow>
-    </Shell>
+          <ListenButton
+            $p={palette}
+            type="button"
+            onClick={onToggleEar}
+            $active={isActive}
+            aria-label={ariaLabel}
+            aria-pressed={isActive}
+            title="Profile Listen"
+          >
+            <Ear size={17} />
+          </ListenButton>
+        </BottomRow>
+      </Case>
+    </Wrap>
   );
 }

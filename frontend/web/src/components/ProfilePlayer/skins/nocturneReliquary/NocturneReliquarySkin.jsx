@@ -3,12 +3,15 @@ import styled, { css, keyframes } from 'styled-components';
 import { Ear, Gem, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { defaultPalette } from './palette';
 import { fmtTime, ratioFromAngle, safeSetPointerCapture, useVerticalDrag } from '../shared';
+import { glassPanel, glassPanelShadow, matteRubber, bevelRaised, bevelSunken } from '../materials';
 
 /*
- * NOCTURNE//RELIQUARY — skin #9. Gothic chapel architecture, not Halloween
- * horror: pointed arches, stone tracery and jewel-tone stained glass. The
- * rose window is a real, clickable progress ring; the glass-pane row is a
- * real playback visualizer; the "gem" is the real favorite flag.
+ * NOCTURNE//RELIQUARY — skin #10. A gothic pointed-arch reliquary, not a
+ * rounded card — the whole shell is clipped to an arch silhouette, with
+ * carved stone tracery bars across the face. Jewel-tone stained glass, not
+ * red/black horror. The rose window is a real, draggable progress ring;
+ * the glass-pane row is a real playback visualizer; the "gem" is the real
+ * favorite flag.
  */
 
 const START_DEG = -120;
@@ -18,15 +21,13 @@ const gemGlow = keyframes`
   0%, 100% { filter: drop-shadow(0 0 3px var(--nr-gem)); }
   50% { filter: drop-shadow(0 0 8px var(--nr-gem)); }
 `;
+const paneGlow = keyframes`0%, 100% { opacity: 0.35; } 50% { opacity: 1; }`;
 
-const paneGlow = keyframes`
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-`;
+// The whole shell IS a pointed gothic arch.
+const ARCH_CLIP = 'polygon(50% 0%, 100% 34%, 100% 100%, 0% 100%, 0% 34%)';
+const SMALL_ARCH_CLIP = 'polygon(50% 0%, 100% 30%, 100% 100%, 0% 100%, 0% 30%)';
 
-const ARCH_CLIP = 'polygon(50% 0%, 100% 30%, 100% 100%, 0% 100%, 0% 30%)';
-
-const Shell = styled.div`
+const Wrap = styled.div`
   --nr-stone: ${({ $p }) => $p.stoneColor};
   --nr-tracery: ${({ $p }) => $p.traceryColor};
   --nr-blue: ${({ $p }) => $p.glassBlue};
@@ -37,45 +38,49 @@ const Shell = styled.div`
   --nr-button: ${({ $p }) => $p.buttonColor};
 
   position: relative;
-  padding: 16px 14px 14px;
-  border-radius: 10px;
+  clip-path: ${ARCH_CLIP};
+  padding: 30px 16px 16px;
   background:
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--nr-tracery) 25%, transparent) 0px, transparent 2px, transparent 34px),
     linear-gradient(160deg, rgba(255,255,255,0.05), transparent 40%),
-    linear-gradient(180deg, color-mix(in srgb, var(--nr-stone) 120%, #000), var(--nr-stone));
-  border: 1px solid color-mix(in srgb, var(--nr-tracery) 55%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 20px rgba(0,0,0,0.45);
+    linear-gradient(180deg, color-mix(in srgb, var(--nr-stone) 65%, #000) 0%, var(--nr-stone) 100%);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.5);
   color: var(--nr-text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Georgia', 'Segoe UI', serif;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 
   @media (max-width: 480px) {
-    padding: 12px 10px 10px;
-    gap: 8px;
+    padding: 24px 12px 12px;
+    gap: 6px;
   }
 `;
 
-const TopRow = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: center;
+const ArchEdge = styled.div`
+  position: absolute;
+  inset: 0;
+  clip-path: ${ARCH_CLIP};
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), inset 0 0 0 2px color-mix(in srgb, var(--nr-tracery) 55%, transparent);
 `;
 
 const RoseWrap = styled.div`
-  position: relative;
-  width: 72px;
-  height: 72px;
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   cursor: pointer;
-  flex-shrink: 0;
+  z-index: 3;
   border: 2px solid color-mix(in srgb, var(--nr-tracery) 70%, transparent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nr-stone) 90%, #000);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--nr-stone) 90%, #000), 0 4px 10px rgba(0,0,0,0.5);
 
   @media (max-width: 480px) {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
   }
 `;
 
@@ -93,7 +98,7 @@ const RoseGlass = styled.div`
 
 const RoseHub = styled.div`
   position: absolute;
-  inset: 30%;
+  inset: 32%;
   border-radius: 50%;
   background: var(--nr-stone);
   border: 1px solid color-mix(in srgb, var(--nr-tracery) 60%, transparent);
@@ -101,21 +106,32 @@ const RoseHub = styled.div`
 
 const RoseSpoke = styled.span`
   position: absolute;
-  top: 4px;
+  top: 3px;
   left: 50%;
   width: 1px;
-  height: calc(50% - 4px);
+  height: calc(50% - 3px);
   background: color-mix(in srgb, var(--nr-tracery) 80%, transparent);
   transform-origin: bottom center;
   transform: translateX(-50%) rotate(${({ $deg }) => $deg}deg);
 `;
 
+const Nave = styled.div`
+  margin-top: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @media (max-width: 480px) {
+    margin-top: 42px;
+  }
+`;
+
 const Display = styled.div`
   min-width: 0;
-  clip-path: ${ARCH_CLIP};
-  padding: 14px 10px 8px;
-  background: rgba(10, 8, 20, 0.55);
-  border: 1px solid color-mix(in srgb, var(--nr-tracery) 45%, transparent);
+  clip-path: ${SMALL_ARCH_CLIP};
+  padding: 12px 10px 8px;
+  background: ${({ $p }) => glassPanel($p.glassBlue, 'sunken')};
+  box-shadow: ${({ $p }) => glassPanelShadow($p.glassBlue, 'sunken')};
 `;
 
 const TrackTitle = styled.div`
@@ -175,16 +191,17 @@ const TransportGroup = styled.div`
 const ArchButton = styled.button`
   width: 26px;
   height: 26px;
-  clip-path: ${ARCH_CLIP};
+  clip-path: ${SMALL_ARCH_CLIP};
   border: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--nr-button) 150%, #555), var(--nr-button));
+  background: ${({ $p }) => matteRubber($p.buttonColor)};
   color: var(--nr-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-shadow: ${bevelRaised(0.7)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.7)}; transform: translateY(1px); }
   &:disabled { opacity: 0.35; cursor: not-allowed; }
 `;
 
@@ -199,17 +216,18 @@ const VigilButton = styled.button`
   gap: 4px;
   padding: 5px 8px;
   border-radius: 4px;
-  border: 1px solid color-mix(in srgb, var(--nr-blue) 55%, #000);
-  background: ${({ $active }) => ($active
+  border: none;
+  background: ${({ $active, $p }) => ($active
     ? 'linear-gradient(180deg, color-mix(in srgb, var(--nr-blue) 55%, #001), color-mix(in srgb, var(--nr-blue) 25%, #000))'
-    : 'linear-gradient(180deg, #201d30, #14121e)')};
+    : matteRubber($p.buttonColor))};
   color: ${({ $active }) => ($active ? '#eef2ff' : 'var(--nr-blue)')};
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.05em;
   cursor: pointer;
+  box-shadow: ${bevelRaised(0.6)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.6)}; transform: translateY(1px); }
 `;
 
 const GemButton = styled.button`
@@ -228,7 +246,8 @@ const VolTrack = styled.div`
   width: 10px;
   height: 36px;
   border-radius: 5px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.4);
+  box-shadow: ${bevelSunken(0.5)};
   cursor: ns-resize;
   touch-action: none;
   overflow: hidden;
@@ -284,26 +303,27 @@ export default function NocturneReliquarySkin({
   const onRoseUp = () => { draggingRose.current = false; };
 
   return (
-    <Shell $p={palette}>
-      <TopRow>
-        <RoseWrap
-          ref={roseRef}
-          role="slider"
-          aria-label="Progreso"
-          aria-valuemin={0}
-          aria-valuemax={duration || 0}
-          aria-valuenow={currentTime}
-          onPointerDown={onRoseDown}
-          onPointerMove={onRoseMove}
-          onPointerUp={onRoseUp}
-          onPointerLeave={onRoseUp}
-        >
-          <RoseGlass $pct={progress * 100} />
-          {Array.from({ length: 8 }, (_, i) => <RoseSpoke key={i} $deg={i * 45} />)}
-          <RoseHub />
-        </RoseWrap>
+    <Wrap $p={palette}>
+      <ArchEdge />
+      <RoseWrap
+        ref={roseRef}
+        role="slider"
+        aria-label="Progreso"
+        aria-valuemin={0}
+        aria-valuemax={duration || 0}
+        aria-valuenow={currentTime}
+        onPointerDown={onRoseDown}
+        onPointerMove={onRoseMove}
+        onPointerUp={onRoseUp}
+        onPointerLeave={onRoseUp}
+      >
+        <RoseGlass $pct={progress * 100} />
+        {Array.from({ length: 8 }, (_, i) => <RoseSpoke key={i} $deg={i * 45} />)}
+        <RoseHub />
+      </RoseWrap>
 
-        <Display>
+      <Nave>
+        <Display $p={palette}>
           {track ? (
             <>
               <TrackTitle title={track.title}>{track.title}</TrackTitle>
@@ -314,69 +334,70 @@ export default function NocturneReliquarySkin({
             <TrackSub>{mode === 'favorites' ? 'SIN FAVORITAS' : mode === 'radio' ? 'RADIO SIN SEÑAL' : 'CRIPTA EN SILENCIO'}</TrackSub>
           )}
         </Display>
-      </TopRow>
 
-      <PaneRow>
-        {PANE_COLORS.map((c, i) => (
-          <Pane key={i} $c={c} $active={playing} $dur={900 + (i % 3) * 300} />
-        ))}
-      </PaneRow>
+        <PaneRow>
+          {PANE_COLORS.map((c, i) => (
+            <Pane key={i} $c={c} $active={playing} $dur={900 + (i % 3) * 300} />
+          ))}
+        </PaneRow>
 
-      <ControlRow>
-        <TransportGroup>
-          <ArchButton type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
-            <SkipBack size={11} />
-          </ArchButton>
-          <GemButton
-            type="button"
-            onClick={() => canFavorite && onToggleFavorite()}
-            disabled={!canFavorite || !track}
-            $on={isFavorited}
-            aria-pressed={isFavorited}
-            aria-label="Favorito (gema)"
-            title={canFavorite ? 'Gema de favorito' : 'Solo el dueño puede encender la gema'}
-          >
-            <Gem size={16} fill={isFavorited ? 'currentColor' : 'none'} />
-          </GemButton>
-        </TransportGroup>
+        <ControlRow>
+          <TransportGroup>
+            <ArchButton $p={palette} type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
+              <SkipBack size={11} />
+            </ArchButton>
+            <GemButton
+              type="button"
+              onClick={() => canFavorite && onToggleFavorite()}
+              disabled={!canFavorite || !track}
+              $on={isFavorited}
+              aria-pressed={isFavorited}
+              aria-label="Favorito (gema)"
+              title={canFavorite ? 'Gema de favorito' : 'Solo el dueño puede encender la gema'}
+            >
+              <Gem size={16} fill={isFavorited ? 'currentColor' : 'none'} />
+            </GemButton>
+          </TransportGroup>
 
-        <TransportGroup style={{ justifyContent: 'center' }}>
-          <PlayButton type="button" onClick={onTogglePlay} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
-            {playing ? <Pause size={15} /> : <Play size={15} />}
-          </PlayButton>
-        </TransportGroup>
+          <TransportGroup style={{ justifyContent: 'center' }}>
+            <PlayButton $p={palette} type="button" onClick={onTogglePlay} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
+              {playing ? <Pause size={15} /> : <Play size={15} />}
+            </PlayButton>
+          </TransportGroup>
 
-        <TransportGroup>
-          <ArchButton type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
-            <SkipForward size={11} />
-          </ArchButton>
-          <VolTrack
-            role="slider"
-            aria-label="Volumen"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(volume * 100)}
-            onPointerDown={volDrag.onPointerDown}
-            onPointerMove={volDrag.onPointerMove}
-            onPointerUp={volDrag.onPointerUp}
-            onPointerLeave={volDrag.onPointerUp}
-          >
-            <VolFill $pct={volume * 100} />
-          </VolTrack>
-        </TransportGroup>
-      </ControlRow>
+          <TransportGroup>
+            <ArchButton $p={palette} type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
+              <SkipForward size={11} />
+            </ArchButton>
+            <VolTrack
+              role="slider"
+              aria-label="Volumen"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(volume * 100)}
+              onPointerDown={volDrag.onPointerDown}
+              onPointerMove={volDrag.onPointerMove}
+              onPointerUp={volDrag.onPointerUp}
+              onPointerLeave={volDrag.onPointerUp}
+            >
+              <VolFill $pct={volume * 100} />
+            </VolTrack>
+          </TransportGroup>
+        </ControlRow>
 
-      <VigilButton
-        type="button"
-        onClick={onToggleEar}
-        $active={isActive}
-        aria-label={ariaLabel}
-        aria-pressed={isActive}
-        title="Profile Listen"
-        style={{ alignSelf: 'center' }}
-      >
-        <Ear size={11} /> {isActive ? 'EN VIGILIA' : 'INICIAR VIGILIA'}
-      </VigilButton>
-    </Shell>
+        <VigilButton
+          $p={palette}
+          type="button"
+          onClick={onToggleEar}
+          $active={isActive}
+          aria-label={ariaLabel}
+          aria-pressed={isActive}
+          title="Profile Listen"
+          style={{ alignSelf: 'center' }}
+        >
+          <Ear size={11} /> {isActive ? 'EN VIGILIA' : 'INICIAR VIGILIA'}
+        </VigilButton>
+      </Nave>
+    </Wrap>
   );
 }
