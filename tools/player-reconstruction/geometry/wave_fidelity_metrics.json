@@ -2,6 +2,8 @@
   "silhouetteIoU": 0.6043,
   "boundingBoxIoU": 1.0,
   "waveContourErrorPx": 7.99,
+  "edgeSimilarityF1": 0.4943,
+  "waveColorDifference": 64.61,
   "commonColumns": 598,
   "refBBox": [
     18,
