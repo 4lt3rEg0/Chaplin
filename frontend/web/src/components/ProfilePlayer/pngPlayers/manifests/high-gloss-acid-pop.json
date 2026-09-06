@@ -3,11 +3,34 @@
   "label": "High-Gloss Acid Pop",
   "sourceSheet": "g3ry50",
   "sourceCell": "r1c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/high-gloss-acid-pop/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.8020,
+  "maxWidth": 520,
+  "notes": "Dos fotos de modelos reales horneadas en las dos pantallas: ambas neutralizadas; al haber solo una fuente real disponible (el avatar del propio perfil) se muestra el mismo avatar en ambos huecos en vez de dejar uno vacio. Se uso la barra inferior etiquetada 'Time' como Progreso real (hay una segunda barra decorativa bajo el texto que no se duplica). El D-pad y el cluster de 6 botones de colores son decorativos, sin funcion de audio clara.",
+  "controls": {
+    "previous": { "x": 0.4173, "y": 0.6391, "w": 0.0626, "h": 0.1003 },
+    "playPause": { "x": 0.4938, "y": 0.6266, "w": 0.0626, "h": 0.1253 },
+    "next": { "x": 0.5702, "y": 0.6391, "w": 0.0556, "h": 0.1003 },
+    "progress": { "x": 0.3477, "y": 0.7519, "w": 0.3199, "h": 0.0251, "color": "#ffd23f" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar1", "x": 0.1461, "y": 0.1128, "w": 0.2156, "h": 0.3008, "source": "avatar" },
+    { "id": "ownerAvatar2", "x": 0.3894, "y": 0.1128, "w": 0.3060, "h": 0.2882, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.3407, "y": 0.4762, "w": 0.2504, "h": 0.1253,
+      "align": "flex-start", "justify": "center",
+      "color": "#fff0f5",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

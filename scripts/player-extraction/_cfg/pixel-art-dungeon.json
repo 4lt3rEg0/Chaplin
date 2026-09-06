@@ -1,0 +1,6 @@
+{
+  "id": "pixel-art-dungeon",
+  "source": "cutout",
+  "trim": [0, 90, 23, 0],
+  "blurBoxes": [[245, 33, 535, 72]]
+}

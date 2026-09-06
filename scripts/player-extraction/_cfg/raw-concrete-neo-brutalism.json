@@ -1,0 +1,7 @@
+{
+  "id": "raw-concrete-neo-brutalism",
+  "source": "cutout",
+  "trim": [20, 85, 0, 6],
+  "blurBoxes": [[42, 55, 445, 145], [48, 198, 112, 255]],
+  "blurRadius": 14
+}

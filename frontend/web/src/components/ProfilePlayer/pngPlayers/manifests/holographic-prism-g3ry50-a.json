@@ -3,16 +3,36 @@
   "label": "Holographic Prism",
   "sourceSheet": "g3ry50",
   "sourceCell": "r2c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/holographic-prism-g3ry50-a/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6995,
+  "maxWidth": 460,
+  "notes": "Se recorto el titulo de catalogo. El disco de prisma decorativo se conserva. Hay una rueda de jog secundaria a la derecha con iconos redundantes de anterior/siguiente; se prefirieron los botones lineales principales (mas grandes y claros) para el mapping. La barra 'Title/Artist' es Progreso; la barra inferior sin etiqueta es Volumen.",
+  "controls": {
+    "previous": { "x": 0.3789, "y": 0.6061, "w": 0.0669, "h": 0.1010 },
+    "playPause": { "x": 0.4531, "y": 0.5934, "w": 0.0669, "h": 0.1136 },
+    "next": { "x": 0.5275, "y": 0.6061, "w": 0.0669, "h": 0.1010 },
+    "progress": { "x": 0.3492, "y": 0.5227, "w": 0.2600, "h": 0.0328, "color": "#5adfff" },
+    "volume": { "x": 0.2600, "y": 0.7323, "w": 0.4160, "h": 0.0379, "color": "#5adfff" }
+  },
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.3418, "y": 0.1136, "w": 0.4160, "h": 0.1389,
+      "align": "flex-start", "justify": "center",
+      "color": "#5adfff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.8vw,12px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.4vw,9px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }
