@@ -1,0 +1,6 @@
+{
+  "id": "translucent-y2k-b",
+  "source": "cutout",
+  "trim": [23, 138, 0, 6],
+  "blurBoxes": [[85, 88, 275, 145]]
+}

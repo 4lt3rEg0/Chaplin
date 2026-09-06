@@ -3,11 +3,40 @@
   "label": "Vaporwave Glitch Box",
   "sourceSheet": "g3ry50",
   "sourceCell": "r0c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/vaporwave-glitch-box/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 2.1264,
+  "maxWidth": 560,
+  "notes": "Se recorto el titulo de catalogo. El arte es un personaje anime generico (no persona real), se conserva. El titulo se muestra en dos zonas reales (banner grande + campo 'Title' pequeno); ambas se saneaon y muestran el titulo real. El slider horizontal es el control real de Progreso; no hay volumen reconocible en el arte.",
+  "controls": {
+    "previous": { "x": 0.3986, "y": 0.8333, "w": 0.0608, "h": 0.1149 },
+    "playPause": { "x": 0.4662, "y": 0.8333, "w": 0.0608, "h": 0.1149 },
+    "next": { "x": 0.5338, "y": 0.8333, "w": 0.0608, "h": 0.1149 },
+    "progress": { "x": 0.3378, "y": 0.6897, "w": 0.3378, "h": 0.0431, "color": "#3a2a6b" }
+  },
+  "displayRegions": [
+    {
+      "id": "bigTitle",
+      "x": 0.1351, "y": 0.2529, "w": 0.3946, "h": 0.1724,
+      "align": "center", "justify": "center",
+      "color": "#3a2a6b",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(13px,2.6vw,18px)", "weight": 700 }
+      ]
+    },
+    {
+      "id": "smallDisplay",
+      "x": 0.1351, "y": 0.4770, "w": 0.2324, "h": 0.1839,
+      "align": "flex-start", "justify": "center",
+      "color": "#3a2a6b",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "artist", "size": "clamp(8px,1.6vw,10px)", "weight": 600 },
+        { "field": "time", "size": "clamp(7px,1.4vw,9px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

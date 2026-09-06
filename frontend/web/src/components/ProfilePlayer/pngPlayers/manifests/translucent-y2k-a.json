@@ -1,13 +1,32 @@
 {
   "id": "translucent-y2k-a",
-  "label": "2et0s TranslucentY2K",
+  "label": "2000s Translucent Y2K",
   "sourceSheet": "g3ry50",
   "sourceCell": "r1c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/translucent-y2k-a/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.9859,
+  "maxWidth": 460,
+  "notes": "Se recorto el titulo de catalogo. El arte de la pantalla es un sprite pixel-art generico (no persona real), se conserva; el campo 'Title' debajo si es un dato real horneado y se saneo. El D-pad y los 4 botones circulares laterales son decorativos (sin funcion de audio clara distinta a Play/Prev/Next); no se fuerza un mapping ahi.",
+  "controls": {
+    "previous": { "x": 0.3617, "y": 0.7549, "w": 0.0567, "h": 0.0986 },
+    "playPause": { "x": 0.4468, "y": 0.7408, "w": 0.0638, "h": 0.1127 },
+    "next": { "x": 0.5177, "y": 0.7549, "w": 0.0567, "h": 0.0986 },
+    "progress": { "x": 0.2624, "y": 0.8254, "w": 0.2979, "h": 0.0282, "color": "#6fa8dc" }
+  },
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.2525, "y": 0.5775, "w": 0.3036, "h": 0.1775,
+      "align": "flex-start", "justify": "center",
+      "color": "#2a4a6b",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

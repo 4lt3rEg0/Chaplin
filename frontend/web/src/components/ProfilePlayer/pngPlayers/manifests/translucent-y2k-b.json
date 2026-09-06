@@ -1,18 +1,38 @@
 {
   "id": "translucent-y2k-b",
-  "label": "2000s Translucent Y2K",
+  "label": "2et0s TranslucentY2K",
   "sourceSheet": "g3ry50",
   "sourceCell": "r1c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/translucent-y2k-b/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.7494,
+  "maxWidth": 520,
+  "notes": "El titulo de catalogo bleeding requirio recortar bastante mas arriba de lo normal (el texto era mas alto de lo estimado en el primer intento). 'RETRO-FUTURIST WIREFRAME' es el logotipo pintado del diseno (se conserva); 'GRID_SURFER' + subtitulo si eran datos horneados y se saneon. Hay dos sliders reales: el de arriba (etiquetado 'Time') se usa como Progreso; el de abajo (con lectura numerica tipo reloj) se usa como Volumen, ya que no hay otro control de volumen en el arte.",
+  "controls": {
+    "previous": { "x": 0.4132, "y": 0.6867, "w": 0.0482, "h": 0.0723 },
+    "playPause": { "x": 0.4683, "y": 0.6747, "w": 0.0482, "h": 0.0964 },
+    "next": { "x": 0.5234, "y": 0.6867, "w": 0.0482, "h": 0.0723 },
+    "progress": { "x": 0.3444, "y": 0.6145, "w": 0.2755, "h": 0.0361, "color": "#5affa0" },
+    "volume": { "x": 0.3444, "y": 0.7711, "w": 0.2066, "h": 0.0361, "color": "#5affa0" }
+  },
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.1240, "y": 0.2169, "w": 0.2479, "h": 0.1325,
+      "align": "flex-start", "justify": "center",
+      "color": "#c85adf",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.8vw,12px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }
