@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import api from '../../services/api';
 import { usePlayer } from '../../context/PlayerContext';
 import { useSkin } from '../../context/SkinContext';
+import { useAuth } from '../../context/AuthContext';
 import { normalizeTrackSrc, areSameSrc } from '../../utils/mediaUrl';
 import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './skins';
 
@@ -44,6 +45,8 @@ export default function ProfilePlayer({ username }) {
     setVolume: setGlobalVolume
   } = usePlayer();
   const { playerSkinId, playerColorMode, playerCustomPalettes, appTheme } = useSkin();
+  const { user: authUser } = useAuth();
+  const isOwner = Boolean(authUser?.username) && authUser.username === username;
 
   const [source, setSource] = useState(null); // { mode, owner_username, tracks }
   const [trackIndex, setTrackIndex] = useState(0);
@@ -175,6 +178,16 @@ export default function ProfilePlayer({ username }) {
     }
   }, [tracks.length, trackIndex, playOwnTrackAt]);
 
+  // Absolute jump — backs any skin's real queue/playlist UI (e.g. PRISM
+  // DISC's eject-to-open-queue) rather than only relative prev/next.
+  const selectTrack = useCallback((index) => {
+    if (index < 0 || index >= tracks.length) return;
+    setTrackIndex(index);
+    if (isActiveRef.current) {
+      playOwnTrackAt(index);
+    }
+  }, [tracks.length, playOwnTrackAt]);
+
   const handleSeek = useCallback((time) => {
     const audio = audioElRef.current;
     if (!audio || !Number.isFinite(time)) return;
@@ -183,11 +196,30 @@ export default function ProfilePlayer({ username }) {
   }, []);
 
   const handleVolumeChange = useCallback((next) => {
+    if (!Number.isFinite(next)) return;
     const clamped = Math.max(0, Math.min(1, next));
     const audio = audioElRef.current;
     if (audio) audio.volume = clamped;
     setVolume(clamped);
   }, []);
+
+  // Real, persisted favorite flag (Track.is_favorited) — only the profile's
+  // owner is authorized to change it (backend enforces this too, 403 otherwise).
+  // Visitors still see the current state; the control is just non-interactive.
+  const toggleFavorite = useCallback(() => {
+    if (!isOwner || !track) return;
+    const next = !track.is_favorited;
+    setSource((prev) => (prev ? {
+      ...prev,
+      tracks: prev.tracks.map((t, i) => (i === trackIndex ? { ...t, is_favorited: next } : t))
+    } : prev));
+    api.put(`/tracks/${track.id}`, { is_favorited: next }).catch(() => {
+      setSource((prev) => (prev ? {
+        ...prev,
+        tracks: prev.tracks.map((t, i) => (i === trackIndex ? { ...t, is_favorited: !next } : t))
+      } : prev));
+    });
+  }, [isOwner, track, trackIndex]);
 
   // Leaving the profile (unmount) or switching to a different profile
   // (username change) must never leave the profile audio "ghosting" in the
@@ -266,6 +298,12 @@ export default function ProfilePlayer({ username }) {
         volume={volume}
         onVolumeChange={handleVolumeChange}
         onSeek={handleSeek}
+        isFavorited={Boolean(track?.is_favorited)}
+        canFavorite={isOwner}
+        onToggleFavorite={toggleFavorite}
+        queue={tracks}
+        queueIndex={trackIndex}
+        onSelectTrack={selectTrack}
         palette={palette}
       />
     </Wrapper>

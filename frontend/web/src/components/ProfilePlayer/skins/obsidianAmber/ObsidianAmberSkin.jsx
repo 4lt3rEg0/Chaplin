@@ -2,6 +2,7 @@ import React, { useCallback, useRef } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { Ear, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { defaultPalette } from './palette';
+import { safeSetPointerCapture } from '../shared';
 
 /*
  * OBSIDIAN AMBER — skin #1 of the Chaplin profile player collection.
@@ -306,7 +307,7 @@ function useVolumeDrag(volume, onVolumeChange) {
   const onPointerDown = useCallback((e) => {
     draggingRef.current = true;
     startRef.current = { y: e.clientY, volume };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    safeSetPointerCapture(e.currentTarget, e.pointerId);
   }, [volume]);
 
   const onPointerMove = useCallback((e) => {

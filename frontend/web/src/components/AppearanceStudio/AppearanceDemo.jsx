@@ -205,6 +205,12 @@ export default function AppearanceDemo({ draft }) {
         volume={0.7}
         onVolumeChange={() => {}}
         onSeek={() => {}}
+        isFavorited={false}
+        canFavorite={false}
+        onToggleFavorite={() => {}}
+        queue={[DEMO_TRACK]}
+        queueIndex={0}
+        onSelectTrack={() => {}}
         palette={demoPalette}
       />
     </PlayerWrap>
