@@ -8,7 +8,7 @@ import {
   MATERIAL_PROFILES,
   TYPOGRAPHY_PROFILES
 } from '../styles/visualIdentitySystem';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/pngPlayers';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/reconstructed';
 
 // Guards against stale persisted ids from a since-removed skin resolving to
 // nothing in the current registry — silently falls back to the default.
