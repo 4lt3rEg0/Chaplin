@@ -1,0 +1,6 @@
+{
+  "id": "industrial-steampunk-aero",
+  "source": "cutout",
+  "trim": [0, 0, 0, 244],
+  "blurBoxes": [[58, 98, 480, 175]]
+}

@@ -3,11 +3,29 @@
   "label": "Barbie Y2K Dream",
   "sourceSheet": "5vjode",
   "sourceCell": "r1c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/barbie-y2k-dream/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.0984,
+  "maxWidth": 380,
+  "notes": "Variante sin protrusion de correa (a diferencia de V.2). Previous/Play/Next usan iconos reales; el 4to boton queda sin mapear. Sin barra de progreso lineal reconocible.",
+  "controls": {
+    "previous": { "x": 0.2688, "y": 0.4205, "w": 0.0733, "h": 0.0716 },
+    "playPause": { "x": 0.3502, "y": 0.4205, "w": 0.0733, "h": 0.0716 },
+    "next": { "x": 0.4316, "y": 0.4205, "w": 0.0733, "h": 0.0716 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2932, "y": 0.1879, "w": 0.6026, "h": 0.1163,
+      "align": "flex-start", "justify": "center",
+      "color": "#fff0f7",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

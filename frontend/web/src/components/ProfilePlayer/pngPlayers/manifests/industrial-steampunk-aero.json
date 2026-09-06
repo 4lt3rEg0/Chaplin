@@ -3,11 +3,29 @@
   "label": "Industrial Steampunk Aero",
   "sourceSheet": "5vjode",
   "sourceCell": "r1c4",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/industrial-steampunk-aero/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.8698,
+  "maxWidth": 520,
+  "notes": "Se recorto bleed real de 'Holographic Prism' (celda de abajo) que aparecia fantasma en el cutout de rembg. 'Winamp' es la placa permanente. Previous/Play/Next usan iconos reales; el 4to boton queda sin mapear. Variante rectangular (sin gauges) de la familia steampunk.",
+  "controls": {
+    "previous": { "x": 0.1104, "y": 0.7619, "w": 0.0679, "h": 0.1111 },
+    "playPause": { "x": 0.1867, "y": 0.7619, "w": 0.0679, "h": 0.1111 },
+    "next": { "x": 0.2632, "y": 0.7619, "w": 0.0679, "h": 0.1111 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1018, "y": 0.3175, "w": 0.6876, "h": 0.2222,
+      "align": "flex-start", "justify": "center",
+      "color": "#ffb0a0",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
