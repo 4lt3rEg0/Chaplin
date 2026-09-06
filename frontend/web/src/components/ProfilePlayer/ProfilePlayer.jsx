@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import styled from 'styled-components';
+import { Ear, Heart, Pause, Play, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 import api from '../../services/api';
 import { usePlayer } from '../../context/PlayerContext';
-import { useSkin } from '../../context/SkinContext';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeTrackSrc, areSameSrc } from '../../utils/mediaUrl';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './skins';
 
 const MODE_LABELS = {
   all: 'Reproduciendo toda la música',
@@ -13,12 +12,136 @@ const MODE_LABELS = {
   radio: 'Radio Chaplin'
 };
 
+const fmtTime = (value) => {
+  if (!Number.isFinite(value)) return '00:00';
+  const safe = Math.max(0, Math.floor(value));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+};
+
 const Wrapper = styled.div`
   margin: 14px 0 22px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.04)'};
+  border: 1px solid ${({ theme }) => theme.card?.border || theme.colors.border};
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 
   @media (max-width: 480px) {
     margin: 10px 0 16px;
+    padding: 10px 12px;
+    gap: 8px;
   }
+`;
+
+const InfoRow = styled.div`
+  min-width: 0;
+`;
+
+const TrackTitle = styled.div`
+  font-size: 14px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const TrackSub = styled.div`
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+`;
+
+const ProgressRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: ${({ theme }) => theme.colors.textSecondary};
+  font-variant-numeric: tabular-nums;
+`;
+
+const ProgressTrack = styled.div`
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: ${({ theme }) => theme.colors.border};
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+`;
+
+const ProgressFill = styled.div`
+  position: absolute;
+  inset: 0;
+  width: ${({ $pct }) => $pct}%;
+  background: ${({ theme }) => theme.colors.primary};
+`;
+
+const ControlRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const IconButton = styled.button`
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt || 'transparent'};
+  color: ${({ theme }) => theme.colors.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) { border-color: ${({ theme }) => theme.colors.primary}; }
+  &:disabled { opacity: 0.35; cursor: not-allowed; }
+`;
+
+const PlayButton = styled(IconButton)`
+  width: 38px;
+  height: 38px;
+  background: ${({ theme }) => theme.colors.primary};
+  border-color: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.background};
+`;
+
+const ListenButton = styled(IconButton)`
+  ${({ $active, theme }) => $active && `
+    background: ${theme.colors.primary};
+    border-color: ${theme.colors.primary};
+    color: ${theme.colors.background};
+  `}
+`;
+
+const FavoriteButton = styled(IconButton)`
+  ${({ $on, theme }) => $on && `color: ${theme.colors.primary}; border-color: ${theme.colors.primary};`}
+`;
+
+const VolumeGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+
+  @media (max-width: 480px) {
+    display: none;
+  }
+`;
+
+const VolumeSlider = styled.input`
+  width: 70px;
+  accent-color: ${({ theme }) => theme.colors.primary};
 `;
 
 /**
@@ -30,10 +153,10 @@ const Wrapper = styled.div`
  * profile listening session ends.
  *
  * "Profile listening" (isActive, toggled by the ear/LISTEN control) and
- * "playing" (isPlaying, toggled by the skin's own play/pause transport) are
- * deliberately separate: a skin's play/pause button can pause the profile's
- * own audio without handing playback back to the global player — only the
- * ear control fully engages/disengages the handoff.
+ * "playing" (isPlaying, toggled by the play/pause transport) are
+ * deliberately separate: the play/pause button can pause the profile's own
+ * audio without handing playback back to the global player — only the ear
+ * control fully engages/disengages the handoff.
  */
 export default function ProfilePlayer({ username }) {
   const {
@@ -44,7 +167,6 @@ export default function ProfilePlayer({ username }) {
     play: playGlobal,
     setVolume: setGlobalVolume
   } = usePlayer();
-  const { playerSkinId, playerColorMode, playerCustomPalettes, appTheme } = useSkin();
   const { user: authUser } = useAuth();
   const isOwner = Boolean(authUser?.username) && authUser.username === username;
 
@@ -89,6 +211,7 @@ export default function ProfilePlayer({ username }) {
   const track = tracks[trackIndex] || null;
   const mode = source?.mode || 'all';
   const modeLabel = MODE_LABELS[mode] || MODE_LABELS.all;
+  const hasQueue = tracks.length > 1;
 
   const stopOwnAudio = useCallback(() => {
     const audio = audioElRef.current;
@@ -178,16 +301,6 @@ export default function ProfilePlayer({ username }) {
     }
   }, [tracks.length, trackIndex, playOwnTrackAt]);
 
-  // Absolute jump — backs any skin's real queue/playlist UI (e.g. PRISM
-  // DISC's eject-to-open-queue) rather than only relative prev/next.
-  const selectTrack = useCallback((index) => {
-    if (index < 0 || index >= tracks.length) return;
-    setTrackIndex(index);
-    if (isActiveRef.current) {
-      playOwnTrackAt(index);
-    }
-  }, [tracks.length, playOwnTrackAt]);
-
   const handleSeek = useCallback((time) => {
     const audio = audioElRef.current;
     if (!audio || !Number.isFinite(time)) return;
@@ -264,16 +377,20 @@ export default function ProfilePlayer({ username }) {
     audioElRef.current?.pause();
   }, []);
 
-  const skinEntry = PLAYER_SKINS[playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
-  const SkinComponent = skinEntry.component;
-  const palette = useMemo(
-    () => resolvePlayerPalette(skinEntry.id, playerColorMode, playerCustomPalettes, appTheme),
-    [skinEntry.id, playerColorMode, playerCustomPalettes, appTheme]
-  );
-
   const ariaLabel = useMemo(() => (
     isActive ? 'Detener reproducción del perfil' : 'Escuchar la música de este perfil'
   ), [isActive]);
+
+  const progressRef = useRef(null);
+  const seekFromClientX = (clientX) => {
+    const el = progressRef.current;
+    if (!el || !duration) return;
+    const rect = el.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    handleSeek(ratio * duration);
+  };
+  const progressPct = duration > 0 ? Math.min(1, currentTime / duration) * 100 : 0;
+  const playing = isActive && isPlaying;
 
   if (!source) {
     return null;
@@ -281,31 +398,70 @@ export default function ProfilePlayer({ username }) {
 
   return (
     <Wrapper data-profile-player>
-      <SkinComponent
-        track={track}
-        mode={mode}
-        modeLabel={modeLabel}
-        isActive={isActive}
-        isPlaying={isPlaying}
-        hasQueue={tracks.length > 1}
-        onToggleEar={toggleEar}
-        onTogglePlay={togglePlayPause}
-        onPrev={() => goToOffset(-1)}
-        onNext={() => goToOffset(1)}
-        ariaLabel={ariaLabel}
-        currentTime={currentTime}
-        duration={duration}
-        volume={volume}
-        onVolumeChange={handleVolumeChange}
-        onSeek={handleSeek}
-        isFavorited={Boolean(track?.is_favorited)}
-        canFavorite={isOwner}
-        onToggleFavorite={toggleFavorite}
-        queue={tracks}
-        queueIndex={trackIndex}
-        onSelectTrack={selectTrack}
-        palette={palette}
-      />
+      <InfoRow>
+        {track ? (
+          <>
+            <TrackTitle title={track.title}>{track.title}</TrackTitle>
+            <TrackSub>{modeLabel}{track.owner_username ? ` · ${track.owner_username}` : ''}</TrackSub>
+          </>
+        ) : (
+          <TrackSub>{mode === 'favorites' ? 'Sin favoritas' : mode === 'radio' ? 'Radio sin señal' : 'Sin audio disponible'}</TrackSub>
+        )}
+      </InfoRow>
+
+      <ProgressRow>
+        <span>{fmtTime(currentTime)}</span>
+        <ProgressTrack
+          ref={progressRef}
+          role="slider"
+          aria-label="Progreso"
+          aria-valuemin={0}
+          aria-valuemax={duration || 0}
+          aria-valuenow={currentTime}
+          onClick={(e) => seekFromClientX(e.clientX)}
+        >
+          <ProgressFill $pct={progressPct} />
+        </ProgressTrack>
+        <span>{fmtTime(duration)}</span>
+      </ProgressRow>
+
+      <ControlRow>
+        <IconButton type="button" onClick={() => goToOffset(-1)} disabled={!hasQueue} aria-label="Anterior">
+          <SkipBack size={14} />
+        </IconButton>
+        <PlayButton type="button" onClick={togglePlayPause} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
+          {playing ? <Pause size={17} /> : <Play size={17} />}
+        </PlayButton>
+        <IconButton type="button" onClick={() => goToOffset(1)} disabled={!hasQueue} aria-label="Siguiente">
+          <SkipForward size={14} />
+        </IconButton>
+        <ListenButton type="button" onClick={toggleEar} $active={isActive} aria-label={ariaLabel} aria-pressed={isActive} title="Escuchar perfil">
+          <Ear size={14} />
+        </ListenButton>
+        <FavoriteButton
+          type="button"
+          onClick={toggleFavorite}
+          disabled={!isOwner || !track}
+          $on={Boolean(track?.is_favorited)}
+          aria-pressed={Boolean(track?.is_favorited)}
+          aria-label="Favorito"
+          title={isOwner ? 'Favorito' : 'Solo el dueño puede marcar favoritos'}
+        >
+          <Heart size={14} fill={track?.is_favorited ? 'currentColor' : 'none'} />
+        </FavoriteButton>
+
+        <VolumeGroup>
+          <Volume2 size={14} />
+          <VolumeSlider
+            type="range"
+            min={0}
+            max={100}
+            value={Math.round(volume * 100)}
+            onChange={(e) => handleVolumeChange(Number(e.target.value) / 100)}
+            aria-label="Volumen"
+          />
+        </VolumeGroup>
+      </ControlRow>
     </Wrapper>
   );
 }
