@@ -1,5 +1,7 @@
 import ObsidianAmberSkin from './obsidianAmber/ObsidianAmberSkin';
 import * as obsidianAmberPalette from './obsidianAmber/palette';
+import LiquidNeonTankSkin from './liquidNeonTank/LiquidNeonTankSkin';
+import * as liquidNeonTankPalette from './liquidNeonTank/palette';
 
 /*
  * Registry for the Chaplin profile player skin collection. Each entry is:
@@ -13,7 +15,8 @@ import * as obsidianAmberPalette from './obsidianAmber/palette';
  * Settings.jsx or AppearanceDemo.jsx needs to change.
  */
 const SKIN_MODULES = [
-  { component: ObsidianAmberSkin, palette: obsidianAmberPalette }
+  { component: ObsidianAmberSkin, palette: obsidianAmberPalette },
+  { component: LiquidNeonTankSkin, palette: liquidNeonTankPalette }
 ];
 
 export const PLAYER_SKINS = SKIN_MODULES.reduce((acc, { component, palette }) => {
