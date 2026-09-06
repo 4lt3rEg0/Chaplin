@@ -59,13 +59,14 @@
     },
 
     "slider-track": {
-      "present": true, "asset": "controls/slider-track.png", "x": 25, "y": 442, "width": 206, "height": 34, "z": 25,
+      "present": true, "asset": "controls/slider-track.png", "x": 24, "y": 435, "width": 301, "height": 49, "z": 25,
       "anchor": "top-left", "opacity": 1, "blendMode": "normal",
       "interactive": true, "action": "seekVolumeTrack", "hitBounds": null, "recolorGroup": null,
-      "stretch": true, "trackInsetX": 20
+      "_replaced": "2026-09-06: swapped for a fuller real crop (chaplin_assets_06_ALL_INDIVIDUAL_FLAT/01_y2k_bubblegum_gloss__slider_track_048.png) spanning the track's real full width with its own natural end-glow — no CSS stretch needed anymore.",
+      "stretch": false, "trackInsetX": 24
     },
     "slider-thumb": {
-      "present": true, "asset": "controls/slider-thumb.png", "x": 229, "y": 435, "width": 48, "height": 48, "z": 31,
+      "present": true, "asset": "controls/slider-thumb.png", "x": 229, "y": 435, "width": 49, "height": 47, "z": 31,
       "anchor": "top-left", "opacity": 1, "blendMode": "normal",
       "interactive": false, "action": null, "hitBounds": null, "recolorGroup": null,
       "boundTo": "volume"
@@ -84,14 +85,33 @@
 
   "decorations": [
     {
-      "id": "bubbles-cluster-01",
-      "present": true,
-      "asset": "decoration/bubbles.png",
-      "x": 336, "y": 336, "width": 131, "height": 174, "z": 20,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "note": "6 individual bubbles as extracted (composited once onto one transparent canvas at their real relative positions, not split into separate files) — see README. Placed once; never duplicated to fill space."
+      "id": "bubble-01", "present": true, "asset": "decoration/bubble-01.png",
+      "x": 396, "y": 410, "width": 76, "height": 76, "z": 20,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
+      "note": "real individual crop (chaplin_assets_06_ALL_INDIVIDUAL_FLAT/.../button_or_knob_04.png, verified by content — not by its auto-generated filename) matched to the sheet position measured in this project's own segmentation pass."
+    },
+    {
+      "id": "bubble-02", "present": true, "asset": "decoration/bubble-02.png",
+      "x": 416, "y": 338, "width": 54, "height": 56, "z": 20,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
+      "note": "real individual crop (.../button_or_knob_01.png)."
+    },
+    {
+      "id": "bubble-03", "present": true, "asset": "decoration/bubble-03.png",
+      "x": 358, "y": 451, "width": 28, "height": 29, "z": 20,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
+      "note": "real individual crop (.../button_or_knob_03.png)."
+    },
+    {
+      "id": "bubble-04", "present": true, "asset": "decoration/bubble-04.png",
+      "x": 441, "y": 483, "width": 25, "height": 28, "z": 20,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
+      "note": "real individual crop (.../decoration_or_effect_01.png)."
     }
   ],
+  "_decorationsSuperseded": {
+    "bubbles-cluster-01": "decoration/bubbles.png — the original single merged 6-bubble composite from this project's own first extraction pass. Kept on disk but no longer referenced now that 4 of its 6 bubbles exist as individually verified, separately placeable files above (the 2 smallest — under ~20px — weren't extracted as standalone files by the new delivery and are dropped, not faked back in)."
+  },
 
   "screen": {
     "x": 100, "y": 75, "width": 210, "height": 180,

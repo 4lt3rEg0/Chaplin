@@ -4,7 +4,10 @@ import { fmtTime, ratioFromClientX, safeSetPointerCapture } from '../../shared/a
 import manifest from '../../../../assets/profilePlayers/bubblegum-gloss/manifest.json';
 
 import screenFusedImg from '../../../../assets/profilePlayers/bubblegum-gloss/shell/screen-fused.png';
-import bubblesImg from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubbles.png';
+import bubble01Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-01.png';
+import bubble02Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-02.png';
+import bubble03Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-03.png';
+import bubble04Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-04.png';
 import prevImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/prev.png';
 import playImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/play.png';
 import pauseImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/pause.png';
@@ -42,7 +45,10 @@ const ASSET_MODULES = {
   volume: volumeImg,
   'slider-track': sliderTrackImg,
   'slider-thumb': sliderThumbImg,
-  'bubbles-cluster-01': bubblesImg,
+  'bubble-01': bubble01Img,
+  'bubble-02': bubble02Img,
+  'bubble-03': bubble03Img,
+  'bubble-04': bubble04Img,
 };
 
 const CW = manifest.canvas.width;
