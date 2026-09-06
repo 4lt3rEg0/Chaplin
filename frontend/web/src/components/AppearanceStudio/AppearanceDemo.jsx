@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { buildAppTheme } from '../../styles/Y2KTheme';
 import BackgroundThumb from './BackgroundThumb';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from '../ProfilePlayer/skins';
 
 /*
  * Self-contained live preview sandbox: a miniature, fully composed profile
@@ -154,12 +153,6 @@ const DemoBtn = styled.button`
   font-family: ${({ theme }) => theme.fonts.ui};
 `;
 
-const PlayerWrap = styled.div`
-  width: 100%;
-`;
-
-const DEMO_TRACK = { title: 'Así suena tu perfil', owner_username: 'tu_usuario', artwork_url: null };
-
 export default function AppearanceDemo({ draft }) {
   const draftTheme = useMemo(() => buildAppTheme(
     draft.skinId,
@@ -176,45 +169,7 @@ export default function AppearanceDemo({ draft }) {
     }
   ), [draft.skinId, draft.accentColor, draft.animations, draft.themeVariant, draft.textColor, draft.fontPrimary, draft.secondaryAccent, draft.layoutId]);
 
-  const skinEntry = PLAYER_SKINS[draft.playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
-  const SkinComponent = skinEntry.component;
   const arrangement = LAYOUT_ARRANGEMENTS[draft.layoutId] || 'centered';
-  const demoPalette = useMemo(() => resolvePlayerPalette(
-    skinEntry.id,
-    draft.playerColorMode || 'default',
-    { [skinEntry.id]: draft.playerCustomPalette || {} },
-    draftTheme
-  ), [skinEntry.id, draft.playerColorMode, draft.playerCustomPalette, draftTheme]);
-
-  const player = (
-    <PlayerWrap>
-      <SkinComponent
-        track={DEMO_TRACK}
-        mode="all"
-        modeLabel="Vista previa en vivo"
-        isActive={false}
-        isPlaying={false}
-        hasQueue={false}
-        onToggleEar={() => {}}
-        onTogglePlay={() => {}}
-        onPrev={() => {}}
-        onNext={() => {}}
-        ariaLabel="Vista previa del reproductor"
-        currentTime={97}
-        duration={214}
-        volume={0.7}
-        onVolumeChange={() => {}}
-        onSeek={() => {}}
-        isFavorited={false}
-        canFavorite={false}
-        onToggleFavorite={() => {}}
-        queue={[DEMO_TRACK]}
-        queueIndex={0}
-        onSelectTrack={() => {}}
-        palette={demoPalette}
-      />
-    </PlayerWrap>
-  );
 
   const cards = (
     <CardRow $cols={arrangement === 'stacked' ? 1 : arrangement === 'split' ? 1 : 2}>
@@ -251,7 +206,6 @@ export default function AppearanceDemo({ draft }) {
                 <Avatar />
                 {identity}
                 {stats}
-                {player}
               </SplitMain>
               {cards}
             </>
@@ -264,7 +218,6 @@ export default function AppearanceDemo({ draft }) {
                   {stats}
                 </div>
               </HeaderRow>
-              {player}
               {cards}
             </>
           ) : (
@@ -272,7 +225,6 @@ export default function AppearanceDemo({ draft }) {
               <Avatar />
               {identity}
               {stats}
-              {player}
               {cards}
               <DemoBtn type="button">Botón de ejemplo</DemoBtn>
             </>
