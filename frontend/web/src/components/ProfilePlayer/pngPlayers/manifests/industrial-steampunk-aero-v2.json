@@ -3,16 +3,36 @@
   "label": "Industrial Steampunk Aero V.2",
   "sourceSheet": "5vjode",
   "sourceCell": "r0c4",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/industrial-steampunk-aero-v2/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.2170,
+  "maxWidth": 400,
+  "notes": "'Winamp' es la placa de marca permanente del diseno, se conserva. Los 4 botones de transporte usan iconos reales. El primer engranaje/perilla de bronce (izquierda del par) se usa como Volumen (arrastre + halo circular); el segundo queda decorativo (es una manivela articulada, no un control claro). Las agujas de los manometros quedan estaticas (limitacion real: estan horneadas en el PNG, no se pueden animar sin redibujar el gauge).",
+  "controls": {
+    "previous": { "x": 0.1260, "y": 0.8019, "w": 0.0775, "h": 0.0825 },
+    "playPause": { "x": 0.2132, "y": 0.8019, "w": 0.0775, "h": 0.0825 },
+    "next": { "x": 0.3004, "y": 0.8019, "w": 0.0775, "h": 0.0825 },
+    "progress": { "x": 0.1260, "y": 0.7075, "w": 0.3779, "h": 0.0236, "color": "#ff5a5a" },
+    "volume": { "x": 0.4942, "y": 0.7783, "w": 0.0969, "h": 0.1179, "shape": "circle", "color": "#d4a24a" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1085, "y": 0.5660, "w": 0.6, "h": 0.13,
+      "align": "flex-start", "justify": "center",
+      "color": "#e8c890",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }
