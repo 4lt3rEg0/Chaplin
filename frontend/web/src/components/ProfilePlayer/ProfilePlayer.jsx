@@ -5,7 +5,7 @@ import { usePlayer } from '../../context/PlayerContext';
 import { useSkin } from '../../context/SkinContext';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeTrackSrc, areSameSrc } from '../../utils/mediaUrl';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './pngPlayers';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './reconstructed';
 
 const MODE_LABELS = {
   all: 'Reproduciendo toda la música',
@@ -286,8 +286,7 @@ export default function ProfilePlayer({ username, avatarUrl }) {
   return (
     <Wrapper data-profile-player>
       <SkinComponent
-        manifest={skinEntry.manifest}
-        asset={skinEntry.manifest.asset}
+        manifest={skinEntry}
         avatarUrl={avatarUrl}
         track={track}
         mode={mode}

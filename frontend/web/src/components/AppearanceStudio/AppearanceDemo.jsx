@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { buildAppTheme } from '../../styles/Y2KTheme';
 import BackgroundThumb from './BackgroundThumb';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from '../ProfilePlayer/pngPlayers';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from '../ProfilePlayer/reconstructed';
 
 /*
  * Self-contained live preview sandbox: a miniature, fully composed profile
@@ -192,8 +192,7 @@ export default function AppearanceDemo({ draft }) {
   const player = !SkinComponent ? null : (
     <PlayerWrap>
       <SkinComponent
-        manifest={skinEntry.manifest}
-        asset={skinEntry.manifest.asset}
+        manifest={skinEntry}
         track={DEMO_TRACK}
         mode="all"
         modeLabel="Vista previa en vivo"
