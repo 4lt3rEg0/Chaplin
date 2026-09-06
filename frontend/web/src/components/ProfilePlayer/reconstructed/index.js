@@ -1,19 +1,21 @@
 /*
- * Registry for hand-reconstructed player skins. Each skin is a REAL
- * component (SVG geometry + CSS + real DOM controls) that traces a sketch
- * from the user's canonical sheets (O:\...\repros, mirrored at
- * assets-source/) — the sketch is a blueprint, never the rendered body.
- * See reconstructed/<id>/manifest.js for sourceFile/sourceCell traceability
- * and reconstructed/<id>/AquaFlowSkin.jsx-style component for the build.
+ * Registry for real player-skin components. Two families live here:
+ *  - reconstructed/<id>: traces a sketch from the user's canonical sheets
+ *    (O:\...\repros, mirrored at assets-source/) — the sketch is a
+ *    blueprint, never the rendered body. See reconstructed/<id>/manifest.js
+ *    for sourceFile/sourceCell traceability.
+ *  - y2kBubbly/<id>: no PNG reference — built directly from
+ *    docs/design-specs/y2k-bubbly-players.md (pure CSS gel/glow shading).
  *
- * Only manifests with status 'ready' (declared per-module below) are
- * exposed to real users; this file is intentionally explicit (no
- * import.meta.glob) since each entry is real, audited work, not a
- * generated stub.
+ * This file is intentionally explicit (no import.meta.glob) since each
+ * entry is real, audited work, not a generated stub.
  */
 import * as aquaFlow from './aquaFlow/manifest';
+import * as bubblegumGloss from '../y2kBubbly/bubblegumGloss.manifest';
+import * as cyberAcidJelly from '../y2kBubbly/cyberAcidJelly.manifest';
+import * as transTechJelly from '../y2kBubbly/transTechJelly.manifest';
 
-const SKIN_MODULES = [aquaFlow];
+const SKIN_MODULES = [aquaFlow, bubblegumGloss, cyberAcidJelly, transTechJelly];
 
 export const PLAYER_SKINS = SKIN_MODULES.reduce((acc, mod) => {
   acc[mod.id] = {
