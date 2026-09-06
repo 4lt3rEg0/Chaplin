@@ -3,11 +3,30 @@
   "label": "Glitch Digital Art",
   "sourceSheet": "5vjode",
   "sourceCell": "r1c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/glitch-digital-art/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 2.2791,
+  "maxWidth": 560,
+  "notes": "Esta celda tenia bleed real de la celda de arriba (titulo de catalogo) y de la de abajo (Neon Wireframe, procesada por separado con su propia celda). Se recorto a solo el dispositivo real. 'Winamp' es la placa permanente. Los 3 botones de transporte usan iconos reales.",
+  "controls": {
+    "previous": { "x": 0.1020, "y": 0.6977, "w": 0.0918, "h": 0.1628 },
+    "playPause": { "x": 0.2041, "y": 0.6977, "w": 0.1020, "h": 0.1628 },
+    "next": { "x": 0.3265, "y": 0.6977, "w": 0.0918, "h": 0.1628 },
+    "progress": { "x": 0.0816, "y": 0.3488, "w": 0.5918, "h": 0.0465, "color": "#5affa0" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.0673, "y": 0.1023, "w": 0.9122, "h": 0.2,
+      "align": "flex-start", "justify": "center",
+      "color": "#8fffb0",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.6vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

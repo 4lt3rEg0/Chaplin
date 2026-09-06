@@ -3,11 +3,29 @@
   "label": "Kawaii Cloudscape V.2",
   "sourceSheet": "5vjode",
   "sourceCell": "r1c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/kawaii-cloudscape-v2-b/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.5488,
+  "maxWidth": 440,
+  "notes": "A pesar del nombre de catalogo ('Kawaii Cloudscape V.2', igual que r0c3), el arte real de esta celda es un reproductor Winamp holografico rosa/azul, no una nube kawaii -desajuste del propio generador de la hoja original, no un error de extraccion. Previous/Play/Next usan iconos reales; el 4to boton queda sin mapear.",
+  "controls": {
+    "previous": { "x": 0.1280, "y": 0.7317, "w": 0.0787, "h": 0.0915 },
+    "playPause": { "x": 0.2165, "y": 0.7317, "w": 0.0689, "h": 0.0915 },
+    "next": { "x": 0.2953, "y": 0.7317, "w": 0.0689, "h": 0.0915 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1083, "y": 0.2591, "w": 0.8268, "h": 0.2,
+      "align": "flex-start", "justify": "center",
+      "color": "#bce8ff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.6vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

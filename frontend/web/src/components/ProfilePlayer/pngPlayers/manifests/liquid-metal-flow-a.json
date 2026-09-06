@@ -3,11 +3,29 @@
   "label": "Liquid Metal Flow",
   "sourceSheet": "5vjode",
   "sourceCell": "r1c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/liquid-metal-flow-a/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 0.9767,
+  "maxWidth": 380,
+  "notes": "'Winamp' es la placa permanente; el reflejo fantasma inferior ('Liquid Metal Flow' duplicado, invertido) es el propio efecto de charco liquido del diseno, se conserva intacto (no es un dato falso, es material). Previous/Play/Next usan iconos reales; el 4to boton (otro play) queda sin mapear por ser redundante. No hay barra de progreso lineal reconocible (solo espectros decorativos).",
+  "controls": {
+    "previous": { "x": 0.1648, "y": 0.4204, "w": 0.0916, "h": 0.0716 },
+    "playPause": { "x": 0.2656, "y": 0.4204, "w": 0.0824, "h": 0.0716 },
+    "next": { "x": 0.3571, "y": 0.4204, "w": 0.0824, "h": 0.0716 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1575, "y": 0.1789, "w": 0.8223, "h": 0.1217,
+      "align": "flex-start", "justify": "center",
+      "color": "#bcd8ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
