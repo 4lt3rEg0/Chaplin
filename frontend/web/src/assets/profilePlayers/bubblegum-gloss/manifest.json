@@ -8,32 +8,101 @@
     "extractionScript": "tools/player-assets/scripts/extract_bubblegum_gloss.py",
     "extractedAt": "2026-09-06"
   },
-  "layers": [
-    { "id": "screen-fused", "asset": "shell/screen-fused.png", "x": 23, "y": 61, "width": 303, "height": 218, "z": 10 },
-    { "id": "bubbles", "asset": "decoration/bubbles.png", "x": 336, "y": 336, "width": 131, "height": 174, "z": 20 }
+
+  "_schema": "Every slot below shares the same generic field set: asset, x, y, width, height, z, anchor, opacity, blendMode, interactive, action, hitBounds, recolorGroup. `present:false` slots keep their real field names but omit `asset`/geometry — they render nothing (BubblegumGlossSkin.jsx renders a slot only when manifest marks it present, no CSS fallback ever). `decorations` is an array so multiple real pieces can be placed without ever duplicating one asset to fill space.",
+
+  "slots": {
+    "shell-base": { "present": false, "reason": "no shell/carcasa-shaped asset in Assets (6).png" },
+    "shell-shadow": { "present": false, "reason": "depends on shell-base" },
+    "shell-highlight": { "present": false, "reason": "depends on shell-base" },
+    "shell-accent-mask": { "present": false, "reason": "depends on shell-base; needed for real recolor of the carcasa" },
+
+    "screen-frame": { "present": false, "reason": "bezel is fused to screen-content and to the mini-transport buttons in the source art — confirmed inseparable via strict alpha-mask segmentation (threshold 192 still one component)" },
+    "screen-background": { "present": false, "reason": "screen/background-alt.png exists as a clean stand-in texture but is not decomposed as a true swappable background layer yet" },
+    "screen-glass": { "present": false, "reason": "no separate reflection/glass-sheen pass extracted" },
+    "screen-highlight": { "present": false, "reason": "no separate highlight pass extracted" },
+    "screen-fused-interim": {
+      "present": true,
+      "note": "INTERIM piece, not one of the canonical screen-* slots above: bezel+content+mini-transport as extracted (fused, can't be decomposed further from this sheet). Used for rendering today until screen-frame/background/glass/highlight exist separately.",
+      "asset": "shell/screen-fused.png", "x": 23, "y": 61, "width": 303, "height": 218, "z": 10,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "interactive": false
+    },
+
+    "mini-prev": { "present": false, "reason": "baked into screen-fused-interim, physically fused to the screen bezel — not separable" },
+    "mini-play-pause": { "present": false, "reason": "same as mini-prev" },
+    "mini-next": { "present": false, "reason": "same as mini-prev" },
+
+    "prev": {
+      "present": true, "asset": "controls/prev.png", "x": 23, "y": 280, "width": 77, "height": 78, "z": 30,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": true, "action": "previous", "hitBounds": null, "recolorGroup": null
+    },
+    "play": {
+      "present": true, "asset": "controls/play.png", "x": 96, "y": 280, "width": 77, "height": 78, "z": 30,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": true, "action": "play", "hitBounds": null, "recolorGroup": null
+    },
+    "pause": {
+      "present": true, "asset": "controls/pause.png", "x": 170, "y": 279, "width": 81, "height": 81, "z": 30,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": true, "action": "pause", "hitBounds": null, "recolorGroup": null
+    },
+    "next": {
+      "present": true, "asset": "controls/next.png", "x": 248, "y": 280, "width": 78, "height": 78, "z": 30,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": true, "action": "next", "hitBounds": null, "recolorGroup": null
+    },
+    "volume": {
+      "present": true, "asset": "controls/volume.png", "x": 323, "y": 280, "width": 76, "height": 78, "z": 30,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": true, "action": "toggleVolumePopover", "hitBounds": null, "recolorGroup": null
+    },
+
+    "slider-track": {
+      "present": true, "asset": "controls/slider-track.png", "x": 25, "y": 442, "width": 206, "height": 34, "z": 25,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": true, "action": "seekVolumeTrack", "hitBounds": null, "recolorGroup": null,
+      "stretch": true, "trackInsetX": 20
+    },
+    "slider-thumb": {
+      "present": true, "asset": "controls/slider-thumb.png", "x": 229, "y": 435, "width": 48, "height": 48, "z": 31,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "interactive": false, "action": null, "hitBounds": null, "recolorGroup": null,
+      "boundTo": "volume"
+    },
+
+    "glow": { "present": false, "reason": "no separate glow pass extracted" },
+    "specular": { "present": false, "reason": "no separate specular pass extracted" },
+    "rim-light": { "present": false, "reason": "no separate rim-light pass extracted" },
+
+    "assembled-reference": {
+      "present": false,
+      "reason": "no full assembled-player reference image supplied yet",
+      "note": "When supplied (assembled-reference.png), it becomes the ABSOLUTE authority for composition, proportions, alignment, scale and position — superseding the sheet-native coordinates every other slot uses today."
+    }
+  },
+
+  "decorations": [
+    {
+      "id": "bubbles-cluster-01",
+      "present": true,
+      "asset": "decoration/bubbles.png",
+      "x": 336, "y": 336, "width": 131, "height": 174, "z": 20,
+      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
+      "note": "6 individual bubbles as extracted (composited once onto one transparent canvas at their real relative positions, not split into separate files) — see README. Placed once; never duplicated to fill space."
+    }
   ],
+
   "screen": {
     "x": 100, "y": 75, "width": 210, "height": 180,
-    "note": "Interior text-safe area inside screen-fused.png, excluding the baked mini-transport column on the left (that trio is decorative-only, see README)."
+    "note": "Interior text-safe area inside screen-fused-interim, excluding the baked mini-transport column."
   },
-  "controls": {
-    "prev": { "asset": "controls/prev.png", "x": 23, "y": 280, "width": 77, "height": 78, "action": "previous" },
-    "play": { "asset": "controls/play.png", "x": 96, "y": 280, "width": 77, "height": 78, "action": "play" },
-    "pause": { "asset": "controls/pause.png", "x": 170, "y": 279, "width": 81, "height": 81, "action": "pause" },
-    "next": { "asset": "controls/next.png", "x": 248, "y": 280, "width": 78, "height": 78, "action": "next" },
-    "volume": { "asset": "controls/volume.png", "x": 323, "y": 280, "width": 76, "height": 78, "action": "toggleVolumePopover" }
-  },
-  "slider": {
-    "track": { "asset": "controls/slider-track.png", "x": 25, "y": 442, "width": 206, "height": 34, "stretch": true },
-    "thumb": { "asset": "controls/slider-thumb.png", "x": 229, "y": 435, "width": 48, "height": 48 },
-    "trackInsetX": 20,
-    "binding": "volume"
-  },
+
   "palette": {
     "gelPink": "#fb82d9",
     "gelBlue": "#29d0f7",
     "accentPurple": "#a28ff1",
     "accentPale": "#bcd7ed",
-    "_note": "measured directly from the sheet's own RECOLOR MASK / ACCENT swatch legend, not invented"
+    "_note": "measured directly from the sheet's own RECOLOR MASK / ACCENT swatch legend. Not yet consumed — no shell-accent-mask exists to apply them to."
   }
 }

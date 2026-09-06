@@ -1,5 +1,32 @@
 # Y2K Bubblegum Gloss — asset-pipeline Golden Master
 
+## Estado actual (arquitectura de slots)
+`manifest.json` ahora describe el player como un conjunto de **slots**
+genéricos (`asset, x, y, width, height, z, anchor, opacity, blendMode,
+interactive, action, hitBounds, recolorGroup`), cada uno con
+`present: true/false`. `BubblegumGlossSkin.jsx` es un **compositor
+genérico**: renderiza un slot solo si `present === true`; un slot ausente
+no renderiza nada — nunca una aproximación CSS (gradiente, box-shadow,
+gel simulado, decoración duplicada).
+
+**Slots presentes hoy** (9 assets reales, sin cambios respecto a la
+extracción original): `screen-fused-interim`, `prev`, `play`, `pause`,
+`next`, `volume`, `slider-track`, `slider-thumb`,
+`decorations[0]` (`bubbles-cluster-01`).
+
+**Slots pendientes** (documentados en `manifest.json#slots`, cada uno con
+su razón): `shell-base`, `shell-shadow`, `shell-highlight`,
+`shell-accent-mask`, `screen-frame`, `screen-background`, `screen-glass`,
+`screen-highlight`, `mini-prev`, `mini-play-pause`, `mini-next`, `glow`,
+`specular`, `rim-light`, `assembled-reference`.
+
+**Regla explícita:** no rellenar estos huecos con CSS. Cuando exista un
+asset real (carcasa, bezel separado, glow, etc.) o un
+`assembled-reference.png` completo, se añade como slot `present: true`
+con sus coordenadas reales — la autoridad de composición pasa a ser esa
+imagen, no las coordenadas nativas de `Assets (6).png` que se usan hoy.
+
+
 ## Fuente
 `Assets (6).png` (master sheet, one of 4 real detailed-breakdown sheets —
 `Assets (1)-(4)` are unlabeled auxiliary decoration/material sheets,
