@@ -31,14 +31,12 @@ import bubble06Img from '../../../../assets/profilePlayers/bubblegum-gloss/decor
  *
  * IMPORTANT (see manifest.json's _CRITICAL_NOTE): Assets (6).png is an
  * ASSET SHEET (a catalog layout of available pieces), not a picture of
- * the assembled player. The x/y this component reads is
- * sourceSheetPosition — where each piece was found on the sheet — NOT a
- * validated assembledPlayerPosition (manifest.json#assembledPlayerCoordinates
- * is currently unavailable). That is why this renders as a parts layout
- * rather than a single mounted device. Do not "fix" this by inventing a
- * shell or by repositioning pieces without a real assembled reference —
- * per explicit instruction, this component's visual output stays as-is
- * until one is supplied.
+ * the assembled player — so its own layout (sourceSheetPosition, kept on
+ * every asset for traceability) is never used for composition anymore.
+ * This component now renders manifest.json#assembledPlayerCoordinates
+ * (estimated from a real user-supplied assembled mockup's visual
+ * proportions — see that block's own `referenceSource` note for exactly
+ * what it is and isn't) — same real asset files, repositioned only.
  *
  * Still missing (see manifest.json#missingAssets, each with why): a real
  * shell-base/shadow/highlight/accent-mask, a separable screen-frame vs.
@@ -67,10 +65,15 @@ const ASSET_MODULES = {
   'bubble-06': bubble06Img,
 };
 
-const CW = manifest.canvas.width;
-const CH = manifest.canvas.height;
+const APC = manifest.assembledPlayerCoordinates;
+const CW = APC?.available ? APC.canvas.width : manifest.canvas.width;
+const CH = APC?.available ? APC.canvas.height : manifest.canvas.height;
 const pct = (v, total) => `${(v / total) * 100}%`;
-const box = (a) => ({ left: pct(a.x, CW), top: pct(a.y, CH), width: pct(a.width, CW), height: pct(a.height, CH) });
+// Resolves an asset's real render position: assembledPlayerCoordinates
+// (a real mounted-device layout) when available, else its raw
+// sourceSheetPosition (catalog layout) as a last resort.
+const pos = (a) => (APC?.available && APC.positions[a.id]) || a;
+const box = (a) => { const p = pos(a); return { left: pct(p.x, CW), top: pct(p.y, CH), width: pct(a.width, CW), height: pct(a.height, CH) }; };
 const byId = (id) => manifest.assets.find((a) => a.id === id);
 
 const Wrap = styled.div`
@@ -190,8 +193,18 @@ export default function BubblegumGlossSkin({
   const volRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
-  const { screen } = manifest;
   const setVolFromClientX = (clientX) => onVolumeChange(ratioFromClientX(volRef, clientX));
+
+  // manifest.screen (text-safe area) is defined as a fixed offset from
+  // screen-fused's OWN sourceSheetPosition — re-derive it relative to
+  // screen-fused's resolved (possibly repositioned) location so the text
+  // still lands correctly inside the screen wherever the screen itself
+  // ends up.
+  const screenFusedAsset = byId('screen-fused');
+  const screenFusedPos = pos(screenFusedAsset);
+  const screenOffsetX = manifest.screen.x - screenFusedAsset.x;
+  const screenOffsetY = manifest.screen.y - screenFusedAsset.y;
+  const screen = { x: screenFusedPos.x + screenOffsetX, y: screenFusedPos.y + screenOffsetY, width: manifest.screen.width, height: manifest.screen.height };
 
   const title = track ? track.title : (mode === 'favorites' ? 'Sin favoritas' : mode === 'radio' ? 'Radio sin señal' : 'Sin reproducción');
   const artist = track?.owner_username ? `@${track.owner_username}` : modeLabel;
@@ -268,8 +281,8 @@ export default function BubblegumGlossSkin({
       <SliderThumb
         src={ASSET_MODULES['slider-thumb']} alt="" $size={(sliderThumb.width / CW) * 100}
         style={{
-          left: pct(sliderTrack.x + sliderTrack.trackInsetX + volume * (sliderTrack.width - sliderTrack.trackInsetX * 2), CW),
-          top: pct(sliderThumb.y + sliderThumb.height / 2, CH),
+          left: pct(pos(sliderTrack).x + sliderTrack.trackInsetX + volume * (sliderTrack.width - sliderTrack.trackInsetX * 2), CW),
+          top: pct(pos(sliderThumb).y + sliderThumb.height / 2, CH),
         }}
       />
 
