@@ -4,6 +4,8 @@ import LiquidNeonTankSkin from './liquidNeonTank/LiquidNeonTankSkin';
 import * as liquidNeonTankPalette from './liquidNeonTank/palette';
 import VelocityCockpitSkin from './velocityCockpit/VelocityCockpitSkin';
 import * as velocityCockpitPalette from './velocityCockpit/palette';
+import PrismDiscSkin from './prismDisc/PrismDiscSkin';
+import * as prismDiscPalette from './prismDisc/palette';
 
 /*
  * Registry for the Chaplin profile player skin collection. Each entry is:
@@ -19,7 +21,8 @@ import * as velocityCockpitPalette from './velocityCockpit/palette';
 const SKIN_MODULES = [
   { component: ObsidianAmberSkin, palette: obsidianAmberPalette },
   { component: LiquidNeonTankSkin, palette: liquidNeonTankPalette },
-  { component: VelocityCockpitSkin, palette: velocityCockpitPalette }
+  { component: VelocityCockpitSkin, palette: velocityCockpitPalette },
+  { component: PrismDiscSkin, palette: prismDiscPalette }
 ];
 
 export const PLAYER_SKINS = SKIN_MODULES.reduce((acc, { component, palette }) => {
