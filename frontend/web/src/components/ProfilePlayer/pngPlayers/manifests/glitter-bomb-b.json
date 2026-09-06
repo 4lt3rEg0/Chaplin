@@ -3,11 +3,43 @@
   "label": "Glitter Bomb",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r2c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/glitter-bomb-b/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.5,
+  "maxWidth": 440,
+  "notes": "Segunda variante de Glitter Bomb, con otra foto de persona real horneada: mismo tratamiento (neutralizada, sustituida por avatar real). Mismo mapping de controles que glitter-bomb-a (misma familia de layout).",
+  "controls": {
+    "previous": { "x": 0.0929, "y": 0.6971, "w": 0.0962, "h": 0.1442 },
+    "next": { "x": 0.3253, "y": 0.6971, "w": 0.0962, "h": 0.1442 },
+    "playPause": { "x": 0.4535, "y": 0.6851, "w": 0.1042, "h": 0.1683 },
+    "progress": { "x": 0.1090, "y": 0.4688, "w": 0.4840, "h": 0.0361, "color": "#ff9bd8" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.1090, "y": 0.1563, "w": 0.1635, "h": 0.2404, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3125, "y": 0.1442, "w": 0.4006, "h": 0.2404,
+      "align": "flex-start", "justify": "center",
+      "color": "#ffe0f2",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    },
+    {
+      "id": "digitalClock",
+      "x": 0.5128, "y": 0.5649, "w": 0.3766, "h": 0.1034,
+      "align": "center", "justify": "center",
+      "color": "#ffd6ef",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "time", "size": "clamp(7px,1.5vw,9px)", "weight": 700 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

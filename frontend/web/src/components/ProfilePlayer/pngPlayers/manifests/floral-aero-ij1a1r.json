@@ -3,11 +3,31 @@
   "label": "Floral Aero",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r1c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/floral-aero-ij1a1r/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6094,
+  "maxWidth": 460,
+  "notes": "Previous/Play por posicion, Next coincide con su icono real >>|. Se uso la barra inferior larga como progreso real; la mini barra bajo el texto y el ecualizador verde quedan decorativos.",
+  "controls": {
+    "previous": { "x": 0.0938, "y": 0.7552, "w": 0.0971, "h": 0.1563 },
+    "playPause": { "x": 0.2152, "y": 0.7552, "w": 0.0971, "h": 0.1563 },
+    "next": { "x": 0.3366, "y": 0.7552, "w": 0.0971, "h": 0.1563 },
+    "progress": { "x": 0.1100, "y": 0.6641, "w": 0.8285, "h": 0.0391, "color": "#c9a8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2993, "y": 0.1432, "w": 0.6068, "h": 0.3203,
+      "align": "flex-start", "justify": "center",
+      "color": "#6b4f7a",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
