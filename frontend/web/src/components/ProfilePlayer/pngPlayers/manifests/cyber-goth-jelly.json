@@ -3,11 +3,29 @@
   "label": "Cyber-Goth Jelly",
   "sourceSheet": "5vjode",
   "sourceCell": "r0c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/cyber-goth-jelly/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.2154,
+  "maxWidth": 420,
+  "notes": "Silueta de blob espinoso con cadena, conservada intacta (sin bleed de la hoja). Solo hay iconos reales de anterior/pausa/stop (sin siguiente); no se inventa un boton de avance. La fila de iconos superiores (shuffle/repeat/candado) y 'ROTATRN' quedan decorativos por ambiguedad de funcion real.",
+  "controls": {
+    "previous": { "x": 0.2505, "y": 0.5386, "w": 0.0674, "h": 0.0703 },
+    "playPause": { "x": 0.3661, "y": 0.5269, "w": 0.0674, "h": 0.0819 },
+    "progress": { "x": 0.3565, "y": 0.3630, "w": 0.1830, "h": 0.0234, "color": "#5affc0" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2851, "y": 0.2202, "w": 0.5473, "h": 0.1312,
+      "align": "flex-start", "justify": "center",
+      "color": "#8fffc8",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

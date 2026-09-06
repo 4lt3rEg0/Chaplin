@@ -3,11 +3,30 @@
   "label": "Glitch Digital Art V.2",
   "sourceSheet": "5vjode",
   "sourceCell": "r0c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/glitch-digital-art-v2/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.1949,
+  "maxWidth": 400,
+  "notes": "Los 4 botones de transporte usan iconos reales (incluye Next real, poco comun en esta hoja). La fila de mini-botones con texto glitcheado y el bloque de pixeles magenta/verde son decorativos.",
+  "controls": {
+    "previous": { "x": 0.1876, "y": 0.7993, "w": 0.0816, "h": 0.0975 },
+    "next": { "x": 0.2773, "y": 0.7993, "w": 0.0816, "h": 0.0975 },
+    "playPause": { "x": 0.3670, "y": 0.7993, "w": 0.0816, "h": 0.0975 },
+    "progress": { "x": 0.1713, "y": 0.7602, "w": 0.3997, "h": 0.0293, "color": "#8fffe0" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1631, "y": 0.1852, "w": 0.6689, "h": 0.0975,
+      "align": "flex-start", "justify": "center",
+      "color": "#c8fff0",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.6vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

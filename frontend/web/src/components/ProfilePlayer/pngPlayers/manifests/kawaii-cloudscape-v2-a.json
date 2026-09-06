@@ -3,10 +3,14 @@
   "label": "Kawaii Cloudscape V.2",
   "sourceSheet": "5vjode",
   "sourceCell": "r0c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/kawaii-cloudscape-v2-a/base.png",
-  "aspectRatio": null,
-  "controls": {},
+  "aspectRatio": 1.3891,
+  "maxWidth": 380,
+  "notes": "LIMITACION OBJETIVA: este diseno es arte puramente decorativo (una nube kawaii con caritas, estrellas y arcoiris) sin ningun boton, display, slider o icono dibujado -no hay absolutamente ningun control real que mapear (Fase 21, ultimo escalon). Se opto por el patron minimo no invasivo permitido: la propia cara sonriente de la nube funciona como area de Play/Pause (tap-to-play), sin dibujar nada nuevo encima del PNG. No hay Previous/Next/Progress/Volumen/Favorito/Profile-Listen visualmente representables en este arte.",
+  "controls": {
+    "playPause": { "x": 0.2443, "y": 0.2262, "w": 0.5212, "h": 0.4977 }
+  },
   "displayRegions": [],
   "ledRegions": [],
   "colorRegions": [],
