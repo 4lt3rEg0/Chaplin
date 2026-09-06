@@ -1,0 +1,19 @@
+{
+  "id": "barbie-y2k-dream-v2",
+  "label": "Barbie Y2K Dream V.2",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r0c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/barbie-y2k-dream-v2/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

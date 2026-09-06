@@ -1,0 +1,19 @@
+{
+  "id": "gothic-cyber-tech",
+  "label": "Gothic Cyber-Tech",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r1c2",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/gothic-cyber-tech/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

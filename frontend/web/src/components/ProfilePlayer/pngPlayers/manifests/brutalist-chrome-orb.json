@@ -1,0 +1,31 @@
+{
+  "id": "brutalist-chrome-orb",
+  "label": "Brutalist Chrome Orb",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r0c2",
+  "status": "ready",
+  "asset": "/assets/profile-players/generated/brutalist-chrome-orb/base.png",
+  "aspectRatio": 2.0594,
+  "maxWidth": 560,
+  "notes": "Panel industrial de borde a borde, sin LCD/display de texto en el arte original: por eso no hay displayRegions (Fase 21, no se inventa una pantalla que no existe). Se usaron los 4 pulsadores rojos cuadrados existentes como transporte segun el mapping dado por el usuario (sup.izq=Previous, sup.der=Next, inf.izq=Play/Pause, inf.der=Profile Listen). Los dos grandes emisores circulares rojos laterales se reutilizan como LEDs reactivos (arriba=actividad de reproduccion, abajo=escucha de perfil activa) en vez de botones de transporte. El manometro superior derecho se mapea a volumen (arrastre horizontal + halo circular de intensidad); el manometro inferior queda decorativo porque solo hay dos funciones razonables (progreso ya cubierto por la tira de 4 LEDs) y forzar una tercera funcion ahi no tenia un mapping coherente. rembg fallo en esta celda (borra parte del panel por no haber separacion figura/fondo real) asi que esta usa el recorte rectangular simple, no el cutout con fondo removido.",
+  "controls": {
+    "previous": { "x": 0.3869, "y": 0.2031, "w": 0.0759, "h": 0.15625 },
+    "next": { "x": 0.5160, "y": 0.2031, "w": 0.0759, "h": 0.15625 },
+    "playPause": { "x": 0.3869, "y": 0.4375, "w": 0.0759, "h": 0.15625 },
+    "profileListen": { "x": 0.5160, "y": 0.4375, "w": 0.0759, "h": 0.15625 },
+    "progress": { "x": 0.1441, "y": 0.4531, "w": 0.0986, "h": 0.0469, "color": "#ff5c5c" },
+    "volume": { "x": 0.7056, "y": 0.0625, "w": 0.1366, "h": 0.28125, "shape": "circle", "color": "#ff5c5c" }
+  },
+  "displayRegions": [],
+  "ledRegions": [
+    { "id": "activityLed", "x": 0.1366, "y": 0.0469, "w": 0.1518, "h": 0.3125, "color": "#ff2b2b", "activeWhen": "isPlaying", "label": "ACTIVITY" },
+    { "id": "listenLed", "x": 0.1366, "y": 0.5156, "w": 0.1518, "h": 0.3125, "color": "#ff2b2b", "activeWhen": "isActive", "label": "PROFILE LISTEN" }
+  ],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": true,
+    "hasProfileListen": true,
+    "hasVisualizer": false
+  }
+}

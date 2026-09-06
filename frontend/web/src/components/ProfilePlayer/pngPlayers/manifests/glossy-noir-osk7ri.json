@@ -1,0 +1,19 @@
+{
+  "id": "glossy-noir-osk7ri",
+  "label": "Glossy Noir",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r1c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/glossy-noir-osk7ri/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

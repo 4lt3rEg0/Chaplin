@@ -1,0 +1,19 @@
+{
+  "id": "glitter-bomb-osk7ri",
+  "label": "Glitter Bomb",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r2c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/glitter-bomb-osk7ri/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

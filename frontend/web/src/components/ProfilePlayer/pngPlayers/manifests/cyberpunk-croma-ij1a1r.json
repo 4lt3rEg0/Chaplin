@@ -1,0 +1,19 @@
+{
+  "id": "cyberpunk-croma-ij1a1r",
+  "label": "Cyberpunk Croma",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r1c2",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/cyberpunk-croma-ij1a1r/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

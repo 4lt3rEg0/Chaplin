@@ -1,0 +1,19 @@
+{
+  "id": "glossy-noir-ij1a1r",
+  "label": "Glossy Noir",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r1c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/glossy-noir-ij1a1r/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

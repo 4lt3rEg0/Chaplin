@@ -1,0 +1,19 @@
+{
+  "id": "holographic-prism-5vjode",
+  "label": "Holographic Prism",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r2c4",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/holographic-prism-5vjode/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

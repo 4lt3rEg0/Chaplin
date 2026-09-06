@@ -5,7 +5,7 @@ import { usePlayer } from '../../context/PlayerContext';
 import { useSkin } from '../../context/SkinContext';
 import { useAuth } from '../../context/AuthContext';
 import { normalizeTrackSrc, areSameSrc } from '../../utils/mediaUrl';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './skins';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from './pngPlayers';
 
 const MODE_LABELS = {
   all: 'Reproduciendo toda la música',
@@ -37,7 +37,7 @@ const Wrapper = styled.div`
  * audio without handing playback back to the global player — only the ear
  * control fully engages/disengages the handoff.
  */
-export default function ProfilePlayer({ username }) {
+export default function ProfilePlayer({ username, avatarUrl }) {
   const {
     current: globalCurrent,
     playing: globalPlaying,
@@ -272,19 +272,23 @@ export default function ProfilePlayer({ username }) {
   ), [isActive]);
 
   const skinEntry = PLAYER_SKINS[playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
-  const SkinComponent = skinEntry.component;
   const palette = useMemo(
-    () => resolvePlayerPalette(skinEntry.id, playerColorMode, playerCustomPalettes, appTheme),
-    [skinEntry.id, playerColorMode, playerCustomPalettes, appTheme]
+    () => (skinEntry ? resolvePlayerPalette(skinEntry.id, playerColorMode, playerCustomPalettes, appTheme) : null),
+    [skinEntry, playerColorMode, playerCustomPalettes, appTheme]
   );
 
-  if (!source) {
+  if (!source || !skinEntry) {
     return null;
   }
+
+  const SkinComponent = skinEntry.component;
 
   return (
     <Wrapper data-profile-player>
       <SkinComponent
+        manifest={skinEntry.manifest}
+        asset={skinEntry.manifest.asset}
+        avatarUrl={avatarUrl}
         track={track}
         mode={mode}
         modeLabel={modeLabel}

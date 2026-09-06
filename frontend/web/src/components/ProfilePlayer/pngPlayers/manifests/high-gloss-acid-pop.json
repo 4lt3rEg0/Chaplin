@@ -1,0 +1,19 @@
+{
+  "id": "high-gloss-acid-pop",
+  "label": "High-Gloss Acid Pop",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r1c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/high-gloss-acid-pop/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

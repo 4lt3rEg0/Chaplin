@@ -1,0 +1,19 @@
+{
+  "id": "cyber-punk-shards",
+  "label": "Cyber-Punk Shards",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r2c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/cyber-punk-shards/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

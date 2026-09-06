@@ -1,0 +1,19 @@
+{
+  "id": "raw-concrete-neo-brutalism",
+  "label": "Raw Concrete Neo-Brutalism",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r2c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/raw-concrete-neo-brutalism/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "floral-aero-ij1a1r",
+  "label": "Floral Aero",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r1c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/floral-aero-ij1a1r/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

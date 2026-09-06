@@ -1,0 +1,19 @@
+{
+  "id": "kawaii-cloudscape-v2-b",
+  "label": "Kawaii Cloudscape V.2",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r1c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/kawaii-cloudscape-v2-b/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

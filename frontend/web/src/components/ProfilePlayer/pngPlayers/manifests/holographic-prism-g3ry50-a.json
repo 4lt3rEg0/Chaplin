@@ -1,0 +1,19 @@
+{
+  "id": "holographic-prism-g3ry50-a",
+  "label": "Holographic Prism",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r2c2",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/holographic-prism-g3ry50-a/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

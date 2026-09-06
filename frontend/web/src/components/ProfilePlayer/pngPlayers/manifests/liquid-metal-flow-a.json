@@ -1,0 +1,19 @@
+{
+  "id": "liquid-metal-flow-a",
+  "label": "Liquid Metal Flow",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r1c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/liquid-metal-flow-a/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

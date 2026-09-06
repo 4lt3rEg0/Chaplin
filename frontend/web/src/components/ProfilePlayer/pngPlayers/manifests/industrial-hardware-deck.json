@@ -1,0 +1,19 @@
+{
+  "id": "industrial-hardware-deck",
+  "label": "Industrial Hardware Deck",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r0c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/industrial-hardware-deck/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

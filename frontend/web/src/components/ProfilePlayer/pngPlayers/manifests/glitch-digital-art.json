@@ -1,0 +1,19 @@
+{
+  "id": "glitch-digital-art",
+  "label": "Glitch Digital Art",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r1c2",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/glitch-digital-art/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "bubble-bliss",
+  "label": "Bubble Bliss",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r0c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/bubble-bliss/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

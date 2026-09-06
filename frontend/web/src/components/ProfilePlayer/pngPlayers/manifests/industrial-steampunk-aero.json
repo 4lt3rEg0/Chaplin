@@ -1,0 +1,19 @@
+{
+  "id": "industrial-steampunk-aero",
+  "label": "Industrial Steampunk Aero",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r1c4",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/industrial-steampunk-aero/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

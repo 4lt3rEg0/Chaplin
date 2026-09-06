@@ -1,0 +1,19 @@
+{
+  "id": "galactic-pop",
+  "label": "Galactic Pop",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r0c2",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/galactic-pop/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

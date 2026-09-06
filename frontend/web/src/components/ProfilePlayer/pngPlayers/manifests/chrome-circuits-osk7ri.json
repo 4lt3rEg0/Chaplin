@@ -1,0 +1,19 @@
+{
+  "id": "chrome-circuits-osk7ri",
+  "label": "Chrome & Circuits",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r0c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/chrome-circuits-osk7ri/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

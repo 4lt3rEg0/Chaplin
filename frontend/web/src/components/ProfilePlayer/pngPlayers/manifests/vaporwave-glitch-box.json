@@ -1,0 +1,19 @@
+{
+  "id": "vaporwave-glitch-box",
+  "label": "Vaporwave Glitch Box",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r0c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/vaporwave-glitch-box/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

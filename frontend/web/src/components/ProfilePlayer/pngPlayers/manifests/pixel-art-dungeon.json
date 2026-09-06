@@ -1,0 +1,19 @@
+{
+  "id": "pixel-art-dungeon",
+  "label": "Pixel Art Dungeon",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r2c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/pixel-art-dungeon/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}
