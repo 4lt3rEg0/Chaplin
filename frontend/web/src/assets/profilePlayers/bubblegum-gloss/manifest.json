@@ -1,0 +1,39 @@
+{
+  "id": "bubblegum-gloss",
+  "label": "Y2K Bubblegum Gloss",
+  "canvas": { "width": 483, "height": 560 },
+  "source": {
+    "sheet": "Assets (6).png",
+    "region": [0, 0, 483, 560],
+    "extractionScript": "tools/player-assets/scripts/extract_bubblegum_gloss.py",
+    "extractedAt": "2026-09-06"
+  },
+  "layers": [
+    { "id": "screen-fused", "asset": "shell/screen-fused.png", "x": 23, "y": 61, "width": 303, "height": 218, "z": 10 },
+    { "id": "bubbles", "asset": "decoration/bubbles.png", "x": 336, "y": 336, "width": 131, "height": 174, "z": 20 }
+  ],
+  "screen": {
+    "x": 100, "y": 75, "width": 210, "height": 180,
+    "note": "Interior text-safe area inside screen-fused.png, excluding the baked mini-transport column on the left (that trio is decorative-only, see README)."
+  },
+  "controls": {
+    "prev": { "asset": "controls/prev.png", "x": 23, "y": 280, "width": 77, "height": 78, "action": "previous" },
+    "play": { "asset": "controls/play.png", "x": 96, "y": 280, "width": 77, "height": 78, "action": "play" },
+    "pause": { "asset": "controls/pause.png", "x": 170, "y": 279, "width": 81, "height": 81, "action": "pause" },
+    "next": { "asset": "controls/next.png", "x": 248, "y": 280, "width": 78, "height": 78, "action": "next" },
+    "volume": { "asset": "controls/volume.png", "x": 323, "y": 280, "width": 76, "height": 78, "action": "toggleVolumePopover" }
+  },
+  "slider": {
+    "track": { "asset": "controls/slider-track.png", "x": 25, "y": 442, "width": 206, "height": 34, "stretch": true },
+    "thumb": { "asset": "controls/slider-thumb.png", "x": 229, "y": 435, "width": 48, "height": 48 },
+    "trackInsetX": 20,
+    "binding": "volume"
+  },
+  "palette": {
+    "gelPink": "#fb82d9",
+    "gelBlue": "#29d0f7",
+    "accentPurple": "#a28ff1",
+    "accentPale": "#bcd7ed",
+    "_note": "measured directly from the sheet's own RECOLOR MASK / ACCENT swatch legend, not invented"
+  }
+}

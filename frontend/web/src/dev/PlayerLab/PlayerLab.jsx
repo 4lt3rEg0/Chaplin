@@ -3,18 +3,30 @@ import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { PLAYER_SKINS, resolvePlayerPalette } from '../../components/ProfilePlayer/reconstructed';
 import { AQUA_WAVE_BODY_PATH, AQUA_WAVE_HIGHLIGHT_PATHS } from '../../components/ProfilePlayer/reconstructed/aquaFlow/waveGeometry';
+import bubblegumGlossManifest from '../../assets/profilePlayers/bubblegum-gloss/manifest.json';
 
 // Per-skin measured contour geometry for CONTOURS mode (reference vs.
 // implementation). Circles are the same Hough-measured button geometry used
 // in the skin's own SVG (tools/player-reconstruction/scripts/
 // extract_key_geometry.py), kept here too so this mode can draw them
-// without importing skin internals.
+// without importing skin internals. `rects` (asset-based players) come
+// straight from the player's own manifest.json layer/control placements —
+// real extraction coordinates, not re-measured.
 const CONTOUR_GEOMETRY = {
   'aqua-flow': {
     paths: [AQUA_WAVE_BODY_PATH, ...AQUA_WAVE_HIGHLIGHT_PATHS],
     circles: [
       [66.6, 235.8, 19.3], [123, 238.2, 18], [174.6, 237, 19.3],
       [82.2, 298.2, 32.7], [150.6, 299.4, 31.4], [222.6, 298.2, 31.2],
+    ],
+  },
+  'bubblegum-gloss': {
+    rects: [
+      ...bubblegumGlossManifest.layers.map((l) => [l.x, l.y, l.width, l.height]),
+      ...Object.values(bubblegumGlossManifest.controls).map((c) => [c.x, c.y, c.width, c.height]),
+      [bubblegumGlossManifest.slider.track.x, bubblegumGlossManifest.slider.track.y, bubblegumGlossManifest.slider.track.width, bubblegumGlossManifest.slider.track.height],
+      [bubblegumGlossManifest.slider.thumb.x, bubblegumGlossManifest.slider.thumb.y, bubblegumGlossManifest.slider.thumb.width, bubblegumGlossManifest.slider.thumb.height],
+      [bubblegumGlossManifest.screen.x, bubblegumGlossManifest.screen.y, bubblegumGlossManifest.screen.width, bubblegumGlossManifest.screen.height],
     ],
   },
 };
@@ -185,11 +197,14 @@ export default function PlayerLab() {
                 viewBox={`0 0 ${skin.referenceWidth || w} ${skin.referenceHeight || h}`}
                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
               >
-                {CONTOUR_GEOMETRY[skinId].paths.map((d, i) => (
+                {(CONTOUR_GEOMETRY[skinId].paths || []).map((d, i) => (
                   <path key={i} d={d} fill="none" stroke={i === 0 ? '#00ff6a' : '#ff2ec4'} strokeWidth="1.5" />
                 ))}
-                {CONTOUR_GEOMETRY[skinId].circles.map(([cx, cy, r], i) => (
+                {(CONTOUR_GEOMETRY[skinId].circles || []).map(([cx, cy, r], i) => (
                   <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke="#ffe600" strokeWidth="1.5" />
+                ))}
+                {(CONTOUR_GEOMETRY[skinId].rects || []).map(([x, y, rw, rh], i) => (
+                  <rect key={i} x={x} y={y} width={rw} height={rh} fill="none" stroke="#00e5ff" strokeWidth="1.5" />
                 ))}
               </svg>
             )}
