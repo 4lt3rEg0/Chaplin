@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Check, Headphones, LogOut, Palette, User as UserIcon, X
+  ArrowLeft, Check, ChevronLeft, ChevronRight, Headphones, LogOut, Palette, User as UserIcon, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
@@ -321,11 +321,88 @@ const ThemeSwatch = styled.div`
   }
 `;
 
-const PlayerSkinCardWrap = styled.div`
-  transform: scale(0.82);
-  transform-origin: top left;
-  width: 122%;
-  pointer-events: none;
+/* Large, non-cropping carousel for the player skin picker. Each skin is a
+   physical object with its own silhouette — some protrude well past a
+   rectangular bounding box (a gauge pod, a disc bulge, a handset) — so the
+   stage gives generous breathing room instead of clipping at a card edge. */
+const CarouselSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+`;
+
+const CarouselRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+`;
+
+const CarouselNavButton = styled.button`
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt || 'rgba(255,255,255,0.06)'};
+  color: ${({ theme }) => theme.colors.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  &:hover { border-color: ${({ theme }) => theme.colors.primary}; }
+`;
+
+const CarouselStage = styled.div`
+  flex: 1;
+  min-height: 260px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 10px, transparent 10px, transparent 20px),
+    #0a0a10;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 30px;
+  overflow: visible;
+
+  @media (max-width: 480px) {
+    min-height: 220px;
+    padding: 24px 16px;
+  }
+`;
+
+const CarouselPlayerWrap = styled.div`
+  width: 100%;
+  max-width: 360px;
+`;
+
+const CarouselCaption = styled.div`
+  font-size: 15px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const CarouselDotsRow = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+`;
+
+const CarouselDot = styled.button`
+  width: ${({ $active }) => ($active ? '18px' : '7px')};
+  height: 7px;
+  border-radius: 4px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  transition: width 0.15s ease;
 `;
 
 const StudioActions = styled.div`
@@ -380,6 +457,76 @@ const PaletteDot = styled.span`
   background: ${({ $c }) => $c};
   border: 1px solid rgba(255, 255, 255, 0.25);
 `;
+
+const CAROUSEL_DEMO_TRACK = { title: 'Así suena tu perfil', owner_username: 'tu_usuario' };
+const CAROUSEL_DEMO_QUEUE = [CAROUSEL_DEMO_TRACK];
+
+/* Large, non-cropping preview carousel — replaces the old grid of tiny
+   cropped thumbnails. Each skin is a physical object with its own
+   silhouette (some protrude past a rectangular box entirely), so this
+   shows exactly one skin at a time, full-size, with room to breathe. */
+function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
+  const activeIndex = Math.max(0, PLAYER_SKIN_LIST.findIndex((s) => s.id === draft.playerSkinId));
+  const option = PLAYER_SKIN_LIST[activeIndex] || PLAYER_SKIN_LIST[0];
+  const SkinComp = option.component;
+
+  const goTo = (index) => {
+    const next = PLAYER_SKIN_LIST[(index + PLAYER_SKIN_LIST.length) % PLAYER_SKIN_LIST.length];
+    selectPlayerSkin(next.id);
+  };
+
+  return (
+    <CarouselSection>
+      <CarouselRow>
+        <CarouselNavButton type="button" onClick={() => goTo(activeIndex - 1)} aria-label="Skin anterior">
+          <ChevronLeft size={18} />
+        </CarouselNavButton>
+
+        <CarouselStage>
+          <CarouselPlayerWrap>
+            <SkinComp
+              track={CAROUSEL_DEMO_TRACK}
+              mode="all"
+              modeLabel="Vista previa"
+              isActive={false}
+              isPlaying={false}
+              hasQueue={false}
+              onToggleEar={() => {}}
+              onTogglePlay={() => {}}
+              onPrev={() => {}}
+              onNext={() => {}}
+              ariaLabel="preview"
+              currentTime={97}
+              duration={214}
+              volume={0.7}
+              onVolumeChange={() => {}}
+              onSeek={() => {}}
+              isFavorited={false}
+              canFavorite={false}
+              onToggleFavorite={() => {}}
+              queue={CAROUSEL_DEMO_QUEUE}
+              queueIndex={0}
+              onSelectTrack={() => {}}
+              palette={option.defaultPalette}
+            />
+          </CarouselPlayerWrap>
+        </CarouselStage>
+
+        <CarouselNavButton type="button" onClick={() => goTo(activeIndex + 1)} aria-label="Skin siguiente">
+          <ChevronRight size={18} />
+        </CarouselNavButton>
+      </CarouselRow>
+
+      <CarouselCaption>{option.label}</CarouselCaption>
+
+      <CarouselDotsRow>
+        {PLAYER_SKIN_LIST.map((s, i) => (
+          <CarouselDot key={s.id} type="button" $active={i === activeIndex} onClick={() => goTo(i)} aria-label={`Ir a ${s.label}`} aria-current={i === activeIndex} />
+        ))}
+      </CarouselDotsRow>
+    </CarouselSection>
+  );
+}
 
 /* Per-skin color customization (Default / Theme / Custom). Reads
    `skin.colorSchema` off whichever skin is currently selected in the
@@ -579,45 +726,7 @@ function AparienciaSection() {
 
           <StudioSection>
             <StudioSectionTitle>Skin del reproductor de perfil</StudioSectionTitle>
-            <CatalogGrid>
-              {PLAYER_SKIN_LIST.map((option) => {
-                const SkinComp = option.component;
-                return (
-                  <CatalogCard key={option.id} type="button" $active={draft.playerSkinId === option.id} onClick={() => selectPlayerSkin(option.id)}>
-                    <CatalogThumbBox style={{ background: '#0a0a10', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-                      <PlayerSkinCardWrap>
-                        <SkinComp
-                          track={{ title: 'Demo', owner_username: 'tu' }}
-                          mode="all"
-                          modeLabel=""
-                          isActive={false}
-                          isPlaying={false}
-                          hasQueue={false}
-                          onToggleEar={() => {}}
-                          onTogglePlay={() => {}}
-                          onPrev={() => {}}
-                          onNext={() => {}}
-                          ariaLabel="preview"
-                          currentTime={0}
-                          duration={0}
-                          volume={0.8}
-                          onVolumeChange={() => {}}
-                          onSeek={() => {}}
-                          isFavorited={false}
-                          canFavorite={false}
-                          onToggleFavorite={() => {}}
-                          queue={[{ title: 'Demo', owner_username: 'tu' }]}
-                          queueIndex={0}
-                          onSelectTrack={() => {}}
-                          palette={option.defaultPalette}
-                        />
-                      </PlayerSkinCardWrap>
-                    </CatalogThumbBox>
-                    <CatalogLabel>{option.label}</CatalogLabel>
-                  </CatalogCard>
-                );
-              })}
-            </CatalogGrid>
+            <PlayerSkinCarousel draft={draft} selectPlayerSkin={selectPlayerSkin} />
 
             <PlayerColorEditor draft={draft} patch={patch} patchCustomColor={patchCustomColor} appTheme={skin.appTheme} />
           </StudioSection>

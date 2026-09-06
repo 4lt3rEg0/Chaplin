@@ -1,14 +1,16 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useRef } from 'react';
 import styled, { css, keyframes } from 'styled-components';
 import { Ear, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { defaultPalette } from './palette';
-import { fmtTime, ratioFromAngle, safeSetPointerCapture } from '../shared';
+import { fmtTime, safeSetPointerCapture, ratioFromAngle } from '../shared';
+import { chromeGradient, glassPanel, matteRubber, bevelRaised, bevelSunken, screwCss } from '../materials';
 
 /*
- * VELOCITY COCKPIT — skin #3. An instrument cluster read as a music player:
- * the main dial is literal song progress (needle sweep + lit tick arc), the
- * secondary dial is volume (drag like a real gauge), and "profile listen" is
- * a guarded toggle switch built into the panel, not a floating button.
+ * VELOCITY COCKPIT — skin #4. An instrument-cluster binnacle: two large
+ * chrome-ringed gauge pods physically protrude above a hooded dashboard
+ * panel, exactly like a real automotive cluster — not a rounded box with an
+ * arc drawn on it. The MFD screen sits recessed between the gauges; the
+ * transport row lives on the lower dash apron.
  */
 
 const START_DEG = -130;
@@ -24,7 +26,11 @@ const switchGlow = keyframes`
   50% { box-shadow: 0 0 12px 3px var(--vc-switch); }
 `;
 
-const Shell = styled.div`
+// The dashboard hood: a trapezoid-ish shape (angled top, wider base) so the
+// silhouette alone reads as a binnacle even with the gauges removed.
+const HOOD_CLIP = 'polygon(6% 0%, 94% 0%, 100% 22%, 100% 100%, 0% 100%, 0% 22%)';
+
+const Wrap = styled.div`
   --vc-panel: ${({ $p }) => $p.dashPanel};
   --vc-face: ${({ $p }) => $p.gaugeFace};
   --vc-needle: ${({ $p }) => $p.needleColor};
@@ -35,66 +41,74 @@ const Shell = styled.div`
   --vc-accent: ${({ $p }) => $p.accentColor};
 
   position: relative;
-  padding: 14px;
-  border-radius: 12px;
-  background:
-    linear-gradient(160deg, rgba(255,255,255,0.06), transparent 35%),
-    linear-gradient(180deg, color-mix(in srgb, var(--vc-panel) 120%, #000), var(--vc-panel));
-  border: 1px solid rgba(0,0,0,0.6);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 20px rgba(0,0,0,0.4);
+  padding-top: 34px;
   color: var(--vc-text);
   font-family: 'Segoe UI', system-ui, sans-serif;
+
+  @media (max-width: 480px) {
+    padding-top: 28px;
+  }
+`;
+
+const Hood = styled.div`
+  position: relative;
+  clip-path: ${HOOD_CLIP};
+  padding: 30px 16px 16px;
+  background: ${({ $p }) => matteRubber($p.dashPanel)};
+  box-shadow: 0 12px 24px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
   gap: 10px;
 
   @media (max-width: 480px) {
-    padding: 10px;
-    gap: 8px;
+    padding: 26px 12px 12px;
   }
 `;
 
-const TopRow = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
-`;
-
-const GaugeWrap = styled.div`
-  position: relative;
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  @media (max-width: 480px) {
-    width: 64px;
-    height: 64px;
-  }
-`;
-
-const GaugeRing = styled.div`
+const HoodEdge = styled.div`
   position: absolute;
   inset: 0;
+  clip-path: ${HOOD_CLIP};
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 1px rgba(0,0,0,0.6), inset 0 -3px 8px rgba(0,0,0,0.5);
+`;
+
+const GaugePod = styled.div`
+  position: absolute;
+  top: -34px;
+  ${({ $side }) => ($side === 'left' ? 'left: 4%;' : 'right: 4%;')}
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
-  background: conic-gradient(
-    var(--vc-tick) ${({ $pct }) => $pct * 0.72}%,
-    rgba(255,255,255,0.08) 0
-  );
-  transform: rotate(126deg);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  padding: 4px;
+  background: ${chromeGradient()};
+  box-shadow: ${bevelRaised(1)}, 0 8px 14px rgba(0,0,0,0.5);
+  cursor: pointer;
+  z-index: 2;
+
+  @media (max-width: 480px) {
+    width: 66px;
+    height: 66px;
+    top: -28px;
+  }
 `;
 
 const GaugeFace = styled.div`
   position: absolute;
-  inset: 8px;
+  inset: 4px;
   border-radius: 50%;
-  background: radial-gradient(circle at 40% 32%, color-mix(in srgb, var(--vc-face) 140%, #fff 6%), var(--vc-face) 70%);
-  border: 1px solid rgba(0,0,0,0.6);
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.6);
+  background: radial-gradient(circle at 38% 32%, color-mix(in srgb, var(--vc-face) 94%, #fff 6%), var(--vc-face) 70%);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.65);
+`;
+
+const GaugeArc = styled.div`
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: conic-gradient(var(--vc-tick) ${({ $pct }) => $pct * 0.72}%, rgba(255,255,255,0.08) 0);
+  transform: rotate(126deg);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), #000 calc(100% - 5px));
 `;
 
 const Needle = styled.div`
@@ -102,32 +116,36 @@ const Needle = styled.div`
   left: 50%;
   bottom: 50%;
   width: 2px;
-  height: 30%;
+  height: 32%;
   background: linear-gradient(180deg, var(--vc-needle), transparent);
   transform-origin: 50% 100%;
   transform: translateX(-50%) rotate(${({ $deg }) => $deg}deg);
   animation: ${css`${needleFlick} 2.6s ease-in-out infinite`};
-
-  @media (max-width: 480px) {
-    height: 26%;
-  }
 `;
 
 const GaugeHub = styled.div`
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--vc-needle);
   transform: translate(-50%, -50%);
   box-shadow: 0 0 4px var(--vc-needle);
 `;
 
+const GaugeGlass = styled.div`
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: linear-gradient(120deg, rgba(255,255,255,0.28) 0%, transparent 30%, transparent 70%, rgba(255,255,255,0.06) 100%);
+  pointer-events: none;
+`;
+
 const GaugeLabel = styled.span`
   position: absolute;
-  bottom: -3px;
+  bottom: -12px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 7px;
@@ -136,12 +154,30 @@ const GaugeLabel = styled.span`
   font-family: 'Consolas', monospace;
 `;
 
-const Display = styled.div`
+const Screw = styled.span`
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  z-index: 2;
+  ${screwCss}
+  ${({ $pos }) => $pos}
+`;
+
+const MfdBezel = styled.div`
+  align-self: center;
+  width: 100%;
+  padding: 3px;
+  border-radius: 5px;
+  background: ${chromeGradient()};
+  box-shadow: ${bevelRaised(0.6)};
+  margin-top: 6px;
+`;
+
+const Mfd = styled.div`
   min-width: 0;
   padding: 8px 10px;
-  border-radius: 6px;
-  background: linear-gradient(160deg, rgba(255,255,255,0.04), transparent 40%), #0c0c0e;
-  border: 1px solid color-mix(in srgb, var(--vc-accent) 35%, transparent);
+  border-radius: 3px;
+  background: ${({ $p }) => glassPanel($p.accentColor, 'sunken')};
   font-family: 'Consolas', monospace;
 `;
 
@@ -171,7 +207,10 @@ const TimeRow = styled.div`
   letter-spacing: 0.04em;
 `;
 
-const ControlRow = styled.div`
+const Apron = styled.div`
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -188,16 +227,16 @@ const SwitchButton = styled.button`
   width: 30px;
   height: 30px;
   border-radius: 5px;
-  border: 1px solid rgba(0,0,0,0.7);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--vc-button) 130%, #555), var(--vc-button));
+  border: none;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--vc-button) 65%, #999) 0%, var(--vc-button) 50%, color-mix(in srgb, var(--vc-button) 60%, #000) 100%);
   color: var(--vc-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+  box-shadow: ${bevelRaised(0.9)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.9)}; transform: translateY(1px); }
   &:disabled { opacity: 0.35; cursor: not-allowed; }
 `;
 
@@ -209,37 +248,31 @@ const PlayButton = styled(SwitchButton)`
 
 const ListenSwitch = styled.button`
   position: relative;
-  width: 44px;
+  width: 46px;
   height: 26px;
   border-radius: 4px;
-  border: 1px solid color-mix(in srgb, var(--vc-switch) 55%, #000);
-  background: ${({ $active }) => ($active
-    ? 'linear-gradient(180deg, color-mix(in srgb, var(--vc-switch) 55%, #200), color-mix(in srgb, var(--vc-switch) 22%, #000))'
-    : 'linear-gradient(180deg, #201414, #100c0c)')};
-  color: ${({ $active }) => ($active ? '#1a0500' : 'var(--vc-switch)')};
+  border: none;
+  padding: 3px;
+  background: linear-gradient(180deg, #26201c, #14100d);
+  box-shadow: ${bevelSunken(0.6)};
+  cursor: pointer;
+`;
+
+const ListenLed = styled.div`
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  background: ${({ $active, $tint }) => (
+    $active
+      ? `radial-gradient(circle at 35% 30%, color-mix(in srgb, ${$tint} 90%, #fff), color-mix(in srgb, ${$tint} 50%, #000))`
+      : 'radial-gradient(circle at 35% 30%, #3a2c26, #150d0a)'
+  )};
+  color: ${({ $active }) => ($active ? '#1a0500' : 'var(--vc-switch)')};
   animation: ${({ $active }) => ($active ? css`${switchGlow} 2s ease-in-out infinite` : 'none')};
-
-  &:active { transform: translateY(1px); }
 `;
-
-function useGaugeDrag(ref, value, onChange) {
-  const draggingRef = useRef(false);
-  const onPointerDown = useCallback((e) => {
-    draggingRef.current = true;
-    safeSetPointerCapture(e.currentTarget, e.pointerId);
-    onChange(ratioFromAngle(ref, e.clientX, e.clientY, START_DEG, SWEEP_DEG));
-  }, [onChange, ref]);
-  const onPointerMove = useCallback((e) => {
-    if (!draggingRef.current) return;
-    onChange(ratioFromAngle(ref, e.clientX, e.clientY, START_DEG, SWEEP_DEG));
-  }, [onChange, ref]);
-  const onPointerUp = useCallback(() => { draggingRef.current = false; }, []);
-  return { onPointerDown, onPointerMove, onPointerUp };
-}
 
 export default function VelocityCockpitSkin({
   track,
@@ -262,110 +295,129 @@ export default function VelocityCockpitSkin({
 }) {
   const progressGaugeRef = useRef(null);
   const volGaugeRef = useRef(null);
+  const draggingProgress = useRef(false);
+  const draggingVol = useRef(false);
 
   const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
   const progressDeg = START_DEG + progress * SWEEP_DEG;
   const volDeg = START_DEG + volume * SWEEP_DEG;
 
-  const seekDrag = useGaugeDrag(progressGaugeRef, progress, (ratio) => {
-    if (duration) onSeek(ratio * duration);
-  });
-  const volDrag = useGaugeDrag(volGaugeRef, volume, onVolumeChange);
+  const onProgressDown = (e) => {
+    draggingProgress.current = true;
+    safeSetPointerCapture(e.currentTarget, e.pointerId);
+    if (duration) onSeek(ratioFromAngle(progressGaugeRef, e.clientX, e.clientY, START_DEG, SWEEP_DEG) * duration);
+  };
+  const onProgressMove = (e) => {
+    if (!draggingProgress.current || !duration) return;
+    onSeek(ratioFromAngle(progressGaugeRef, e.clientX, e.clientY, START_DEG, SWEEP_DEG) * duration);
+  };
+  const onProgressUp = () => { draggingProgress.current = false; };
+
+  const onVolDown = (e) => {
+    draggingVol.current = true;
+    safeSetPointerCapture(e.currentTarget, e.pointerId);
+    onVolumeChange(ratioFromAngle(volGaugeRef, e.clientX, e.clientY, START_DEG, SWEEP_DEG));
+  };
+  const onVolMove = (e) => {
+    if (!draggingVol.current) return;
+    onVolumeChange(ratioFromAngle(volGaugeRef, e.clientX, e.clientY, START_DEG, SWEEP_DEG));
+  };
+  const onVolUp = () => { draggingVol.current = false; };
 
   const playing = isActive && isPlaying;
 
   return (
-    <Shell $p={palette}>
-      <TopRow>
-        <GaugeWrap
-          ref={progressGaugeRef}
-          role="slider"
-          aria-label="Progreso"
-          aria-valuemin={0}
-          aria-valuemax={duration || 0}
-          aria-valuenow={currentTime}
-          onPointerDown={seekDrag.onPointerDown}
-          onPointerMove={seekDrag.onPointerMove}
-          onPointerUp={seekDrag.onPointerUp}
-          onPointerLeave={seekDrag.onPointerUp}
-        >
-          <GaugeRing $pct={progress * 100} />
-          <GaugeFace />
-          <Needle $deg={progressDeg} />
-          <GaugeHub />
-          <GaugeLabel>PROG</GaugeLabel>
-        </GaugeWrap>
+    <Wrap $p={palette}>
+      <GaugePod
+        $side="left"
+        ref={progressGaugeRef}
+        role="slider"
+        aria-label="Progreso"
+        aria-valuemin={0}
+        aria-valuemax={duration || 0}
+        aria-valuenow={currentTime}
+        onPointerDown={onProgressDown}
+        onPointerMove={onProgressMove}
+        onPointerUp={onProgressUp}
+        onPointerLeave={onProgressUp}
+      >
+        <GaugeArc $pct={progress * 100} />
+        <GaugeFace />
+        <Needle $deg={progressDeg} />
+        <GaugeHub />
+        <GaugeGlass />
+        <GaugeLabel>PROG</GaugeLabel>
+      </GaugePod>
 
-        <Display>
-          {track ? (
-            <>
-              <TrackTitle title={track.title}>{track.title}</TrackTitle>
-              <TrackSub>{modeLabel}{track.owner_username ? ` · ${track.owner_username}` : ''}</TrackSub>
-              <TimeRow>
-                <span>{fmtTime(currentTime)}</span>
-                <span>{playing ? 'RUN' : isActive ? 'HOLD' : 'IDLE'}</span>
-                <span>{fmtTime(duration)}</span>
-              </TimeRow>
-            </>
-          ) : (
-            <TrackSub>{mode === 'favorites' ? 'SIN FAVORITAS' : mode === 'radio' ? 'RADIO SIN SEÑAL' : 'SIN SEÑAL'}</TrackSub>
-          )}
-        </Display>
+      <GaugePod
+        $side="right"
+        ref={volGaugeRef}
+        role="slider"
+        aria-label="Volumen"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(volume * 100)}
+        onPointerDown={onVolDown}
+        onPointerMove={onVolMove}
+        onPointerUp={onVolUp}
+        onPointerLeave={onVolUp}
+      >
+        <GaugeArc $pct={volume * 100} />
+        <GaugeFace />
+        <Needle $deg={volDeg} />
+        <GaugeHub />
+        <GaugeGlass />
+        <GaugeLabel>VOL</GaugeLabel>
+      </GaugePod>
 
-        <GaugeWrap
-          ref={volGaugeRef}
-          role="slider"
-          aria-label="Volumen"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(volume * 100)}
-          onPointerDown={volDrag.onPointerDown}
-          onPointerMove={volDrag.onPointerMove}
-          onPointerUp={volDrag.onPointerUp}
-          onPointerLeave={volDrag.onPointerUp}
-        >
-          <GaugeRing $pct={volume * 100} />
-          <GaugeFace />
-          <Needle $deg={volDeg} />
-          <GaugeHub />
-          <GaugeLabel>VOL</GaugeLabel>
-        </GaugeWrap>
-      </TopRow>
+      <Hood $p={palette}>
+        <HoodEdge />
+        <Screw $pos="top: 34px; left: 10px;" />
+        <Screw $pos="top: 34px; right: 10px;" />
 
-      <ControlRow>
-        <TransportGroup>
-          <SwitchButton type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
-            <SkipBack size={13} />
-          </SwitchButton>
-          <ListenSwitch
-            type="button"
-            onClick={onToggleEar}
-            $active={isActive}
-            aria-label={ariaLabel}
-            aria-pressed={isActive}
-            title="Profile Listen"
-          >
-            <Ear size={14} />
-          </ListenSwitch>
-        </TransportGroup>
+        <MfdBezel>
+          <Mfd $p={palette}>
+            {track ? (
+              <>
+                <TrackTitle title={track.title}>{track.title}</TrackTitle>
+                <TrackSub>{modeLabel}{track.owner_username ? ` · ${track.owner_username}` : ''}</TrackSub>
+                <TimeRow>
+                  <span>{fmtTime(currentTime)}</span>
+                  <span>{playing ? 'RUN' : isActive ? 'HOLD' : 'IDLE'}</span>
+                  <span>{fmtTime(duration)}</span>
+                </TimeRow>
+              </>
+            ) : (
+              <TrackSub>{mode === 'favorites' ? 'SIN FAVORITAS' : mode === 'radio' ? 'RADIO SIN SEÑAL' : 'SIN SEÑAL'}</TrackSub>
+            )}
+          </Mfd>
+        </MfdBezel>
 
-        <TransportGroup style={{ justifyContent: 'center' }}>
-          <PlayButton
-            type="button"
-            onClick={onTogglePlay}
-            aria-label={playing ? 'Pausar' : 'Reproducir'}
-            disabled={!track}
-          >
-            {playing ? <Pause size={17} /> : <Play size={17} />}
-          </PlayButton>
-        </TransportGroup>
+        <Apron>
+          <TransportGroup>
+            <SwitchButton type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
+              <SkipBack size={13} />
+            </SwitchButton>
+            <ListenSwitch type="button" onClick={onToggleEar} aria-label={ariaLabel} aria-pressed={isActive} title="Profile Listen">
+              <ListenLed $active={isActive} $tint={palette.switchColor}>
+                <Ear size={14} />
+              </ListenLed>
+            </ListenSwitch>
+          </TransportGroup>
 
-        <TransportGroup>
-          <SwitchButton type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
-            <SkipForward size={13} />
-          </SwitchButton>
-        </TransportGroup>
-      </ControlRow>
-    </Shell>
+          <TransportGroup style={{ justifyContent: 'center' }}>
+            <PlayButton type="button" onClick={onTogglePlay} aria-label={playing ? 'Pausar' : 'Reproducir'} disabled={!track}>
+              {playing ? <Pause size={17} /> : <Play size={17} />}
+            </PlayButton>
+          </TransportGroup>
+
+          <TransportGroup>
+            <SwitchButton type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
+              <SkipForward size={13} />
+            </SwitchButton>
+          </TransportGroup>
+        </Apron>
+      </Hood>
+    </Wrap>
   );
 }

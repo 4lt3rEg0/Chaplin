@@ -3,12 +3,16 @@ import styled, { css, keyframes } from 'styled-components';
 import { Heart, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { defaultPalette } from './palette';
 import { fmtTime, ratioFromAngle, ratioFromClientX, safeSetPointerCapture } from '../shared';
+import { glassPanel, glassPanelShadow, matteRubber, bevelRaised, bevelSunken, screwCss } from '../materials';
 
 /*
- * NEON//HEART — skin #11. A cybernetic heart core, not generic cyberpunk
- * glitch/katakana dressing. The core only beats while actually playing, the
- * halo ring is real, clickable song progress, and CORE LINK is the real
- * profile-listen handoff.
+ * NEON//HEART — skin #12. A cybernetic heart encapsulated in a glass
+ * chamber that physically protrudes from an angular chassis, with printed
+ * circuit conduits running from the chamber into the body — not a magenta
+ * card with a heart icon. The core only beats while actually playing, the
+ * halo ring is real clickable song progress, and CORE LINK is the real
+ * profile-listen handoff. Deliberately restrained: no glitch/katakana/
+ * hacker-screen cliché — the core itself carries the identity.
  */
 
 const START_DEG = 0;
@@ -21,18 +25,16 @@ const beat = keyframes`
   50% { transform: scale(1.1); }
   70% { transform: scale(1); }
 `;
-
-const traceFlicker = keyframes`
-  0%, 100% { opacity: 0.25; }
-  50% { opacity: 0.75; }
-`;
-
+const traceFlicker = keyframes`0%, 100% { opacity: 0.25; } 50% { opacity: 0.75; }`;
 const linkGlow = keyframes`
   0%, 100% { box-shadow: 0 0 5px 1px var(--nh-link); }
   50% { box-shadow: 0 0 13px 4px var(--nh-link); }
 `;
+const conduitPulse = keyframes`0%, 100% { opacity: 0.3; } 50% { opacity: 0.9; }`;
 
-const Shell = styled.div`
+const BODY_CLIP = 'polygon(0% 0%, 84% 0%, 100% 16%, 100% 100%, 16% 100%, 0% 84%)';
+
+const Wrap = styled.div`
   --nh-panel: ${({ $p }) => $p.panelColor};
   --nh-circuit: ${({ $p }) => $p.circuitColor};
   --nh-core: ${({ $p }) => $p.coreColor};
@@ -42,67 +44,104 @@ const Shell = styled.div`
   --nh-button: ${({ $p }) => $p.buttonColor};
 
   position: relative;
-  padding: 14px;
-  border-radius: 14px;
+  padding-top: 34px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--nh-text);
+
+  @media (max-width: 480px) {
+    padding-top: 28px;
+  }
+`;
+
+const Body = styled.div`
+  position: relative;
+  clip-path: ${BODY_CLIP};
+  padding: 14px 14px 14px 60px;
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--nh-circuit) 25%, transparent) 1px, transparent 1px) 0 0 / 22px 100%,
     linear-gradient(0deg, color-mix(in srgb, var(--nh-circuit) 25%, transparent) 1px, transparent 1px) 0 0 / 100% 22px,
     var(--nh-panel);
-  border: 1px solid color-mix(in srgb, var(--nh-halo) 35%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 8px 22px rgba(0,0,0,0.5);
-  color: var(--nh-text);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.5);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow: hidden;
+  gap: 8px;
+  overflow: visible;
 
   @media (max-width: 480px) {
-    padding: 10px;
-    gap: 8px;
+    padding: 12px 12px 12px 50px;
+    gap: 6px;
   }
 `;
 
-const TopRow = styled.div`
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
-  align-items: center;
+const BodyEdge = styled.div`
+  position: absolute;
+  inset: 0;
+  clip-path: ${BODY_CLIP};
+  pointer-events: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), inset 0 0 0 1px color-mix(in srgb, var(--nh-halo) 35%, transparent);
+`;
+
+const Screw = styled.span`
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  z-index: 2;
+  ${screwCss}
+  ${({ $pos }) => $pos}
+`;
+
+const Conduit = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 46px;
+  width: ${({ $len }) => $len}px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--nh-halo), transparent);
+  transform-origin: 0 50%;
+  transform: translateY(-50%) rotate(${({ $deg }) => $deg}deg);
+  animation: ${({ $active }) => ($active ? css`${conduitPulse} 1.6s ease-in-out infinite` : 'none')};
+  opacity: ${({ $active }) => ($active ? 0.8 : 0.25)};
 `;
 
 const CoreWrap = styled.div`
-  position: relative;
-  width: 70px;
-  height: 70px;
-  flex-shrink: 0;
+  position: absolute;
+  top: -30px;
+  left: 6px;
+  width: 76px;
+  height: 76px;
   cursor: pointer;
+  z-index: 3;
 
   @media (max-width: 480px) {
-    width: 58px;
-    height: 58px;
+    width: 64px;
+    height: 64px;
   }
+`;
+
+const CoreGlass = styled.div`
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 5px;
+  background: ${({ $p }) => glassPanel($p.haloColor, 'raised')};
+  box-shadow: ${({ $p }) => glassPanelShadow($p.haloColor, 'raised')}, 0 8px 16px rgba(0,0,0,0.5);
 `;
 
 const Halo = styled.div`
   position: absolute;
-  inset: 0;
+  inset: 5px;
   border-radius: 50%;
   background: conic-gradient(var(--nh-halo) ${({ $pct }) => $pct}%, rgba(255,255,255,0.08) 0);
   mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
 `;
 
-const TraceLine = styled.span`
+const CoreChamber = styled.div`
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 14px;
-  height: 1px;
-  background: var(--nh-circuit);
-  transform-origin: left center;
-  transform: translateY(-50%) rotate(${({ $deg }) => $deg}deg) translateX(38px);
-  animation: ${({ $active }) => ($active ? css`${traceFlicker} 1.4s ease-in-out infinite` : 'none')};
-  opacity: ${({ $active }) => ($active ? 0.6 : 0.2)};
+  inset: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.12), transparent 60%), #0a0614;
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.7);
 `;
 
 const CoreIcon = styled(Heart)`
@@ -115,6 +154,7 @@ const CoreIcon = styled(Heart)`
 `;
 
 const Display = styled.div`
+  margin-left: 4px;
   min-width: 0;
   padding: 8px 10px;
   border-radius: 8px;
@@ -166,14 +206,15 @@ const HexButton = styled.button`
   height: 28px;
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
   border: none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--nh-button) 150%, #555), var(--nh-button));
+  background: ${({ $p }) => matteRubber($p.buttonColor)};
   color: var(--nh-text);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  box-shadow: ${bevelRaised(0.7)};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.7)}; transform: translateY(1px); }
   &:disabled { opacity: 0.35; cursor: not-allowed; }
 `;
 
@@ -188,18 +229,19 @@ const LinkButton = styled.button`
   gap: 4px;
   padding: 5px 9px;
   border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--nh-link) 55%, #000);
-  background: ${({ $active }) => ($active
+  border: none;
+  background: ${({ $active, $p }) => ($active
     ? 'linear-gradient(180deg, color-mix(in srgb, var(--nh-link) 55%, #012), color-mix(in srgb, var(--nh-link) 25%, #001))'
-    : 'linear-gradient(180deg, #1c1430, #120e20)')};
+    : matteRubber($p.buttonColor))};
   color: ${({ $active }) => ($active ? '#00181c' : 'var(--nh-link)')};
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.05em;
   cursor: pointer;
+  box-shadow: ${bevelRaised(0.7)};
   animation: ${({ $active }) => ($active ? css`${linkGlow} 2s ease-in-out infinite` : 'none')};
 
-  &:active { transform: translateY(1px); }
+  &:active { box-shadow: ${bevelSunken(0.7)}; transform: translateY(1px); }
 `;
 
 const PowerBar = styled.div`
@@ -207,7 +249,8 @@ const PowerBar = styled.div`
   width: 100%;
   height: 8px;
   border-radius: 4px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.4);
+  box-shadow: ${bevelSunken(0.5)};
   cursor: pointer;
   overflow: hidden;
 `;
@@ -259,8 +302,16 @@ export default function NeonHeartSkin({
   const onVolUp = () => { draggingVol.current = false; };
 
   return (
-    <Shell $p={palette}>
-      <TopRow>
+    <Wrap $p={palette}>
+      <Body $p={palette}>
+        <BodyEdge />
+        <Screw $pos="top: 6px; right: 6px;" />
+        <Screw $pos="bottom: 6px; right: 30px;" />
+
+        <Conduit $len={30} $deg={0} $active={playing} />
+        <Conduit $len={22} $deg={35} $active={playing} />
+        <Conduit $len={22} $deg={-35} $active={playing} />
+
         <CoreWrap
           ref={coreRef}
           role="slider"
@@ -273,9 +324,11 @@ export default function NeonHeartSkin({
           onPointerUp={onCoreUp}
           onPointerLeave={onCoreUp}
         >
-          <Halo $pct={progress * 100} />
-          {Array.from({ length: 6 }, (_, i) => <TraceLine key={i} $deg={i * 60} $active={playing} />)}
-          <CoreIcon size={26} fill="currentColor" $active={playing} />
+          <CoreGlass $p={palette}>
+            <Halo $pct={progress * 100} />
+            <CoreChamber />
+          </CoreGlass>
+          <CoreIcon size={24} fill="currentColor" $active={playing} />
         </CoreWrap>
 
         <Display>
@@ -289,49 +342,50 @@ export default function NeonHeartSkin({
             <TrackSub>{mode === 'favorites' ? 'SIN FAVORITAS' : mode === 'radio' ? 'RADIO SIN SEÑAL' : 'NÚCLEO EN REPOSO'}</TrackSub>
           )}
         </Display>
-      </TopRow>
 
-      <PowerBar
-        ref={volRef}
-        role="slider"
-        aria-label="Volumen"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(volume * 100)}
-        onPointerDown={onVolDown}
-        onPointerMove={onVolMove}
-        onPointerUp={onVolUp}
-        onPointerLeave={onVolUp}
-      >
-        <PowerFill $pct={volume * 100} />
-      </PowerBar>
-
-      <ControlRow>
-        <TransportGroup>
-          <HexButton type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
-            <SkipBack size={12} />
-          </HexButton>
-          <PlayButton type="button" onClick={onTogglePlay} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
-            {playing ? <Pause size={16} /> : <Play size={16} />}
-          </PlayButton>
-          <HexButton type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
-            <SkipForward size={12} />
-          </HexButton>
-        </TransportGroup>
-
-        <div />
-
-        <LinkButton
-          type="button"
-          onClick={onToggleEar}
-          $active={isActive}
-          aria-label={ariaLabel}
-          aria-pressed={isActive}
-          title="Profile Listen"
+        <PowerBar
+          ref={volRef}
+          role="slider"
+          aria-label="Volumen"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(volume * 100)}
+          onPointerDown={onVolDown}
+          onPointerMove={onVolMove}
+          onPointerUp={onVolUp}
+          onPointerLeave={onVolUp}
         >
-          <Heart size={11} fill={isActive ? 'currentColor' : 'none'} /> {isActive ? 'LINKED' : 'CORE LINK'}
-        </LinkButton>
-      </ControlRow>
-    </Shell>
+          <PowerFill $pct={volume * 100} />
+        </PowerBar>
+
+        <ControlRow>
+          <TransportGroup>
+            <HexButton $p={palette} type="button" onClick={onPrev} disabled={!hasQueue} aria-label="Anterior">
+              <SkipBack size={12} />
+            </HexButton>
+            <PlayButton $p={palette} type="button" onClick={onTogglePlay} disabled={!track} aria-label={playing ? 'Pausar' : 'Reproducir'}>
+              {playing ? <Pause size={16} /> : <Play size={16} />}
+            </PlayButton>
+            <HexButton $p={palette} type="button" onClick={onNext} disabled={!hasQueue} aria-label="Siguiente">
+              <SkipForward size={12} />
+            </HexButton>
+          </TransportGroup>
+
+          <div />
+
+          <LinkButton
+            $p={palette}
+            type="button"
+            onClick={onToggleEar}
+            $active={isActive}
+            aria-label={ariaLabel}
+            aria-pressed={isActive}
+            title="Profile Listen"
+          >
+            <Heart size={11} fill={isActive ? 'currentColor' : 'none'} /> {isActive ? 'LINKED' : 'CORE LINK'}
+          </LinkButton>
+        </ControlRow>
+      </Body>
+    </Wrap>
   );
 }
