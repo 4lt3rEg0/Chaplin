@@ -1,0 +1,6 @@
+{
+  "id": "graffiti-y2k",
+  "source": "cutout",
+  "trim": [53, 95, 0, 6],
+  "blurBoxes": [[100, 20, 630, 112]]
+}

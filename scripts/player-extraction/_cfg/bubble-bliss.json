@@ -1,0 +1,5 @@
+{
+  "id": "bubble-bliss",
+  "source": "cutout",
+  "blurBoxes": [[60, 90, 170, 190], [185, 75, 625, 208]]
+}

@@ -3,11 +3,30 @@
   "label": "Graffiti Y2K",
   "sourceSheet": "osk7ri",
   "sourceCell": "r1c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/graffiti-y2k/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.5089,
+  "maxWidth": 440,
+  "notes": "Se recorto el titulo de catalogo horneado sobre el aparato (ajeno al reproductor). La miniatura de foto de persona real es demasiado pequena para ser un elemento util de avatar dinamico, asi que se neutralizo con blur igual que el texto, sin agregar una region de imagen dinamica separada. El graffiti 'GRAFFITI Y2K' es el logotipo permanente del propio diseno (pintado), no un dato falso, y se conserva intacto. No hay barra de progreso reconocible en el arte (el 'osciloscopio' es una linea decorativa, no una barra lineal); no se inventa una.",
+  "controls": {
+    "previous": { "x": 0.1613, "y": 0.5642, "w": 0.0806, "h": 0.0996 },
+    "playPause": { "x": 0.2493, "y": 0.5642, "w": 0.0733, "h": 0.0996 },
+    "next": { "x": 0.3299, "y": 0.5642, "w": 0.0806, "h": 0.0996 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1540, "y": 0.0553, "w": 0.7625, "h": 0.1991,
+      "align": "center", "justify": "center",
+      "color": "#e0f7ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

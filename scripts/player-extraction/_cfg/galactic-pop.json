@@ -1,0 +1,6 @@
+{
+  "id": "galactic-pop",
+  "source": "cutout",
+  "trim": [0, 88, 0, 0],
+  "blurBoxes": [[188, 70, 685, 188]]
+}
