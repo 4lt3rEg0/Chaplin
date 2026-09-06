@@ -56,6 +56,7 @@ import Radio from "./pages/Radio";
 import Inbox from "./pages/Inbox";
 import Explore from "./pages/Explore";
 import RegisterCyber from "./components/RegisterCyber";
+const PlayerLab = (import.meta.env.DEV || window.location.hostname === "localhost") ? React.lazy(() => import("./dev/PlayerLab/PlayerLab")) : null;
 
 const MOBILE_PREVIEW_FLAG = "chaplin_mobile_preview";
 const ALL_PAGES_FLAG = "chaplin_all_pages_enabled";
@@ -398,6 +399,17 @@ const AppShell = () => {
                 </PrivateRoute>
               }
             />
+
+            {(import.meta.env.DEV || window.location.hostname === "localhost") && (
+              <Route
+                path="/dev/player-lab/:skinId"
+                element={
+                  <React.Suspense fallback={null}>
+                    <PlayerLab />
+                  </React.Suspense>
+                }
+              />
+            )}
 
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

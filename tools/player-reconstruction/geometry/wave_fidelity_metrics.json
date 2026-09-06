@@ -1,0 +1,18 @@
+{
+  "silhouetteIoU": 0.6043,
+  "boundingBoxIoU": 1.0,
+  "waveContourErrorPx": 7.99,
+  "commonColumns": 598,
+  "refBBox": [
+    18,
+    88,
+    615,
+    239
+  ],
+  "liveBBox": [
+    18,
+    88,
+    615,
+    239
+  ]
+}
