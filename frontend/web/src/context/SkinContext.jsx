@@ -8,6 +8,11 @@ import {
   MATERIAL_PROFILES,
   TYPOGRAPHY_PROFILES
 } from '../styles/visualIdentitySystem';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/skins';
+
+// Guards against stale persisted ids from a since-removed skin resolving to
+// nothing in the current registry — silently falls back to the default.
+const resolvePlayerSkinId = (id) => (id && PLAYER_SKINS[id] ? id : DEFAULT_PLAYER_SKIN);
 
 const SkinContext = createContext(null);
 
@@ -52,6 +57,23 @@ export const SkinProvider = ({ children }) => {
   const [layoutOpacity, setLayoutOpacity] = useState(
     Number(localStorage.getItem('chaplin_layout_opacity') || '0.92')
   );
+  const [playerSkinId, setPlayerSkinId] = useState(
+    resolvePlayerSkinId(localStorage.getItem('chaplin_player_skin_id'))
+  );
+  // Player color modes: 'default' (skin's own factory palette), 'theme'
+  // (derived live from the active app theme), 'custom' (user-edited tokens).
+  // customPalettes is keyed by skin id so switching modes never destroys a
+  // custom palette the user already built for a skin they're not using now.
+  const [playerColorMode, setPlayerColorMode] = useState(
+    localStorage.getItem('chaplin_player_color_mode') || 'default'
+  );
+  const [playerCustomPalettes, setPlayerCustomPalettes] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('chaplin_player_custom_palettes') || '{}');
+    } catch {
+      return {};
+    }
+  });
 
   const [animations, setAnimations] = useState(
     localStorage.getItem('chaplin_fx') !== 'off'
@@ -117,6 +139,19 @@ export const SkinProvider = ({ children }) => {
               setLayoutOpacity(Math.max(0.1, Math.min(1, nextOpacity)));
             }
           }
+          if (typeof data.player_skin_id === 'string' && data.player_skin_id) {
+            setPlayerSkinId(resolvePlayerSkinId(data.player_skin_id));
+          }
+          if (typeof data.player_color_mode === 'string' && data.player_color_mode) {
+            setPlayerColorMode(data.player_color_mode);
+          }
+          if (typeof data.player_custom_palettes === 'string' && data.player_custom_palettes) {
+            try {
+              setPlayerCustomPalettes(JSON.parse(data.player_custom_palettes));
+            } catch {
+              // keep whatever local cache already had
+            }
+          }
         }
       } catch (err) {
         console.log("No theme loaded (user not logged?)");
@@ -156,7 +191,10 @@ export const SkinProvider = ({ children }) => {
           shape_language_id: shapeId,
           visual_density: density,
           ornament_level: ornament,
-          material_intensity: materialIntensity
+          material_intensity: materialIntensity,
+          player_skin_id: playerSkinId,
+          player_color_mode: playerColorMode,
+          player_custom_palettes: JSON.stringify(playerCustomPalettes)
         });
       } catch (err) {
         console.log("Theme not saved (not logged?)");
@@ -186,6 +224,9 @@ export const SkinProvider = ({ children }) => {
     localStorage.setItem('chaplin_density', density);
     localStorage.setItem('chaplin_ornament', String(ornament));
     localStorage.setItem('chaplin_material_intensity', String(materialIntensity));
+    localStorage.setItem('chaplin_player_skin_id', playerSkinId);
+    localStorage.setItem('chaplin_player_color_mode', playerColorMode);
+    localStorage.setItem('chaplin_player_custom_palettes', JSON.stringify(playerCustomPalettes));
 
   }, [
     skinId,
@@ -209,6 +250,9 @@ export const SkinProvider = ({ children }) => {
     density,
     ornament,
     materialIntensity,
+    playerSkinId,
+    playerColorMode,
+    playerCustomPalettes,
     loadedFromBackend,
     isPreviewingTheme
   ]);
@@ -236,13 +280,17 @@ export const SkinProvider = ({ children }) => {
     fontUi: setFontUi,
     fontMono: setFontMono,
     layoutOpacity: setLayoutOpacity,
-    animations: setAnimations
+    animations: setAnimations,
+    playerSkinId: setPlayerSkinId,
+    playerColorMode: setPlayerColorMode,
+    playerCustomPalettes: setPlayerCustomPalettes
   };
   const themeFieldValues = {
     skinId, accentColor, secondaryAccent, themeVariant, materialId, hudId,
     layoutId, typographyId, shapeId, density, ornament, materialIntensity,
     layoutBackground, layoutBorder, layoutText, fontPrimary, fontSecondary,
-    fontUi, fontMono, layoutOpacity, animations
+    fontUi, fontMono, layoutOpacity, animations, playerSkinId,
+    playerColorMode, playerCustomPalettes
   };
 
   const beginThemePreview = () => {
@@ -389,6 +437,12 @@ export const SkinProvider = ({ children }) => {
     setAnimations,
     skins: THEME_PRESETS,
     appTheme,
+    playerSkinId,
+    setPlayerSkinId,
+    playerColorMode,
+    setPlayerColorMode,
+    playerCustomPalettes,
+    setPlayerCustomPalettes,
     isPreviewingTheme,
     beginThemePreview,
     cancelThemePreview,
@@ -418,6 +472,9 @@ export const SkinProvider = ({ children }) => {
     materialIntensity,
     animations,
     appTheme,
+    playerSkinId,
+    playerColorMode,
+    playerCustomPalettes,
     isPreviewingTheme
   ]);
 

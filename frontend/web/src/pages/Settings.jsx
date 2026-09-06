@@ -2,13 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Check, Headphones, LogOut, Palette, User as UserIcon, X
+  ArrowLeft, Check, ChevronLeft, ChevronRight, Headphones, LogOut, Palette, User as UserIcon, X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSkin } from '../context/SkinContext';
 import { useVortex } from '../context/VortexContext';
 import api, { uploadProfileMusic } from '../services/api';
 import { updateTheme } from '../services/themeService';
+import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/skins';
 import AppearanceDemo from '../components/AppearanceStudio/AppearanceDemo';
 import LayoutThumb from '../components/AppearanceStudio/LayoutThumb';
 import BackgroundThumb from '../components/AppearanceStudio/BackgroundThumb';
@@ -215,6 +216,9 @@ const buildAppearanceSnapshot = (skin, vortex) => ({
   layoutId: skin.layoutId || skin.appTheme?.profile?.layout?.id || 'balanced',
   fontPrimary: skin.fontPrimary || '',
   textColor: skin.layoutText || '',
+  playerSkinId: skin.playerSkinId,
+  playerColorMode: skin.playerColorMode || 'default',
+  playerCustomPalette: skin.playerCustomPalettes?.[skin.playerSkinId] || {},
   backgroundStyle: vortex.backgroundStyle,
   finishType: vortex.finishType,
   vortexColor: vortex.vortexColor
@@ -317,12 +321,269 @@ const ThemeSwatch = styled.div`
   }
 `;
 
+/* Large, non-cropping carousel for the player skin picker. Every skin owns
+   its own real-size composition (some are wider, some taller, some have
+   pieces that stick out past a rectangular box entirely) — the stage shows
+   the ACTUAL skin component at close to its natural size, never a
+   simplified placeholder card standing in for it. */
+const CarouselSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+`;
+
+const CarouselRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+`;
+
+const CarouselNavButton = styled.button`
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.surfaceAlt || 'rgba(255,255,255,0.06)'};
+  color: ${({ theme }) => theme.colors.text};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+
+  &:hover { border-color: ${({ theme }) => theme.colors.primary}; }
+`;
+
+const CarouselStage = styled.div`
+  flex: 1;
+  min-height: 300px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 10px, transparent 10px, transparent 20px),
+    #0a0a10;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  overflow: visible;
+
+  @media (max-width: 480px) {
+    min-height: 240px;
+    padding: 18px;
+  }
+`;
+
+const CarouselPlayerWrap = styled.div`
+  width: 100%;
+`;
+
+const CarouselCaption = styled.div`
+  font-size: 15px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text};
+`;
+
+const CarouselDotsRow = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
+`;
+
+const CarouselDot = styled.button`
+  width: ${({ $active }) => ($active ? '18px' : '7px')};
+  height: 7px;
+  border-radius: 4px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: ${({ $active, theme }) => ($active ? theme.colors.primary : theme.colors.border)};
+  transition: width 0.15s ease;
+`;
+
 const StudioActions = styled.div`
   display: flex;
   gap: 8px;
   margin-top: 12px;
   justify-content: flex-end;
 `;
+
+const ColorModeRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 5px 0;
+  cursor: pointer;
+`;
+
+const TokenRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+`;
+
+const TokenSwatch = styled.input`
+  width: 32px;
+  height: 26px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+`;
+
+const TokenLabel = styled.span`
+  font-size: 12px;
+  flex: 1;
+`;
+
+const PaletteDotsRow = styled.div`
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 4px;
+  flex-wrap: wrap;
+`;
+
+const PaletteDot = styled.span`
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: ${({ $c }) => $c};
+  border: 1px solid rgba(255, 255, 255, 0.25);
+`;
+
+const CAROUSEL_DEMO_TRACK = { title: 'Así suena tu perfil', owner_username: 'tu_usuario' };
+const CAROUSEL_DEMO_QUEUE = [CAROUSEL_DEMO_TRACK];
+
+function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
+  const activeIndex = Math.max(0, PLAYER_SKIN_LIST.findIndex((s) => s.id === draft.playerSkinId));
+  const option = PLAYER_SKIN_LIST[activeIndex] || PLAYER_SKIN_LIST[0];
+  const SkinComp = option.component;
+
+  const goTo = (index) => {
+    const next = PLAYER_SKIN_LIST[(index + PLAYER_SKIN_LIST.length) % PLAYER_SKIN_LIST.length];
+    selectPlayerSkin(next.id);
+  };
+
+  return (
+    <CarouselSection>
+      <CarouselRow>
+        <CarouselNavButton type="button" onClick={() => goTo(activeIndex - 1)} aria-label="Skin anterior">
+          <ChevronLeft size={18} />
+        </CarouselNavButton>
+
+        <CarouselStage>
+          <CarouselPlayerWrap>
+            <SkinComp
+              track={CAROUSEL_DEMO_TRACK}
+              mode="all"
+              modeLabel="Vista previa"
+              isActive={false}
+              isPlaying={false}
+              hasQueue={false}
+              onToggleEar={() => {}}
+              onTogglePlay={() => {}}
+              onPrev={() => {}}
+              onNext={() => {}}
+              ariaLabel="preview"
+              currentTime={97}
+              duration={214}
+              volume={0.7}
+              onVolumeChange={() => {}}
+              onSeek={() => {}}
+              isFavorited={false}
+              canFavorite={false}
+              onToggleFavorite={() => {}}
+              queue={CAROUSEL_DEMO_QUEUE}
+              queueIndex={0}
+              onSelectTrack={() => {}}
+              palette={option.defaultPalette}
+            />
+          </CarouselPlayerWrap>
+        </CarouselStage>
+
+        <CarouselNavButton type="button" onClick={() => goTo(activeIndex + 1)} aria-label="Skin siguiente">
+          <ChevronRight size={18} />
+        </CarouselNavButton>
+      </CarouselRow>
+
+      <CarouselCaption>{option.label}</CarouselCaption>
+
+      <CarouselDotsRow>
+        {PLAYER_SKIN_LIST.map((s, i) => (
+          <CarouselDot key={s.id} type="button" $active={i === activeIndex} onClick={() => goTo(i)} aria-label={`Ir a ${s.label}`} aria-current={i === activeIndex} />
+        ))}
+      </CarouselDotsRow>
+    </CarouselSection>
+  );
+}
+
+/* Per-skin color customization (Default / Theme / Custom). Reads
+   `skin.colorSchema` off whichever skin is currently selected in the
+   catalog, so it scales to future skins without new UI code. */
+function PlayerColorEditor({ draft, patch, patchCustomColor, appTheme }) {
+  const skinEntry = PLAYER_SKINS[draft.playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
+  if (!skinEntry) return null;
+
+  const modeOptions = [
+    { id: 'default', label: 'Diseño predeterminado' },
+    { id: 'theme', label: 'Sincronizar con tema' },
+    { id: 'custom', label: 'Paleta libre' }
+  ];
+
+  const mappedFromTheme = skinEntry.themeMapping(appTheme || {});
+
+  return (
+    <FieldGroup style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 14, marginTop: 4 }}>
+      <Label>Color del reproductor ({skinEntry.label})</Label>
+
+      {modeOptions.map((m) => (
+        <ColorModeRow key={m.id}>
+          <input
+            type="radio"
+            name="player-color-mode"
+            checked={(draft.playerColorMode || 'default') === m.id}
+            onChange={() => patch({ playerColorMode: m.id })}
+          />
+          {m.label}
+        </ColorModeRow>
+      ))}
+
+      {draft.playerColorMode === 'theme' ? (
+        <PaletteDotsRow>
+          {Object.values(mappedFromTheme).map((c, i) => <PaletteDot key={i} $c={c} />)}
+        </PaletteDotsRow>
+      ) : draft.playerColorMode === 'custom' ? (
+        <div style={{ marginTop: 8 }}>
+          {skinEntry.colorSchema.map((token) => (
+            <TokenRow key={token.key}>
+              <TokenSwatch
+                type="color"
+                value={draft.playerCustomPalette?.[token.key] || skinEntry.defaultPalette[token.key]}
+                onChange={(e) => patchCustomColor(token.key, e.target.value)}
+              />
+              <TokenLabel>{token.label}</TokenLabel>
+            </TokenRow>
+          ))}
+        </div>
+      ) : (
+        <PaletteDotsRow>
+          {Object.values(skinEntry.defaultPalette).map((c, i) => <PaletteDot key={i} $c={c} />)}
+        </PaletteDotsRow>
+      )}
+
+      <GhostBtn type="button" onClick={() => patch({ playerColorMode: 'default', playerCustomPalette: {} })} style={{ marginTop: 6 }}>
+        Restablecer diseño original
+      </GhostBtn>
+    </FieldGroup>
+  );
+}
 
 function AparienciaSection() {
   const skin = useSkin();
@@ -338,6 +599,18 @@ function AparienciaSection() {
     setSaveStatus('idle');
   };
 
+  // Switching the catalog selection must re-point playerCustomPalette at
+  // whatever custom palette (if any) is already saved for THAT skin, so
+  // Custom mode edits never bleed from one skin's tokens into another's.
+  const selectPlayerSkin = (newId) => {
+    const existing = skin.playerCustomPalettes?.[newId] || {};
+    patch({ playerSkinId: newId, playerCustomPalette: existing });
+  };
+
+  const patchCustomColor = (key, value) => {
+    patch({ playerCustomPalette: { ...draft.playerCustomPalette, [key]: value } });
+  };
+
   const handleApply = () => {
     setSaveStatus('saving');
     skin.setSkinId(draft.skinId);
@@ -350,6 +623,9 @@ function AparienciaSection() {
     skin.setFontPrimary(draft.fontPrimary);
     skin.setFontSecondary(draft.fontPrimary);
     skin.setFontUi(draft.fontPrimary);
+    skin.setPlayerSkinId(draft.playerSkinId);
+    skin.setPlayerColorMode(draft.playerColorMode);
+    skin.setPlayerCustomPalettes((prev) => ({ ...prev, [draft.playerSkinId]: draft.playerCustomPalette }));
     vortex.setBackgroundStyle(draft.backgroundStyle);
     vortex.setFinishType(draft.finishType);
     vortex.setVortexColor(draft.vortexColor);
@@ -369,7 +645,7 @@ function AparienciaSection() {
     <>
       <SectionTitle>Apariencia</SectionTitle>
       <SectionSub>
-        Layout, tema, fondo, fuente y colores, todo en un mismo configurador —
+        Layout, tema, fondo, fuente, colores y el reproductor de tu perfil, todo en un mismo configurador —
         la demo de al lado se actualiza al instante con la combinación completa. Nada se guarda hasta pulsar Aplicar.
       </SectionSub>
 
@@ -442,6 +718,13 @@ function AparienciaSection() {
                 Fondo animado activo
               </CheckRow>
             </FieldGroup>
+          </StudioSection>
+
+          <StudioSection>
+            <StudioSectionTitle>Skin del reproductor de perfil</StudioSectionTitle>
+            <PlayerSkinCarousel draft={draft} selectPlayerSkin={selectPlayerSkin} />
+
+            <PlayerColorEditor draft={draft} patch={patch} patchCustomColor={patchCustomColor} appTheme={skin.appTheme} />
           </StudioSection>
         </ConfigCol>
 
