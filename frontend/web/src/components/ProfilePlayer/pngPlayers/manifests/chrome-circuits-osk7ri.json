@@ -3,17 +3,41 @@
   "label": "Chrome & Circuits",
   "sourceSheet": "osk7ri",
   "sourceCell": "r0c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/chrome-circuits-osk7ri/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.8524,
+  "maxWidth": 520,
+  "notes": "Foto de celebridad reconocible: neutralizada y sustituida por avatar real. Este diseno tiene un jack/cable de auriculares real dibujado a la derecha; PROFILE LISTEN se mapea ahi (el conector del cable), coincidiendo literalmente con el icono de auriculares que pide la Fase 16. Los 4 botones de transporte usan sus iconos reales.",
+  "controls": {
+    "previous": { "x": 0.0893, "y": 0.6056, "w": 0.0755, "h": 0.1272 },
+    "playPause": { "x": 0.1786, "y": 0.6056, "w": 0.0755, "h": 0.1272 },
+    "next": { "x": 0.2679, "y": 0.6056, "w": 0.0755, "h": 0.1272 },
+    "progress": { "x": 0.2404, "y": 0.3562, "w": 0.2404, "h": 0.0382, "color": "#5affa0" },
+    "profileListen": { "x": 0.8104, "y": 0.3690, "w": 0.0481, "h": 0.1527 }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.0893, "y": 0.1654, "w": 0.1305, "h": 0.2290, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2335, "y": 0.1399, "w": 0.5632, "h": 0.2799,
+      "align": "flex-start", "justify": "center",
+      "color": "#5affa0",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.8vw,12px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.4vw,9px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
     "hasVolume": false,
-    "hasProfileListen": false,
+    "hasProfileListen": true,
     "hasVisualizer": false
   }
 }

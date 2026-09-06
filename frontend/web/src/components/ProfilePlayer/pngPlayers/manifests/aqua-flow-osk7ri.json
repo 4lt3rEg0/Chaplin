@@ -3,11 +3,34 @@
   "label": "Aqua Flow",
   "sourceSheet": "osk7ri",
   "sourceCell": "r0c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/aqua-flow-osk7ri/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.5757,
+  "maxWidth": 460,
+  "notes": "Foto de persona real (silueta identificable) horneada: neutralizada y sustituida por avatar real. Este diseno no tiene un icono de flecha doble izquierda (Previous): se reutiliza la burbuja circular decorativa inferior izquierda (unico control sobrante sin funcion) como Previous por posicion. Play y Next si usan sus iconos reales de triangulo y doble-triangulo.",
+  "controls": {
+    "previous": { "x": 0.0858, "y": 0.7226, "w": 0.0888, "h": 0.1399 },
+    "playPause": { "x": 0.2367, "y": 0.4895, "w": 0.0888, "h": 0.1399 },
+    "next": { "x": 0.3180, "y": 0.4895, "w": 0.0888, "h": 0.1399 },
+    "progress": { "x": 0.2885, "y": 0.2448, "w": 0.2367, "h": 0.0303, "color": "#bfe9ff" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.1006, "y": 0.1399, "w": 0.1435, "h": 0.1865, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2811, "y": 0.1212, "w": 0.5769, "h": 0.2331,
+      "align": "flex-start", "justify": "center",
+      "color": "#cdeaff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

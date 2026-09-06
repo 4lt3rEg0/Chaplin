@@ -3,11 +3,34 @@
   "label": "Bubble Bliss",
   "sourceSheet": "osk7ri",
   "sourceCell": "r0c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/bubble-bliss/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.5738,
+  "maxWidth": 460,
+  "notes": "Foto de celebridad reconocible horneada: neutralizada y sustituida por avatar real (mismo criterio que en toda la coleccion). Este diseno sí tiene los 4 iconos de transporte reales (anterior, pausa, siguiente, stop), asi que el mapping es directo por icono, no por convencion de posicion.",
+  "controls": {
+    "previous": { "x": 0.0967, "y": 0.5972, "w": 0.1265, "h": 0.1054 },
+    "playPause": { "x": 0.2307, "y": 0.5972, "w": 0.1042, "h": 0.1054 },
+    "next": { "x": 0.3423, "y": 0.5972, "w": 0.0967, "h": 0.1054 },
+    "progress": { "x": 0.2902, "y": 0.3981, "w": 0.2604, "h": 0.0351, "color": "#5affe8" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.0967, "y": 0.2225, "w": 0.1488, "h": 0.2108, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2827, "y": 0.1827, "w": 0.6399, "h": 0.19,
+      "align": "flex-start", "justify": "center",
+      "color": "#bdf7ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
