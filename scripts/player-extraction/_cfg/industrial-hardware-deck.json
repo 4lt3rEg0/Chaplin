@@ -2,5 +2,5 @@
   "id": "industrial-hardware-deck",
   "source": "raw",
   "trim": [20, 205, 15, 10],
-  "blurBoxes": [[80, 25, 240, 90]]
+  "blurBoxes": [[65, 12, 245, 100]]
 }

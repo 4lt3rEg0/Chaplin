@@ -3,11 +3,30 @@
   "label": "Plasma Glow",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r2c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/plasma-glow-ij1a1r/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.5752,
+  "maxWidth": 460,
+  "notes": "Sin barra de progreso ni ningun otro control adicional en el arte (es una lamina de plasma decorativa con 4 botones). Play/Pause es el boton grande con halo rojo (el mas destacado visualmente); Previous/Next son el primer boton cuadrado y el de icono real >>|. No se inventa una barra de progreso que no existe (Fase 21).",
+  "controls": {
+    "previous": { "x": 0.0924, "y": 0.7476, "w": 0.0924, "h": 0.1456 },
+    "next": { "x": 0.3236, "y": 0.7476, "w": 0.0924, "h": 0.1456 },
+    "playPause": { "x": 0.4345, "y": 0.7282, "w": 0.1171, "h": 0.1845 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3005, "y": 0.1942, "w": 0.3544, "h": 0.2670,
+      "align": "center", "justify": "center",
+      "color": "#bdf2ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(10px,2.1vw,15px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

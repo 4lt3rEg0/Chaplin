@@ -3,11 +3,40 @@
   "label": "Retro Tech Y2K",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r2c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/retro-tech-y2k-ij1a1r/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6839,
+  "maxWidth": 460,
+  "notes": "El boton central grande con halo amarillo es visualmente el control principal del diseno, asi que se mapea como Play/Pause (no por convencion de posicion, sino porque el propio diseno lo destaca como tal). Previous y Next usan los botones cuadrados izquierdo y el de icono real >>|. Hay dos zonas de texto reales: el LCD grande (titulo/artista) y un reloj digital secundario, ambos horneados con datos falsos y saneados; el reloj digital ahora muestra el tiempo real.",
+  "controls": {
+    "previous": { "x": 0.0892, "y": 0.7332, "w": 0.0923, "h": 0.1554 },
+    "next": { "x": 0.3123, "y": 0.7332, "w": 0.0923, "h": 0.1554 },
+    "playPause": { "x": 0.4123, "y": 0.7124, "w": 0.1, "h": 0.1943 },
+    "progress": { "x": 0.1046, "y": 0.4793, "w": 0.4877, "h": 0.0337, "color": "#c8ff4a" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.0923, "y": 0.1425, "w": 0.8, "h": 0.28,
+      "align": "flex-start", "justify": "center",
+      "color": "#c8ff4a",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,2vw,15px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    },
+    {
+      "id": "digitalClock",
+      "x": 0.52, "y": 0.5699, "w": 0.3292, "h": 0.1192,
+      "align": "center", "justify": "center",
+      "color": "#c8ff4a",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "time", "size": "clamp(8px,1.7vw,11px)", "weight": 700 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

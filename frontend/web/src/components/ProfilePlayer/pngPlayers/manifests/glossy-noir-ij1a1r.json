@@ -3,11 +3,31 @@
   "label": "Glossy Noir",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r1c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/glossy-noir-ij1a1r/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6443,
+  "maxWidth": 460,
+  "notes": "Previous/Play se asignan por posicion (botones 1 y 2, sin icono de flecha); Next si coincide con su icono real >>| (boton 3). El boton 4 (pausa) y los 3 de shuffle/repeat quedan decorativos. Se usa la barra de progreso inferior (la mas larga y clara); la miniatura superior bajo el texto y el medidor doble rojo/verde quedan decorativos, no se duplico la logica de progreso en varias barras.",
+  "controls": {
+    "previous": { "x": 0.0909, "y": 0.7165, "w": 0.0940, "h": 0.1546 },
+    "playPause": { "x": 0.2085, "y": 0.7165, "w": 0.0940, "h": 0.1546 },
+    "next": { "x": 0.3260, "y": 0.7165, "w": 0.0940, "h": 0.1546 },
+    "progress": { "x": 0.1066, "y": 0.6572, "w": 0.5330, "h": 0.0387, "color": "#5affa0" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.29, "y": 0.1418, "w": 0.6505, "h": 0.317,
+      "align": "flex-start", "justify": "center",
+      "color": "#8fffb0",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

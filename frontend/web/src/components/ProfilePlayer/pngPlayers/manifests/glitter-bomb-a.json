@@ -3,11 +3,43 @@
   "label": "Glitter Bomb",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r2c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/glitter-bomb-a/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.2584,
+  "maxWidth": 420,
+  "notes": "Foto de celebridad reconocible horneada (mismo tratamiento que Bubble Gum Pop/Chrome & Circuits): neutralizada y sustituida por avatar real. Previous/Next usan boton1 y el icono real >>|; Play/Pause es el boton grande central. Hay dos zonas de texto reales (display principal y reloj digital secundario), ambas saneadas y con datos reales.",
+  "controls": {
+    "previous": { "x": 0.0909, "y": 0.6706, "w": 0.0940, "h": 0.1183 },
+    "next": { "x": 0.3182, "y": 0.6706, "w": 0.0940, "h": 0.1183 },
+    "playPause": { "x": 0.4436, "y": 0.6608, "w": 0.1019, "h": 0.1381 },
+    "progress": { "x": 0.1066, "y": 0.4438, "w": 0.4420, "h": 0.0296, "color": "#5adfff" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.1066, "y": 0.2071, "w": 0.1630, "h": 0.2169, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.2978, "y": 0.1775, "w": 0.4859, "h": 0.2268,
+      "align": "flex-start", "justify": "center",
+      "color": "#7dd8ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    },
+    {
+      "id": "digitalClock",
+      "x": 0.5330, "y": 0.5286, "w": 0.3213, "h": 0.0828,
+      "align": "center", "justify": "center",
+      "color": "#c8f0ff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "time", "size": "clamp(7px,1.5vw,9px)", "weight": 700 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
