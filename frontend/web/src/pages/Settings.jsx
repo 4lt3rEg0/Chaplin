@@ -603,6 +603,12 @@ function AparienciaSection() {
                           volume={0.8}
                           onVolumeChange={() => {}}
                           onSeek={() => {}}
+                          isFavorited={false}
+                          canFavorite={false}
+                          onToggleFavorite={() => {}}
+                          queue={[{ title: 'Demo', owner_username: 'tu' }]}
+                          queueIndex={0}
+                          onSelectTrack={() => {}}
                           palette={option.defaultPalette}
                         />
                       </PlayerSkinCardWrap>
