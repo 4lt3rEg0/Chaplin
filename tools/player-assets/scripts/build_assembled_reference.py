@@ -11,7 +11,10 @@ from PIL import Image
 import numpy as np
 
 REF = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-assets\references\bubblegum-gloss.png"
-OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\assets\profilePlayers\bubblegum-gloss\assembled-reference.png"
+OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\assets\profilePlayers\bubblegum-gloss\asset-sheet-cropped.png"
+# NOTE: this is an ASSET SHEET crop (catalog layout, metadata masked out),
+# NOT a picture of the assembled player. Do not treat its output as a
+# composition/position reference — see manifest.json's _CRITICAL_NOTE.
 
 # Regions to remove (sheet metadata, never part of the physical player),
 # each padded a few px beyond its measured bbox (components.json) so no

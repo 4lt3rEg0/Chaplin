@@ -27,12 +27,18 @@ import bubble06Img from '../../../../assets/profilePlayers/bubblegum-gloss/decor
  *
  * Renders manifest.json#assets: every piece is a REAL PNG traced back to
  * Assets (6).png (or, for the fuller slider, the verified individual
- * per-piece delivery) — nothing is redrawn or approximated with CSS. This
- * component composites the SAME assets + coordinates that
- * render_from_manifest.py uses to build reconstruction-validation/
- * reconstructed-from-assets.png — compare that against
- * assembled-reference.png (the real sheet, non-player metadata masked
- * out) for the authoritative fidelity check.
+ * per-piece delivery) — nothing is redrawn or approximated with CSS.
+ *
+ * IMPORTANT (see manifest.json's _CRITICAL_NOTE): Assets (6).png is an
+ * ASSET SHEET (a catalog layout of available pieces), not a picture of
+ * the assembled player. The x/y this component reads is
+ * sourceSheetPosition — where each piece was found on the sheet — NOT a
+ * validated assembledPlayerPosition (manifest.json#assembledPlayerCoordinates
+ * is currently unavailable). That is why this renders as a parts layout
+ * rather than a single mounted device. Do not "fix" this by inventing a
+ * shell or by repositioning pieces without a real assembled reference —
+ * per explicit instruction, this component's visual output stays as-is
+ * until one is supplied.
  *
  * Still missing (see manifest.json#missingAssets, each with why): a real
  * shell-base/shadow/highlight/accent-mask, a separable screen-frame vs.
