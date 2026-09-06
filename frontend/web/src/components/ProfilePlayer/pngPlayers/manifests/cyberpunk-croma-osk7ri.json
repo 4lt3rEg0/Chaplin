@@ -3,16 +3,36 @@
   "label": "Cyberpunk Croma",
   "sourceSheet": "osk7ri",
   "sourceCell": "r1c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/cyberpunk-croma-osk7ri/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.3342,
+  "maxWidth": 420,
+  "notes": "Se recorto un fragmento de 'Glossy Noir' que sangraba desde la celda vecina. El titulo cian grande es el logotipo pintado del propio diseno (se conserva); el texto negro debajo (titulo/artista/tiempo de dato) es el que se saneo. El panel matrix de codigo es decoracion permanente, no dato falso, se conserva intacto. No hay boton de Next reconocible (solo hay anterior/pausa/stop); no se inventa uno. El fader vertical de la derecha es Volumen real.",
+  "controls": {
+    "previous": { "x": 0.1026, "y": 0.8816, "w": 0.0888, "h": 0.0921 },
+    "playPause": { "x": 0.2012, "y": 0.8816, "w": 0.0789, "h": 0.0921 },
+    "volume": { "x": 0.8817, "y": 0.4211, "w": 0.0493, "h": 0.4211, "vertical": true, "color": "#4de8ff" },
+    "progress": { "x": 0.1026, "y": 0.3289, "w": 0.7495, "h": 0.0342, "color": "#4de8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1026, "y": 0.1447, "w": 0.8284, "h": 0.1842,
+      "align": "flex-start", "justify": "center",
+      "color": "#4de8ff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }

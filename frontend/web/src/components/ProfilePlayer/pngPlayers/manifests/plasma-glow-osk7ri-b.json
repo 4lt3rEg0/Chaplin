@@ -3,11 +3,31 @@
   "label": "Plasma Glow",
   "sourceSheet": "osk7ri",
   "sourceCell": "r2c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/plasma-glow-osk7ri-b/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 2.2452,
+  "maxWidth": 560,
+  "notes": "Segunda variante de Plasma Glow (arte distinto). Previous/Next usan los dos iconos reales pequenos (<< y >|); Play/Pause usa el tercer boton cuadrado de la fila inferior (icono real de pausa). Los otros 4 cuadrados quedan decorativos.",
+  "controls": {
+    "previous": { "x": 0.3664, "y": 0.3871, "w": 0.0575, "h": 0.0968 },
+    "next": { "x": 0.4310, "y": 0.3871, "w": 0.0575, "h": 0.0968 },
+    "playPause": { "x": 0.2658, "y": 0.6129, "w": 0.0647, "h": 0.1452 },
+    "progress": { "x": 0.3592, "y": 0.2581, "w": 0.3448, "h": 0.0484, "color": "#4de8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3448, "y": 0.0161, "w": 0.5747, "h": 0.2903,
+      "align": "flex-start", "justify": "center",
+      "color": "#4de8ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

@@ -3,11 +3,30 @@
   "label": "Floral Aero",
   "sourceSheet": "osk7ri",
   "sourceCell": "r1c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/floral-aero-osk7ri/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.8086,
+  "maxWidth": 500,
+  "notes": "Se recorto el titulo de catalogo horneado sobre el aparato. Sin persona real en el arte, no requiere avatar. Los 3 botones de transporte usan iconos reales; no hay boton de stop mapeado (redundante con play/pause) ni barra de progreso lineal reconocible (solo un espectro decorativo), asi que no se inventa ninguna.",
+  "controls": {
+    "previous": { "x": 0.1501, "y": 0.4429, "w": 0.0711, "h": 0.1143 },
+    "playPause": { "x": 0.2291, "y": 0.4429, "w": 0.0711, "h": 0.1143 },
+    "next": { "x": 0.3081, "y": 0.4429, "w": 0.0711, "h": 0.1143 }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1343, "y": 0.0429, "w": 0.6635, "h": 0.3,
+      "align": "flex-start", "justify": "center",
+      "color": "#5a3a52",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
