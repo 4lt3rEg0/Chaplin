@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import {
   Play, Pause, SkipBack, SkipForward, Star, Headphones
 } from 'lucide-react';
-import { fmtTime, ratioFromClientX, safeSetPointerCapture } from '../shared/audioControls';
+import { fmtTime, ratioFromClientX, ratioFromClientY, safeSetPointerCapture } from '../shared/audioControls';
 
 /*
  * Generic renderer for PNG-sourced players. It never draws its own shell —
@@ -221,9 +221,12 @@ export default function PngPlayerSkin({
     onSeek(ratioFromClientX(progressRef, clientX) * duration);
   };
 
-  const setVolFromClientX = (clientX) => {
+  const setVolFromClient = (clientX, clientY) => {
     if (!volTrackRef.current) return;
-    onVolumeChange(Math.round(ratioFromClientX(volTrackRef, clientX) * 100) / 100);
+    const ratio = controls.volume?.vertical
+      ? ratioFromClientY(volTrackRef, clientY)
+      : ratioFromClientX(volTrackRef, clientX);
+    onVolumeChange(Math.round(ratio * 100) / 100);
   };
 
   const renderControl = (key, control, { label, onClick, disabled, active, iconName }) => {
@@ -325,8 +328,8 @@ export default function PngPlayerSkin({
           aria-valuemax={100}
           aria-valuenow={Math.round(volume * 100)}
           $vertical={controls.volume.vertical}
-          onPointerDown={(e) => { setDraggingVol(true); safeSetPointerCapture(e.currentTarget, e.pointerId); setVolFromClientX(e.clientX); }}
-          onPointerMove={(e) => { if (draggingVol) setVolFromClientX(e.clientX); }}
+          onPointerDown={(e) => { setDraggingVol(true); safeSetPointerCapture(e.currentTarget, e.pointerId); setVolFromClient(e.clientX, e.clientY); }}
+          onPointerMove={(e) => { if (draggingVol) setVolFromClient(e.clientX, e.clientY); }}
           onPointerUp={() => setDraggingVol(false)}
           onPointerCancel={() => setDraggingVol(false)}
         >

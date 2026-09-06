@@ -61,6 +61,17 @@ export function ratioFromClientX(ref, clientX) {
   return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
 }
 
+// Ratio [0,1] of a clientY position across a ref'd element's height,
+// inverted so the bottom is 0 and the top is 1 — matches the physical
+// convention of a vertical fader/knob (up = more).
+export function ratioFromClientY(ref, clientY) {
+  const el = ref.current;
+  if (!el) return 0;
+  const rect = el.getBoundingClientRect();
+  if (!rect.height) return 0;
+  return Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+}
+
 // Ratio [0,1] of an angle around a circular control's center — shared math
 // behind rotary dials/gauges. 0 at `startDeg` (measured clockwise from 12
 // o'clock), 1 at `startDeg + sweepDeg`.

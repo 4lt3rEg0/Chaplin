@@ -3,17 +3,40 @@
   "label": "Industrial Hardware Deck",
   "sourceSheet": "g3ry50",
   "sourceCell": "r0c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/industrial-hardware-deck/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
-  "ledRegions": [],
+  "aspectRatio": 2.1375,
+  "maxWidth": 560,
+  "notes": "Mapping fisico segun instruccion explicita: pulsador cuadrado inferior izquierdo=Play/Pause, interruptor vertical central=Profile Listen, los dos interruptores inferior-derecha (gris y amarillo/negro)=Previous/Next, knob hexagonal amarillo/negro superior derecha=Volumen (arrastre + halo circular). El manometro central se usa como LED de actividad (glow rojo/verde con isPlaying) en vez de aguja movil, porque la aguja esta horneada en el PNG y no hay forma de rotarla sin redibujar el gauge. El pequeno LCD real del panel se saneo (blur del texto basura) y ahora muestra track/artist/time reales. rembg tambien fallo aqui (mismo problema de panel de borde a borde sin fondo que recortar) asi que se uso el recorte rectangular simple.",
+  "controls": {
+    "playPause": { "x": 0.1682, "y": 0.5938, "w": 0.1462, "h": 0.25 },
+    "profileListen": { "x": 0.4897, "y": 0.6094, "w": 0.0366, "h": 0.2031 },
+    "previous": { "x": 0.6067, "y": 0.5938, "w": 0.0658, "h": 0.2188 },
+    "next": { "x": 0.7383, "y": 0.5938, "w": 0.0804, "h": 0.25 },
+    "volume": { "x": 0.7164, "y": 0.03125, "w": 0.1316, "h": 0.28125, "shape": "circle", "color": "#ffcc33" }
+  },
+  "displayRegions": [
+    {
+      "id": "lcd",
+      "x": 0.1023, "y": 0.0156, "w": 0.2412, "h": 0.28125,
+      "align": "flex-start", "justify": "center",
+      "color": "#7dffe0",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(6.5px,1.4vw,8.5px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6px,1.2vw,7.5px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6px,1.2vw,7.5px)", "weight": 600 }
+      ]
+    }
+  ],
+  "ledRegions": [
+    { "id": "activityGlow", "x": 0.4459, "y": 0, "w": 0.1608, "h": 0.34375, "color": "#ff5a3c", "activeWhen": "isPlaying", "label": "ACTIVITY" }
+  ],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
-    "hasProfileListen": false,
+    "hasVolume": true,
+    "hasProfileListen": true,
     "hasVisualizer": false
   }
 }

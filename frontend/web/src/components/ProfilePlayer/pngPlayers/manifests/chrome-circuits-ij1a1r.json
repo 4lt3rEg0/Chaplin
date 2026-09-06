@@ -3,16 +3,42 @@
   "label": "Chrome & Circuits",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r0c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/chrome-circuits-ij1a1r/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
-  "ledRegions": [],
+  "aspectRatio": 1.6987,
+  "maxWidth": 480,
+  "notes": "Foto de celebridad reconocible horneada junto al titulo (mismo problema de derechos de imagen que Bubble Gum Pop): neutralizada y sustituida por el avatar real del perfil. Prev/Next se mapean a los unicos dos iconos de flecha simple (extremos izquierdo/derecho de la fila fina de transporte), no a los 3 botones circulares grandes (play/pausa/stop, sin flechas de avance). El volumen se mapea al primer fader vertical del cluster de ecualizador (7 faders decorativos identicos); los otros 6 quedan decorativos porque no hay 6 funciones de audio reales que asignarles. El visualizador de barras y el osciloscopio naranja del diseno original quedan estaticos por ahora (no implementado un visualizador Canvas real todavia).",
+  "controls": {
+    "previous": { "x": 0.1068, "y": 0.52, "w": 0.0345, "h": 0.0533 },
+    "next": { "x": 0.9388, "y": 0.52, "w": 0.0345, "h": 0.0533 },
+    "playPause": { "x": 0.0832, "y": 0.6667, "w": 0.1099, "h": 0.1867 },
+    "progress": { "x": 0.1492, "y": 0.5333, "w": 0.1962, "h": 0.04, "color": "#ff5a5a" },
+    "volume": { "x": 0.5416, "y": 0.1467, "w": 0.0393, "h": 0.2267, "vertical": true, "color": "#ff5a5a" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.0989, "y": 0.128, "w": 0.1994, "h": 0.3787, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3140, "y": 0.24, "w": 0.3925, "h": 0.2,
+      "align": "flex-start", "justify": "center",
+      "color": "#8fffb0",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.4vw,9px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
+  "ledRegions": [
+    { "id": "playLedCluster", "x": 0.3140, "y": 0.16, "w": 0.1413, "h": 0.04, "color": "#ff3b3b", "activeWhen": "isPlaying", "label": "PLAY" }
+  ],
   "colorRegions": [],
   "capabilities": {
     "hasFavorite": false,
-    "hasVolume": false,
+    "hasVolume": true,
     "hasProfileListen": false,
     "hasVisualizer": false
   }
