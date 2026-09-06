@@ -3,11 +3,11 @@ import styled from 'styled-components';
 import { fmtTime, ratioFromClientX, safeSetPointerCapture } from '../../shared/audioControls';
 import manifest from '../../../../assets/profilePlayers/bubblegum-gloss/manifest.json';
 
-import screenFusedImg from '../../../../assets/profilePlayers/bubblegum-gloss/shell/screen-fused.png';
-import bubble01Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-01.png';
-import bubble02Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-02.png';
-import bubble03Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-03.png';
-import bubble04Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-04.png';
+import screenFusedImg from '../../../../assets/profilePlayers/bubblegum-gloss/screen/screen-frame-nominitransport.png';
+import bgAltImg from '../../../../assets/profilePlayers/bubblegum-gloss/screen/background-alt.png';
+import miniPrevImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/mini-prev.png';
+import miniPauseImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/mini-pause.png';
+import miniNextImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/mini-next.png';
 import prevImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/prev.png';
 import playImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/play.png';
 import pauseImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/pause.png';
@@ -15,29 +15,37 @@ import nextImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/
 import volumeImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/volume.png';
 import sliderTrackImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/slider-track.png';
 import sliderThumbImg from '../../../../assets/profilePlayers/bubblegum-gloss/controls/slider-thumb.png';
+import bubble01Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-01.png';
+import bubble02Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-02.png';
+import bubble03Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-03.png';
+import bubble04Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-04.png';
+import bubble05Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-05.png';
+import bubble06Img from '../../../../assets/profilePlayers/bubblegum-gloss/decoration/bubble-06.png';
 
 /*
- * AQUA/GEL asset-pipeline Golden Master — GENERIC SLOT COMPOSITOR.
+ * AQUA/GEL asset-pipeline Golden Master — GENERIC MANIFEST COMPOSITOR.
  *
- * This component renders manifest.json#slots + #decorations: every piece
- * is a REAL PNG extracted from the master sheet, nothing is redrawn or
- * approximated with CSS. A slot renders ONLY when manifest marks it
- * `present: true` — a missing slot (shell-base, screen-frame,
- * screen-glass, glow, specular, rim-light, an accent-mask, etc.) renders
- * NOTHING, never a gradient/box-shadow stand-in. See manifest.json#slots
- * for the full architecture (present vs. still-missing pieces, and why)
- * and README.md for extraction detail.
+ * Renders manifest.json#assets: every piece is a REAL PNG traced back to
+ * Assets (6).png (or, for the fuller slider, the verified individual
+ * per-piece delivery) — nothing is redrawn or approximated with CSS. This
+ * component composites the SAME assets + coordinates that
+ * render_from_manifest.py uses to build reconstruction-validation/
+ * reconstructed-from-assets.png — compare that against
+ * assembled-reference.png (the real sheet, non-player metadata masked
+ * out) for the authoritative fidelity check.
  *
- * STOP CONDITION (explicit instruction): do not visually improve this
- * player further — no invented shell, no duplicated decorations, no
- * approximated material — until real shell/screen/decoration/glow assets
- * are supplied. When an assembled-reference.png exists, it becomes the
- * absolute authority for composition/proportion/alignment/scale/position,
- * superseding the sheet-native coordinates this component uses today.
+ * Still missing (see manifest.json#missingAssets, each with why): a real
+ * shell-base/shadow/highlight/accent-mask, a separable screen-frame vs.
+ * screen-background/glass/highlight, glow/specular/rim-light. None of
+ * these are faked here — do not add CSS for them without a real asset.
  */
 
 const ASSET_MODULES = {
-  'screen-fused-interim': screenFusedImg,
+  'screen-fused': screenFusedImg,
+  'screen-background-alt': bgAltImg,
+  'mini-prev': miniPrevImg,
+  'mini-pause': miniPauseImg,
+  'mini-next': miniNextImg,
   prev: prevImg,
   play: playImg,
   pause: pauseImg,
@@ -49,12 +57,15 @@ const ASSET_MODULES = {
   'bubble-02': bubble02Img,
   'bubble-03': bubble03Img,
   'bubble-04': bubble04Img,
+  'bubble-05': bubble05Img,
+  'bubble-06': bubble06Img,
 };
 
 const CW = manifest.canvas.width;
 const CH = manifest.canvas.height;
 const pct = (v, total) => `${(v / total) * 100}%`;
-const box = (s) => ({ left: pct(s.x, CW), top: pct(s.y, CH), width: pct(s.width, CW), height: pct(s.height, CH) });
+const box = (a) => ({ left: pct(a.x, CW), top: pct(a.y, CH), width: pct(a.width, CW), height: pct(a.height, CH) });
+const byId = (id) => manifest.assets.find((a) => a.id === id);
 
 const Wrap = styled.div`
   position: relative;
@@ -71,8 +82,6 @@ const Layer = styled.img`
   width: 100%;
   height: 100%;
   object-fit: fill;
-  opacity: ${(p) => p.$opacity ?? 1};
-  mix-blend-mode: ${(p) => p.$blendMode || 'normal'};
 `;
 
 const ScreenText = styled.div`
@@ -118,7 +127,7 @@ const CtrlBtn = styled.button`
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.08s ease, filter 0.08s ease;
 
-  img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+  img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; border-radius: 50%; }
 
   &:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
   &:active:not(:disabled) { transform: translateY(2px); filter: brightness(0.94); }
@@ -175,7 +184,7 @@ export default function BubblegumGlossSkin({
   const volRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
-  const { slots, decorations, screen } = manifest;
+  const { screen } = manifest;
   const setVolFromClientX = (clientX) => onVolumeChange(ratioFromClientX(volRef, clientX));
 
   const title = track ? track.title : (mode === 'favorites' ? 'Sin favoritas' : mode === 'radio' ? 'Radio sin señal' : 'Sin reproducción');
@@ -189,15 +198,25 @@ export default function BubblegumGlossSkin({
     toggleVolumePopover: { onClick: () => setVolumeOpen((o) => !o), ariaLabel: 'Volumen', ariaHaspopup: true, ariaExpanded: volumeOpen },
   };
 
-  // Plain (non-interactive) present slots, rendered generically.
-  const plainSlotIds = ['screen-fused-interim', 'shell-base', 'shell-shadow', 'shell-highlight', 'glow', 'specular', 'rim-light'];
+  const screenFused = byId('screen-fused');
+  const sliderTrack = byId('slider-track');
+  const sliderThumb = byId('slider-thumb');
+  const decorations = manifest.assets.filter((a) => a.type === 'decoration');
+  const bigButtons = ['prev', 'play', 'pause', 'next'].map(byId);
+  const miniButtons = ['mini-prev', 'mini-pause', 'mini-next'].map(byId);
+  const volumeAsset = byId('volume');
 
   return (
     <Wrap data-skin-root="bubblegum-gloss">
-      {plainSlotIds.map((id) => {
-        const s = slots[id];
-        if (!s?.present) return null;
-        return <Layer key={id} src={ASSET_MODULES[id]} style={box(s)} $opacity={s.opacity} $blendMode={s.blendMode} alt="" />;
+      <Layer src={ASSET_MODULES[screenFused.id]} style={box(screenFused)} alt="" />
+
+      {miniButtons.map((a) => {
+        const h = ACTION_HANDLERS[a.action];
+        return (
+          <CtrlBtn key={a.id} type="button" style={box(a)} aria-label={h.ariaLabel} aria-pressed={h.ariaPressed} onClick={h.onClick} disabled={h.disabled}>
+            <img src={ASSET_MODULES[a.id]} alt="" />
+          </CtrlBtn>
+        );
       })}
 
       <ScreenText style={box(screen)}>
@@ -206,60 +225,50 @@ export default function BubblegumGlossSkin({
         <TimeLine>{fmtTime(currentTime)} / {fmtTime(duration)}</TimeLine>
       </ScreenText>
 
-      {['prev', 'play', 'pause', 'next'].map((id) => {
-        const s = slots[id];
-        if (!s?.present) return null;
-        const h = ACTION_HANDLERS[s.action];
+      {bigButtons.map((a) => {
+        const h = ACTION_HANDLERS[a.action];
         return (
-          <CtrlBtn
-            key={id} type="button" style={box(s)}
-            aria-label={h.ariaLabel} aria-pressed={h.ariaPressed}
-            onClick={h.onClick} disabled={h.disabled}
-          ><img src={ASSET_MODULES[id]} alt="" /></CtrlBtn>
+          <CtrlBtn key={a.id} type="button" style={box(a)} aria-label={h.ariaLabel} aria-pressed={h.ariaPressed} onClick={h.onClick} disabled={h.disabled}>
+            <img src={ASSET_MODULES[a.id]} alt="" />
+          </CtrlBtn>
         );
       })}
 
-      {slots.volume?.present && (
-        <div style={{ position: 'absolute', ...box(slots.volume) }}>
-          <CtrlBtn
-            type="button" style={{ position: 'absolute', inset: 0 }}
-            aria-label={ACTION_HANDLERS.toggleVolumePopover.ariaLabel}
-            aria-haspopup={ACTION_HANDLERS.toggleVolumePopover.ariaHaspopup}
-            aria-expanded={ACTION_HANDLERS.toggleVolumePopover.ariaExpanded}
-            onClick={ACTION_HANDLERS.toggleVolumePopover.onClick}
-          ><img src={ASSET_MODULES.volume} alt="" /></CtrlBtn>
-          <VolumePopover $open={volumeOpen}>
-            <input
-              type="range" min="0" max="1" step="0.01" value={volume} style={{ width: 70 }}
-              onChange={(e) => onVolumeChange(Number(e.target.value))} aria-label="Nivel de volumen"
-            />
-          </VolumePopover>
-        </div>
-      )}
+      <div style={{ position: 'absolute', ...box(volumeAsset) }}>
+        <CtrlBtn
+          type="button" style={{ position: 'absolute', inset: 0 }}
+          aria-label={ACTION_HANDLERS.toggleVolumePopover.ariaLabel}
+          aria-haspopup={ACTION_HANDLERS.toggleVolumePopover.ariaHaspopup}
+          aria-expanded={ACTION_HANDLERS.toggleVolumePopover.ariaExpanded}
+          onClick={ACTION_HANDLERS.toggleVolumePopover.onClick}
+        ><img src={ASSET_MODULES.volume} alt="" /></CtrlBtn>
+        <VolumePopover $open={volumeOpen}>
+          <input
+            type="range" min="0" max="1" step="0.01" value={volume} style={{ width: 70 }}
+            onChange={(e) => onVolumeChange(Number(e.target.value))} aria-label="Nivel de volumen"
+          />
+        </VolumePopover>
+      </div>
 
-      {slots['slider-track']?.present && (
-        <SliderTrack
-          ref={volRef}
-          role="slider" aria-label="Volumen" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(volume * 100)}
-          style={box(slots['slider-track'])}
-          onPointerDown={(e) => { setDragging(true); safeSetPointerCapture(e.currentTarget, e.pointerId); setVolFromClientX(e.clientX); }}
-          onPointerMove={(e) => { if (dragging) setVolFromClientX(e.clientX); }}
-          onPointerUp={() => setDragging(false)}
-          onPointerCancel={() => setDragging(false)}
-        />
-      )}
-      {slots['slider-thumb']?.present && (
-        <SliderThumb
-          src={ASSET_MODULES['slider-thumb']} alt="" $size={(slots['slider-thumb'].width / CW) * 100}
-          style={{
-            left: pct(slots['slider-track'].x + slots['slider-track'].trackInsetX + volume * (slots['slider-track'].width - slots['slider-track'].trackInsetX * 2), CW),
-            top: pct(slots['slider-thumb'].y + slots['slider-thumb'].height / 2, CH),
-          }}
-        />
-      )}
+      <SliderTrack
+        ref={volRef}
+        role="slider" aria-label="Volumen" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(volume * 100)}
+        style={box(sliderTrack)}
+        onPointerDown={(e) => { setDragging(true); safeSetPointerCapture(e.currentTarget, e.pointerId); setVolFromClientX(e.clientX); }}
+        onPointerMove={(e) => { if (dragging) setVolFromClientX(e.clientX); }}
+        onPointerUp={() => setDragging(false)}
+        onPointerCancel={() => setDragging(false)}
+      />
+      <SliderThumb
+        src={ASSET_MODULES['slider-thumb']} alt="" $size={(sliderThumb.width / CW) * 100}
+        style={{
+          left: pct(sliderTrack.x + sliderTrack.trackInsetX + volume * (sliderTrack.width - sliderTrack.trackInsetX * 2), CW),
+          top: pct(sliderThumb.y + sliderThumb.height / 2, CH),
+        }}
+      />
 
-      {decorations.filter((d) => d.present).map((d) => (
-        <Layer key={d.id} src={ASSET_MODULES[d.id]} style={box(d)} $opacity={d.opacity} $blendMode={d.blendMode} alt="" />
+      {decorations.map((d) => (
+        <Layer key={d.id} src={ASSET_MODULES[d.id]} style={box(d)} alt="" />
       ))}
     </Wrap>
   );
