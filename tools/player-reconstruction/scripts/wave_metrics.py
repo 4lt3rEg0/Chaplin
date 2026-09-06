@@ -143,10 +143,43 @@ def main():
     else:
         contour_err = None
 
+    # Edge similarity: F1 of Canny edges within a small tolerance band
+    # (edges rarely land on the exact same pixel even for a good match, so
+    # a dilated-tolerance F1 is the standard way to score this).
+    def edge_map(bgr):
+        gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+        roi = gray[ROI_Y0:ROI_Y1, ROI_X0:ROI_X1]
+        e = cv2.Canny(cv2.GaussianBlur(roi, (3, 3), 0), 40, 110)
+        full = np.zeros(gray.shape, dtype=np.uint8)
+        full[ROI_Y0:ROI_Y1, ROI_X0:ROI_X1] = e
+        return full
+
+    ref_edges = edge_map(ref_bgr)
+    live_edges = edge_map(live_bgr)
+    tol_kernel = np.ones((5, 5), np.uint8)
+    ref_edges_dilated = cv2.dilate(ref_edges, tol_kernel)
+    live_edges_dilated = cv2.dilate(live_edges, tol_kernel)
+    tp = np.logical_and(live_edges > 0, ref_edges_dilated > 0).sum()
+    fp = np.logical_and(live_edges > 0, ref_edges_dilated == 0).sum()
+    fn = np.logical_and(ref_edges > 0, live_edges_dilated == 0).sum()
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    edge_f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
+
+    # Color difference: mean per-channel abs diff over the wave's own
+    # silhouette (union of ref/live core masks), not the whole image — this
+    # isolates the wave's own material color match from bezel/water noise.
+    wave_region = np.logical_or(ref_mask > 0, live_mask > 0)
+    ref_rgb = np.array(ref_im)
+    live_rgb = np.array(live_im)
+    color_diff = float(np.mean(np.abs(ref_rgb[wave_region].astype(float) - live_rgb[wave_region].astype(float))))
+
     result = {
         "silhouetteIoU": round(iou, 4),
         "boundingBoxIoU": round(bb_iou, 4),
         "waveContourErrorPx": round(contour_err, 2) if contour_err is not None else None,
+        "edgeSimilarityF1": round(float(edge_f1), 4),
+        "waveColorDifference": round(color_diff, 2),
         "commonColumns": len(common_x),
         "refBBox": ref_bb,
         "liveBBox": live_bb,
