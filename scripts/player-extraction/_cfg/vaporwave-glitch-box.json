@@ -1,0 +1,6 @@
+{
+  "id": "vaporwave-glitch-box",
+  "source": "cutout",
+  "trim": [0, 150, 9, 0],
+  "blurBoxes": [[100, 88, 392, 148], [100, 166, 272, 230]]
+}

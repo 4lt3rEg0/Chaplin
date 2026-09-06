@@ -3,11 +3,30 @@
   "label": "Gothic Cyber-Tech",
   "sourceSheet": "g3ry50",
   "sourceCell": "r1c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/gothic-cyber-tech/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.7984,
+  "maxWidth": 520,
+  "notes": "rembg fallo en esta celda (recorto solo la pantalla ECG y descarto el marco gotico con rosas, que es la silueta real del diseno); se uso el recorte manual desde el raw para conservar el marco completo. Se recorto el titulo de catalogo. El monitor de pulso (ECG) grande es decoracion permanente; el campo de texto pequeno debajo si es un dato real y se saneo.",
+  "controls": {
+    "previous": { "x": 0.4091, "y": 0.7548, "w": 0.0682, "h": 0.1090 },
+    "playPause": { "x": 0.4924, "y": 0.7411, "w": 0.0758, "h": 0.1362 },
+    "next": { "x": 0.5833, "y": 0.7548, "w": 0.0682, "h": 0.1090 },
+    "progress": { "x": 0.3106, "y": 0.7003, "w": 0.2424, "h": 0.0272, "color": "#ff5ce0" }
+  },
+  "displayRegions": [
+    {
+      "id": "titleDisplay",
+      "x": 0.3030, "y": 0.5450, "w": 0.2576, "h": 0.1499,
+      "align": "flex-start", "justify": "center",
+      "color": "#e0a8d8",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(8px,1.7vw,11px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

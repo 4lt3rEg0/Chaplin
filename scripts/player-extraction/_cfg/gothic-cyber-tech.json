@@ -1,0 +1,6 @@
+{
+  "id": "gothic-cyber-tech",
+  "source": "raw",
+  "trim": [25, 138, 64, 54],
+  "blurBoxes": [[195, 197, 375, 255]]
+}
