@@ -3,11 +3,31 @@
   "label": "Glitter Bomb",
   "sourceSheet": "osk7ri",
   "sourceCell": "r2c3",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/glitter-bomb-osk7ri/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 2.1258,
+  "maxWidth": 560,
+  "notes": "Se recorto el titulo de catalogo. Sin persona real (icono de carita sonriente decorativo). Previous/Next/Play usan los 3 primeros botones reales de la fila de transporte; el cuarto (stop) queda sin mapear.",
+  "controls": {
+    "previous": { "x": 0.1554, "y": 0.6509, "w": 0.0740, "h": 0.1258 },
+    "next": { "x": 0.2367, "y": 0.6509, "w": 0.0740, "h": 0.1258 },
+    "playPause": { "x": 0.3180, "y": 0.6509, "w": 0.0740, "h": 0.1258 },
+    "progress": { "x": 0.1406, "y": 0.2736, "w": 0.5473, "h": 0.0472, "color": "#ff8fd8" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1302, "y": 0, "w": 0.5533, "h": 0.2987,
+      "align": "flex-start", "justify": "center",
+      "color": "#ffe0f5",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

@@ -3,11 +3,31 @@
   "label": "Retro Tech Y2K",
   "sourceSheet": "osk7ri",
   "sourceCell": "r2c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/retro-tech-y2k-osk7ri/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6164,
+  "maxWidth": 460,
+  "notes": "Se recorto el titulo de catalogo. El thumbnail es pixel-art generico (no persona real). Los 4 botones no tienen iconos claros de anterior/siguiente en ese orden; se mapea boton1=Previous, boton2 (icono real >>|)=Next, boton3 (icono real de pausa)=Play/Pause, boton4 queda sin mapear.",
+  "controls": {
+    "previous": { "x": 0.1836, "y": 0.4680, "w": 0.0847, "h": 0.1142 },
+    "next": { "x": 0.2754, "y": 0.4680, "w": 0.0777, "h": 0.1142 },
+    "playPause": { "x": 0.3602, "y": 0.4680, "w": 0.0777, "h": 0.1142 },
+    "progress": { "x": 0.3178, "y": 0.2055, "w": 0.4944, "h": 0.0228, "color": "#4de8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3036, "y": 0, "w": 0.5791, "h": 0.1941,
+      "align": "flex-start", "justify": "center",
+      "color": "#4de8ff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

@@ -1,0 +1,6 @@
+{
+  "id": "plasma-glow-osk7ri-a",
+  "source": "cutout",
+  "trim": [0, 92, 0, 6],
+  "blurBoxes": [[280, 15, 670, 105]]
+}

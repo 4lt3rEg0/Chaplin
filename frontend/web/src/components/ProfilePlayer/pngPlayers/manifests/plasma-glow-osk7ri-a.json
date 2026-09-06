@@ -3,11 +3,31 @@
   "label": "Plasma Glow",
   "sourceSheet": "osk7ri",
   "sourceCell": "r2c1",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/plasma-glow-osk7ri-a/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 2.1071,
+  "maxWidth": 560,
+  "notes": "Se recorto el titulo de catalogo. El arte del thumbnail es un remolino de plasma generico, no persona real. Previous/Play/Next usan los 3 primeros iconos reales de la fila superior; el segundo boton >>| (duplicado) y toda la fila inferior de 4 cuadrados quedan decorativos.",
+  "controls": {
+    "previous": { "x": 0.3782, "y": 0.3709, "w": 0.0521, "h": 0.0824 },
+    "playPause": { "x": 0.4368, "y": 0.3709, "w": 0.0457, "h": 0.0824 },
+    "next": { "x": 0.4889, "y": 0.3709, "w": 0.0457, "h": 0.0824 },
+    "progress": { "x": 0.3782, "y": 0.2610, "w": 0.2999, "h": 0.0357, "color": "#4de8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3651, "y": 0.0357, "w": 0.4967, "h": 0.2830,
+      "align": "flex-start", "justify": "center",
+      "color": "#4de8ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 },
+        { "field": "time", "size": "clamp(6.5px,1.3vw,8.5px)", "weight": 600 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
