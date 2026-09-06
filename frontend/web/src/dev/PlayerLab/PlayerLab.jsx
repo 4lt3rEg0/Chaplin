@@ -22,8 +22,7 @@ const CONTOUR_GEOMETRY = {
   },
   'bubblegum-gloss': {
     rects: [
-      ...Object.values(bubblegumGlossManifest.slots).filter((s) => s?.present && s.width).map((s) => [s.x, s.y, s.width, s.height]),
-      ...bubblegumGlossManifest.decorations.filter((d) => d.present).map((d) => [d.x, d.y, d.width, d.height]),
+      ...bubblegumGlossManifest.assets.map((a) => [a.x, a.y, a.width, a.height]),
       [bubblegumGlossManifest.screen.x, bubblegumGlossManifest.screen.y, bubblegumGlossManifest.screen.width, bubblegumGlossManifest.screen.height],
     ],
   },

@@ -4,118 +4,122 @@
   "canvas": { "width": 483, "height": 560 },
   "source": {
     "sheet": "Assets (6).png",
+    "sheetOriginalPath": "O:\\ODriveO\\OneDrive\\Desktop\\repros\\Assets\\Assets (6).png",
     "region": [0, 0, 483, 560],
-    "extractionScript": "tools/player-assets/scripts/extract_bubblegum_gloss.py",
-    "extractedAt": "2026-09-06"
+    "assembledReference": "assembled-reference.png",
+    "extractionScripts": [
+      "tools/player-assets/scripts/extract_bubblegum_gloss.py",
+      "tools/player-assets/scripts/separate_mini_transport.py",
+      "tools/player-assets/scripts/build_assembled_reference.py"
+    ],
+    "extractedAt": "2026-09-06",
+    "note": "assembled-reference.png is the real sheet cell with ONLY non-player metadata masked to transparent (catalog label, unused icon-row, recolor-swatch legend) — it is the ABSOLUTE authority for x/y/width/height below. Every coordinate is in this same 483x560 canvas. assembled-reference.png itself is never rendered as the player (reference/validation only) — render_from_manifest.py + BubblegumGlossSkin.jsx compose the player from the separate asset files below."
   },
 
-  "_schema": "Every slot below shares the same generic field set: asset, x, y, width, height, z, anchor, opacity, blendMode, interactive, action, hitBounds, recolorGroup. `present:false` slots keep their real field names but omit `asset`/geometry — they render nothing (BubblegumGlossSkin.jsx renders a slot only when manifest marks it present, no CSS fallback ever). `decorations` is an array so multiple real pieces can be placed without ever duplicating one asset to fill space.",
-
-  "slots": {
-    "shell-base": { "present": false, "reason": "no shell/carcasa-shaped asset in Assets (6).png" },
-    "shell-shadow": { "present": false, "reason": "depends on shell-base" },
-    "shell-highlight": { "present": false, "reason": "depends on shell-base" },
-    "shell-accent-mask": { "present": false, "reason": "depends on shell-base; needed for real recolor of the carcasa" },
-
-    "screen-frame": { "present": false, "reason": "bezel is fused to screen-content and to the mini-transport buttons in the source art — confirmed inseparable via strict alpha-mask segmentation (threshold 192 still one component)" },
-    "screen-background": { "present": false, "reason": "screen/background-alt.png exists as a clean stand-in texture but is not decomposed as a true swappable background layer yet" },
-    "screen-glass": { "present": false, "reason": "no separate reflection/glass-sheen pass extracted" },
-    "screen-highlight": { "present": false, "reason": "no separate highlight pass extracted" },
-    "screen-fused-interim": {
-      "present": true,
-      "note": "INTERIM piece, not one of the canonical screen-* slots above: bezel+content+mini-transport as extracted (fused, can't be decomposed further from this sheet). Used for rendering today until screen-frame/background/glass/highlight exist separately.",
-      "asset": "shell/screen-fused.png", "x": 23, "y": 61, "width": 303, "height": 218, "z": 10,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "interactive": false
-    },
-
-    "mini-prev": { "present": false, "reason": "baked into screen-fused-interim, physically fused to the screen bezel — not separable" },
-    "mini-play-pause": { "present": false, "reason": "same as mini-prev" },
-    "mini-next": { "present": false, "reason": "same as mini-prev" },
-
-    "prev": {
-      "present": true, "asset": "controls/prev.png", "x": 23, "y": 280, "width": 77, "height": 78, "z": 30,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": true, "action": "previous", "hitBounds": null, "recolorGroup": null
-    },
-    "play": {
-      "present": true, "asset": "controls/play.png", "x": 96, "y": 280, "width": 77, "height": 78, "z": 30,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": true, "action": "play", "hitBounds": null, "recolorGroup": null
-    },
-    "pause": {
-      "present": true, "asset": "controls/pause.png", "x": 170, "y": 279, "width": 81, "height": 81, "z": 30,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": true, "action": "pause", "hitBounds": null, "recolorGroup": null
-    },
-    "next": {
-      "present": true, "asset": "controls/next.png", "x": 248, "y": 280, "width": 78, "height": 78, "z": 30,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": true, "action": "next", "hitBounds": null, "recolorGroup": null
-    },
-    "volume": {
-      "present": true, "asset": "controls/volume.png", "x": 323, "y": 280, "width": 76, "height": 78, "z": 30,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": true, "action": "toggleVolumePopover", "hitBounds": null, "recolorGroup": null
-    },
-
-    "slider-track": {
-      "present": true, "asset": "controls/slider-track.png", "x": 24, "y": 435, "width": 301, "height": 49, "z": 25,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": true, "action": "seekVolumeTrack", "hitBounds": null, "recolorGroup": null,
-      "_replaced": "2026-09-06: swapped for a fuller real crop (chaplin_assets_06_ALL_INDIVIDUAL_FLAT/01_y2k_bubblegum_gloss__slider_track_048.png) spanning the track's real full width with its own natural end-glow — no CSS stretch needed anymore.",
-      "stretch": false, "trackInsetX": 24
-    },
-    "slider-thumb": {
-      "present": true, "asset": "controls/slider-thumb.png", "x": 229, "y": 435, "width": 49, "height": 47, "z": 31,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal",
-      "interactive": false, "action": null, "hitBounds": null, "recolorGroup": null,
-      "boundTo": "volume"
-    },
-
-    "glow": { "present": false, "reason": "no separate glow pass extracted" },
-    "specular": { "present": false, "reason": "no separate specular pass extracted" },
-    "rim-light": { "present": false, "reason": "no separate rim-light pass extracted" },
-
-    "assembled-reference": {
-      "present": false,
-      "reason": "no full assembled-player reference image supplied yet",
-      "note": "When supplied (assembled-reference.png), it becomes the ABSOLUTE authority for composition, proportions, alignment, scale and position — superseding the sheet-native coordinates every other slot uses today."
-    }
-  },
-
-  "decorations": [
+  "assets": [
     {
-      "id": "bubble-01", "present": true, "asset": "decoration/bubble-01.png",
-      "x": 396, "y": 410, "width": 76, "height": 76, "z": 20,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
-      "note": "real individual crop (chaplin_assets_06_ALL_INDIVIDUAL_FLAT/.../button_or_knob_04.png, verified by content — not by its auto-generated filename) matched to the sheet position measured in this project's own segmentation pass."
+      "id": "screen-fused", "file": "screen/screen-frame-nominitransport.png", "type": "screen",
+      "x": 23, "y": 61, "width": 303, "height": 218, "zIndex": 10,
+      "source": "Assets (6).png", "bboxInSource": [23, 61, 326, 279],
+      "interactive": false, "action": null, "recolorGroup": null,
+      "notes": "Frame+swirl-content, mini-transport circles punched to transparent (real masking, Hough-circle-verified, see separate_mini_transport.py). Frame cannot be separated further from its content: the swirl bleeds to within a few px of the outer edge with no clean bezel band (verified by scanline color sampling) — forcing a frame/background split there would damage the material, so they stay fused. screen-background/screen-glass/screen-highlight remain unavailable for the same reason."
     },
     {
-      "id": "bubble-02", "present": true, "asset": "decoration/bubble-02.png",
-      "x": 416, "y": 338, "width": 54, "height": 56, "z": 20,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
-      "note": "real individual crop (.../button_or_knob_01.png)."
+      "id": "screen-background-alt", "file": "screen/background-alt.png", "type": "screen",
+      "x": 328, "y": 78, "width": 155, "height": 190, "zIndex": 5,
+      "source": "Assets (6).png", "bboxInSource": [328, 78, 483, 268],
+      "interactive": false, "action": null, "recolorGroup": null,
+      "notes": "Clean stand-in swirl texture with no frame baked in. Not consumed by the component today; kept as the closest real material available if a true screen-background slot is needed later."
     },
-    {
-      "id": "bubble-03", "present": true, "asset": "decoration/bubble-03.png",
-      "x": 358, "y": 451, "width": 28, "height": 29, "z": 20,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
-      "note": "real individual crop (.../button_or_knob_03.png)."
-    },
-    {
-      "id": "bubble-04", "present": true, "asset": "decoration/bubble-04.png",
-      "x": 441, "y": 483, "width": 25, "height": 28, "z": 20,
-      "anchor": "top-left", "opacity": 1, "blendMode": "normal", "recolorGroup": null,
-      "note": "real individual crop (.../decoration_or_effect_01.png)."
-    }
+
+    { "id": "mini-prev", "file": "controls/mini-prev.png", "type": "control",
+      "x": 41, "y": 82, "width": 54, "height": 54, "zIndex": 15,
+      "source": "Assets (6).png", "bboxInSource": [41, 82, 95, 136],
+      "interactive": true, "action": "previous", "recolorGroup": "gelPink",
+      "notes": "Separated from screen-fused via Hough-circle detection + circular alpha punch (real pixels, real position) — previously baked-in/non-interactive." },
+    { "id": "mini-pause", "file": "controls/mini-pause.png", "type": "control",
+      "x": 41, "y": 136, "width": 54, "height": 54, "zIndex": 15,
+      "source": "Assets (6).png", "bboxInSource": [41, 136, 95, 190],
+      "interactive": true, "action": "pause", "recolorGroup": "gelPink",
+      "notes": "See mini-prev." },
+    { "id": "mini-next", "file": "controls/mini-next.png", "type": "control",
+      "x": 41, "y": 199, "width": 54, "height": 54, "zIndex": 15,
+      "source": "Assets (6).png", "bboxInSource": [41, 199, 95, 253],
+      "interactive": true, "action": "next", "recolorGroup": "gelPink",
+      "notes": "See mini-prev." },
+
+    { "id": "prev", "file": "controls/prev.png", "type": "control",
+      "x": 23, "y": 280, "width": 77, "height": 78, "zIndex": 30,
+      "source": "Assets (6).png", "bboxInSource": [23, 280, 100, 358],
+      "interactive": true, "action": "previous", "recolorGroup": "gelPink", "notes": "Labeled pill, verified content=PREV." },
+    { "id": "play", "file": "controls/play.png", "type": "control",
+      "x": 96, "y": 280, "width": 77, "height": 78, "zIndex": 30,
+      "source": "Assets (6).png", "bboxInSource": [96, 280, 173, 358],
+      "interactive": true, "action": "play", "recolorGroup": "gelPink", "notes": "Labeled pill, verified content=PLAY." },
+    { "id": "pause", "file": "controls/pause.png", "type": "control",
+      "x": 170, "y": 279, "width": 81, "height": 81, "zIndex": 30,
+      "source": "Assets (6).png", "bboxInSource": [170, 279, 251, 360],
+      "interactive": true, "action": "pause", "recolorGroup": "gelBlue", "notes": "Labeled pill, verified content=PAUSE (blue 'active' variant)." },
+    { "id": "next", "file": "controls/next.png", "type": "control",
+      "x": 248, "y": 280, "width": 78, "height": 78, "zIndex": 30,
+      "source": "Assets (6).png", "bboxInSource": [248, 280, 326, 358],
+      "interactive": true, "action": "next", "recolorGroup": "gelPink", "notes": "Labeled pill, verified content=NEXT." },
+    { "id": "volume", "file": "controls/volume.png", "type": "control",
+      "x": 323, "y": 280, "width": 76, "height": 78, "zIndex": 30,
+      "source": "Assets (6).png", "bboxInSource": [323, 280, 399, 358],
+      "interactive": true, "action": "toggleVolumePopover", "recolorGroup": "gelPink", "notes": "Labeled pill, verified content=VOLUME." },
+
+    { "id": "slider-track", "file": "controls/slider-track.png", "type": "slider",
+      "x": 24, "y": 435, "width": 301, "height": 49, "zIndex": 25,
+      "source": "chaplin_assets_06_ALL_INDIVIDUAL_FLAT/01_y2k_bubblegum_gloss__slider_track_048.png", "bboxInSource": null,
+      "interactive": true, "action": "seekVolumeTrack", "recolorGroup": "gelBlue",
+      "trackInsetX": 24, "notes": "Full-width real crop with natural end-glow; replaced the earlier partial (206x34, CSS-stretched) version." },
+    { "id": "slider-thumb", "file": "controls/slider-thumb.png", "type": "slider",
+      "x": 229, "y": 435, "width": 49, "height": 47, "zIndex": 31,
+      "source": "chaplin_assets_06_ALL_INDIVIDUAL_FLAT/01_y2k_bubblegum_gloss__slider_thumb_048.png", "bboxInSource": null,
+      "interactive": false, "action": null, "recolorGroup": null, "boundTo": "volume",
+      "notes": "Independent from slider-track; positioned in React by volume value, never baked into the track." },
+
+    { "id": "bubble-01", "file": "decoration/bubble-01.png", "type": "decoration",
+      "x": 396, "y": 410, "width": 76, "height": 76, "zIndex": 20,
+      "source": "Assets (6).png", "bboxInSource": [396, 410, 463, 477],
+      "interactive": false, "action": null, "recolorGroup": null, "notes": "Verified individual bubble." },
+    { "id": "bubble-02", "file": "decoration/bubble-02.png", "type": "decoration",
+      "x": 416, "y": 338, "width": 54, "height": 56, "zIndex": 20,
+      "source": "Assets (6).png", "bboxInSource": [416, 338, 461, 384],
+      "interactive": false, "action": null, "recolorGroup": null, "notes": "Verified individual bubble." },
+    { "id": "bubble-03", "file": "decoration/bubble-03.png", "type": "decoration",
+      "x": 358, "y": 451, "width": 28, "height": 29, "zIndex": 20,
+      "source": "Assets (6).png", "bboxInSource": [358, 451, 385, 478],
+      "interactive": false, "action": null, "recolorGroup": null, "notes": "Verified individual bubble." },
+    { "id": "bubble-04", "file": "decoration/bubble-04.png", "type": "decoration",
+      "x": 441, "y": 483, "width": 25, "height": 28, "zIndex": 20,
+      "source": "Assets (6).png", "bboxInSource": [441, 483, 465, 508],
+      "interactive": false, "action": null, "recolorGroup": null, "notes": "Verified individual bubble." },
+    { "id": "bubble-05", "file": "decoration/bubble-05.png", "type": "decoration",
+      "x": 334, "y": 437, "width": 24, "height": 26, "zIndex": 20,
+      "source": "Assets (6).png", "bboxInSource": [338, 441, 354, 459],
+      "interactive": false, "action": null, "recolorGroup": null,
+      "notes": "Recovered directly from this project's own components.json segmentation (not present as a standalone file in the external delivery)." },
+    { "id": "bubble-06", "file": "decoration/bubble-06.png", "type": "decoration",
+      "x": 336, "y": 465, "width": 17, "height": 18, "zIndex": 20,
+      "source": "Assets (6).png", "bboxInSource": [340, 469, 349, 479],
+      "interactive": false, "action": null, "recolorGroup": null,
+      "notes": "Recovered directly from this project's own components.json segmentation (not present as a standalone file in the external delivery)." }
   ],
-  "_decorationsSuperseded": {
-    "bubbles-cluster-01": "decoration/bubbles.png — the original single merged 6-bubble composite from this project's own first extraction pass. Kept on disk but no longer referenced now that 4 of its 6 bubbles exist as individually verified, separately placeable files above (the 2 smallest — under ~20px — weren't extracted as standalone files by the new delivery and are dropped, not faked back in)."
-  },
 
-  "screen": {
-    "x": 100, "y": 75, "width": 210, "height": 180,
-    "note": "Interior text-safe area inside screen-fused-interim, excluding the baked mini-transport column."
+  "missingAssets": {
+    "_note": "Investigated, not fabricated. Each of these was actively searched for (this project's own extraction, the chaplin_assets_06_ALL_INDIVIDUAL_FLAT delivery, and the chaplin_assets_05 overview sheet's equivalent 'Bubble Gum Pop' cell) before being marked absent.",
+    "shell-base": "No unified carcasa/body shape exists in any accessible source. The 'Bubble Gum Pop' cell in chaplin_assets_05 (a related but visually distinct render — different bubble layout, no labeled pills) has a piece auto-named shell_or_frame_01.png; opened and compared directly against this player's own screen-fused asset (tools/player-assets/_compare_shell_vs_screenfused.png) — it is the same screen+mini-transport scope, not a fuller body extending down to the button row. No file contains real shell pixels to segment.",
+    "shell-shadow": "depends on shell-base",
+    "shell-highlight": "depends on shell-base",
+    "shell-accent-mask": "depends on shell-base",
+    "screen-frame (isolated from background)": "the swirl content bleeds to within a few px of the bezel's outer edge with no clean separable band (verified by horizontal-scanline color sampling at multiple y — no dead zone/plain-bezel color region found) — forcing a split would fabricate a boundary that doesn't exist in the art.",
+    "screen-glass": "no separate reflection/sheen pass exists in the source",
+    "screen-highlight": "no separate highlight pass exists in the source",
+    "glow": "no separate glow-pass asset exists in the source",
+    "specular": "no separate specular-pass asset exists in the source",
+    "rim-light": "no separate rim-light-pass asset exists in the source"
   },
 
   "palette": {
@@ -123,6 +127,11 @@
     "gelBlue": "#29d0f7",
     "accentPurple": "#a28ff1",
     "accentPale": "#bcd7ed",
-    "_note": "measured directly from the sheet's own RECOLOR MASK / ACCENT swatch legend. Not yet consumed — no shell-accent-mask exists to apply them to."
+    "_note": "measured directly from the sheet's own RECOLOR MASK / ACCENT swatch legend. Referenced by assets' recolorGroup field; not yet applied as an image-based mask (no shell-accent-mask exists)."
+  },
+
+  "screen": {
+    "x": 100, "y": 75, "width": 210, "height": 180,
+    "note": "Interior text-safe area inside the screen-fused asset, excluding the (now-separated) mini-transport column."
   }
 }
