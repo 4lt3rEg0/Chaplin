@@ -9,7 +9,7 @@ import { useSkin } from '../context/SkinContext';
 import { useVortex } from '../context/VortexContext';
 import api, { uploadProfileMusic } from '../services/api';
 import { updateTheme } from '../services/themeService';
-import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/skins';
+import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/pngPlayers';
 import AppearanceDemo from '../components/AppearanceStudio/AppearanceDemo';
 import LayoutThumb from '../components/AppearanceStudio/LayoutThumb';
 import BackgroundThumb from '../components/AppearanceStudio/BackgroundThumb';
@@ -464,6 +464,7 @@ const CAROUSEL_DEMO_QUEUE = [CAROUSEL_DEMO_TRACK];
 function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
   const activeIndex = Math.max(0, PLAYER_SKIN_LIST.findIndex((s) => s.id === draft.playerSkinId));
   const option = PLAYER_SKIN_LIST[activeIndex] || PLAYER_SKIN_LIST[0];
+  if (!option) return null;
   const SkinComp = option.component;
 
   const goTo = (index) => {
@@ -481,6 +482,9 @@ function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
         <CarouselStage>
           <CarouselPlayerWrap>
             <SkinComp
+              manifest={option.manifest}
+              asset={option.manifest.asset}
+              avatarUrl={undefined}
               track={CAROUSEL_DEMO_TRACK}
               mode="all"
               modeLabel="Vista previa"
@@ -557,7 +561,7 @@ function PlayerColorEditor({ draft, patch, patchCustomColor, appTheme }) {
 
       {draft.playerColorMode === 'theme' ? (
         <PaletteDotsRow>
-          {Object.values(mappedFromTheme).map((c, i) => <PaletteDot key={i} $c={c} />)}
+          {Object.values(mappedFromTheme.regionColors).map((c, i) => <PaletteDot key={i} $c={c} />)}
         </PaletteDotsRow>
       ) : draft.playerColorMode === 'custom' ? (
         <div style={{ marginTop: 8 }}>
@@ -565,7 +569,7 @@ function PlayerColorEditor({ draft, patch, patchCustomColor, appTheme }) {
             <TokenRow key={token.key}>
               <TokenSwatch
                 type="color"
-                value={draft.playerCustomPalette?.[token.key] || skinEntry.defaultPalette[token.key]}
+                value={draft.playerCustomPalette?.[token.key] || skinEntry.defaultPalette.regionColors[token.key]}
                 onChange={(e) => patchCustomColor(token.key, e.target.value)}
               />
               <TokenLabel>{token.label}</TokenLabel>
@@ -574,7 +578,7 @@ function PlayerColorEditor({ draft, patch, patchCustomColor, appTheme }) {
         </div>
       ) : (
         <PaletteDotsRow>
-          {Object.values(skinEntry.defaultPalette).map((c, i) => <PaletteDot key={i} $c={c} />)}
+          {Object.values(skinEntry.defaultPalette.regionColors).map((c, i) => <PaletteDot key={i} $c={c} />)}
         </PaletteDotsRow>
       )}
 

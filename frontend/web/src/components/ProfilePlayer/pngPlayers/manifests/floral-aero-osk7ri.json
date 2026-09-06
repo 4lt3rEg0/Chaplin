@@ -1,0 +1,19 @@
+{
+  "id": "floral-aero-osk7ri",
+  "label": "Floral Aero",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r1c3",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/floral-aero-osk7ri/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

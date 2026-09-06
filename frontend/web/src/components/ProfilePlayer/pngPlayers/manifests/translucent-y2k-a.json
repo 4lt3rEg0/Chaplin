@@ -1,0 +1,19 @@
+{
+  "id": "translucent-y2k-a",
+  "label": "2et0s TranslucentY2K",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r1c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/translucent-y2k-a/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

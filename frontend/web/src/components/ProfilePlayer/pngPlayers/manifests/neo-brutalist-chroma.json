@@ -1,0 +1,19 @@
+{
+  "id": "neo-brutalist-chroma",
+  "label": "Neo-Brutalist Chroma",
+  "sourceSheet": "g3ry50",
+  "sourceCell": "r0c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/neo-brutalist-chroma/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

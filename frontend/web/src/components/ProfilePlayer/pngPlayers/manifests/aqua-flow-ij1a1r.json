@@ -1,0 +1,51 @@
+{
+  "id": "aqua-flow-ij1a1r",
+  "label": "Aqua Flow",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r0c3",
+  "status": "ready",
+  "asset": "/assets/profile-players/generated/aqua-flow-ij1a1r/base.png",
+  "aspectRatio": 1.6992,
+  "maxWidth": 460,
+  "notes": "No hay control de volumen ni de profile-listen dedicado y legible en el arte original (los dos cuadrados de la barra de titulo son luces de estado genericas de Winamp, no auriculares/monitor); se reutilizan como LEDs de PLAY y de escucha-de-perfil en vez de inventar un control nuevo. El boton PLAY ya activa el handoff de perfil (ProfilePlayer.togglePlayPause llama a activate()).",
+  "controls": {
+    "previous": { "x": 0.09, "y": 0.7203, "w": 0.0839, "h": 0.1425 },
+    "playPause": { "x": 0.2019, "y": 0.7124, "w": 0.0932, "h": 0.1584 },
+    "next": { "x": 0.3152, "y": 0.7203, "w": 0.0839, "h": 0.1425 },
+    "progress": { "x": 0.4658, "y": 0.4089, "w": 0.4503, "h": 0.0264, "color": "#bfe9ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3183, "y": 0.1636, "w": 0.5978, "h": 0.145,
+      "align": "flex-start", "justify": "center",
+      "color": "#cdeaff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    },
+    {
+      "id": "timeDisplay",
+      "x": 0.3183, "y": 0.305, "w": 0.5978, "h": 0.06,
+      "align": "flex-end", "justify": "center",
+      "color": "#eafaff",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "time", "size": "clamp(7px,1.4vw,9px)", "weight": 600 }
+      ]
+    }
+  ],
+  "ledRegions": [
+    { "id": "playLed", "x": 0.8307, "y": 0.1451, "w": 0.0264, "h": 0.0343, "color": "#57ff8a", "activeWhen": "isPlaying", "label": "PLAY" },
+    { "id": "listenLed", "x": 0.7888, "y": 0.1451, "w": 0.0264, "h": 0.0343, "color": "#c48bff", "activeWhen": "isActive", "label": "PROFILE LISTEN" }
+  ],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "y2k-graffiti",
+  "label": "Y2K Graffiti",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r1c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/y2k-graffiti/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "retro-tech-y2k-ij1a1r",
+  "label": "Retro Tech Y2K",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r2c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/retro-tech-y2k-ij1a1r/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

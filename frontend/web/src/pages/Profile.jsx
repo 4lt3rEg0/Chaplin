@@ -285,7 +285,7 @@ const ProfilePage = () => {
             onPhotoChange={isOwnProfile ? handleAvatarUpload : null}
             onPresenceChange={isOwnProfile ? handlePresenceChange : null}
           />
-          <ProfilePlayer username={displayUser.username} />
+          <ProfilePlayer username={displayUser.username} avatarUrl={displayUser.avatar_url} />
         </HeroArea>
         <FeedArea>
           <ProfileTabs user={displayUser} isOwnProfile={isOwnProfile} />

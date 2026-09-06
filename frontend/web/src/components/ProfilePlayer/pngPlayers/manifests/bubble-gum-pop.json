@@ -1,0 +1,53 @@
+{
+  "id": "bubble-gum-pop",
+  "label": "Bubble Gum Pop",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r0c0",
+  "status": "ready",
+  "asset": "/assets/profile-players/generated/bubble-gum-pop/base.png",
+  "aspectRatio": 1.5677,
+  "maxWidth": 480,
+  "notes": "IMPORTANTE: el arte original tenia una foto real de una celebridad (identificable) horneada en el hueco de la miniatura, con su nombre en el texto basura de IA junto al titulo. Eso es un riesgo real de derechos de imagen si se publica tal cual en un producto -no es una decision de gusto de diseno-, asi que ese hueco se neutralizo (blur) igual que el texto basura, y se convirtio en una region de imagen dinamica que muestra el avatar real del dueno del perfil (fallback: inicial de su username si no tiene avatar). El mismo criterio se aplicara a cualquier otra celda de las 51 que contenga una foto de persona real reconocible. Los 3 botones circulares de transporte muestran los iconos genericos de IA (repeticion de pausa) en vez de iconos de anterior/siguiente reales; se asigna su funcion por convencion de posicion izquierda-a-derecha (anterior/play-pausa/siguiente), no por el icono horneado, ya que no existe un boton dedicado con icono de flecha doble en este diseno.",
+  "controls": {
+    "previous": { "x": 0.1782, "y": 0.7424, "w": 0.0891, "h": 0.1397 },
+    "playPause": { "x": 0.2814, "y": 0.7467, "w": 0.0836, "h": 0.1310 },
+    "next": { "x": 0.3719, "y": 0.7467, "w": 0.0836, "h": 0.1310 },
+    "progress": { "x": 0.4178, "y": 0.4803, "w": 0.4039, "h": 0.0328, "color": "#ff8fc4" }
+  },
+  "imageRegions": [
+    { "id": "ownerAvatar", "x": 0.1324, "y": 0.2620, "w": 0.2298, "h": 0.3057, "source": "avatar" }
+  ],
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3900, "y": 0.2838, "w": 0.5292, "h": 0.1747,
+      "align": "flex-start", "justify": "center",
+      "color": "#4a1236",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 600, "opacity": 0.85 }
+      ]
+    },
+    {
+      "id": "timeDisplay",
+      "x": 0.3900, "y": 0.4694, "w": 0.5292, "h": 0.0873,
+      "align": "flex-start", "justify": "center",
+      "color": "#6b1f4c",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "time", "size": "clamp(7px,1.4vw,9px)", "weight": 600 }
+      ]
+    }
+  ],
+  "ledRegions": [
+    { "id": "playLed", "x": 0.8357, "y": 0.2948, "w": 0.0348, "h": 0.0437, "color": "#4dc9ff", "activeWhen": "isPlaying", "label": "PLAY" }
+  ],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

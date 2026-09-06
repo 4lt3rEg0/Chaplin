@@ -1,0 +1,19 @@
+{
+  "id": "plasma-glow-osk7ri-b",
+  "label": "Plasma Glow",
+  "sourceSheet": "osk7ri",
+  "sourceCell": "r2c2",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/plasma-glow-osk7ri-b/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

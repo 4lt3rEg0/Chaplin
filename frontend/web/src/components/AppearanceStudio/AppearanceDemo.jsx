@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { buildAppTheme } from '../../styles/Y2KTheme';
 import BackgroundThumb from './BackgroundThumb';
-import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from '../ProfilePlayer/skins';
+import { PLAYER_SKINS, DEFAULT_PLAYER_SKIN, resolvePlayerPalette } from '../ProfilePlayer/pngPlayers';
 
 /*
  * Self-contained live preview sandbox: a miniature, fully composed profile
@@ -181,17 +181,19 @@ export default function AppearanceDemo({ draft }) {
   const arrangement = LAYOUT_ARRANGEMENTS[draft.layoutId] || 'centered';
 
   const skinEntry = PLAYER_SKINS[draft.playerSkinId] || PLAYER_SKINS[DEFAULT_PLAYER_SKIN];
-  const SkinComponent = skinEntry.component;
-  const demoPalette = useMemo(() => resolvePlayerPalette(
+  const SkinComponent = skinEntry?.component;
+  const demoPalette = useMemo(() => (skinEntry ? resolvePlayerPalette(
     skinEntry.id,
     draft.playerColorMode || 'default',
     { [skinEntry.id]: draft.playerCustomPalette || {} },
     draftTheme
-  ), [skinEntry.id, draft.playerColorMode, draft.playerCustomPalette, draftTheme]);
+  ) : null), [skinEntry, draft.playerColorMode, draft.playerCustomPalette, draftTheme]);
 
-  const player = (
+  const player = !SkinComponent ? null : (
     <PlayerWrap>
       <SkinComponent
+        manifest={skinEntry.manifest}
+        asset={skinEntry.manifest.asset}
         track={DEMO_TRACK}
         mode="all"
         modeLabel="Vista previa en vivo"

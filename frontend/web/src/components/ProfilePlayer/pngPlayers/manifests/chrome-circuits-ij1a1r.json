@@ -1,0 +1,19 @@
+{
+  "id": "chrome-circuits-ij1a1r",
+  "label": "Chrome & Circuits",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r0c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/chrome-circuits-ij1a1r/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

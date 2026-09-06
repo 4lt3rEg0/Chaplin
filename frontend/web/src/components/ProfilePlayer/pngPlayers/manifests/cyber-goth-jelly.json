@@ -1,0 +1,19 @@
+{
+  "id": "cyber-goth-jelly",
+  "label": "Cyber-Goth Jelly",
+  "sourceSheet": "5vjode",
+  "sourceCell": "r0c0",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/cyber-goth-jelly/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}

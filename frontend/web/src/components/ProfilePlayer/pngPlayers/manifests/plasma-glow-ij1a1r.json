@@ -1,0 +1,19 @@
+{
+  "id": "plasma-glow-ij1a1r",
+  "label": "Plasma Glow",
+  "sourceSheet": "ij1a1r",
+  "sourceCell": "r2c1",
+  "status": "raw-extracted",
+  "asset": "/assets/profile-players/generated/plasma-glow-ij1a1r/base.png",
+  "aspectRatio": null,
+  "controls": {},
+  "displayRegions": [],
+  "ledRegions": [],
+  "colorRegions": [],
+  "capabilities": {
+    "hasFavorite": false,
+    "hasVolume": false,
+    "hasProfileListen": false,
+    "hasVisualizer": false
+  }
+}
