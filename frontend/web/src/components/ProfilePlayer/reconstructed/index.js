@@ -4,18 +4,20 @@
  *    (O:\...\repros, mirrored at assets-source/) — the sketch is a
  *    blueprint, never the rendered body. See reconstructed/<id>/manifest.js
  *    for sourceFile/sourceCell traceability.
- *  - y2kBubbly/<id>: no PNG reference — built directly from
- *    docs/design-specs/y2k-bubbly-players.md (pure CSS gel/glow shading).
+ *  - assetPlayers/<id>: reconstructed from real extracted PNG pieces (a
+ *    master asset sheet segmented into shell/screen/controls/decoration
+ *    layers via tools/player-assets/), composed by real React/CSS — never
+ *    a full-player screenshot with hitboxes on top. See
+ *    assetPlayers/<id>/manifest.json for the source region + per-layer
+ *    placement data.
  *
  * This file is intentionally explicit (no import.meta.glob) since each
  * entry is real, audited work, not a generated stub.
  */
 import * as aquaFlow from './aquaFlow/manifest';
-import * as bubblegumGloss from '../y2kBubbly/bubblegumGloss.manifest';
-import * as cyberAcidJelly from '../y2kBubbly/cyberAcidJelly.manifest';
-import * as transTechJelly from '../y2kBubbly/transTechJelly.manifest';
+import * as bubblegumGloss from '../assetPlayers/bubblegumGloss/manifest';
 
-const SKIN_MODULES = [aquaFlow, bubblegumGloss, cyberAcidJelly, transTechJelly];
+const SKIN_MODULES = [aquaFlow, bubblegumGloss];
 
 export const PLAYER_SKINS = SKIN_MODULES.reduce((acc, mod) => {
   acc[mod.id] = {

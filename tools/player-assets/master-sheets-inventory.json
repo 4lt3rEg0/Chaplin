@@ -1,0 +1,23 @@
+{
+  "_note": "Full inventory of the 4 detailed master sheets (Assets 5-8) plus the 4 auxiliary/undated decoration sheets (Assets 1-4). Only bubblegum-gloss (Assets 6, cell r0c0) has been fully extracted+manifested+reconstructed+validated so far, per the explicit pipeline order: validate one Golden Master before scaling. Region boxes for entries other than bubblegum-gloss are approximate (read from the grid layout, not yet pixel-verified via connected-components) and must be re-verified with the extraction pipeline before that player is processed.",
+  "sheets": {
+    "Assets (1).png": { "kind": "auxiliary-parts", "family": "INDUSTRIAL/STEAMPUNK", "notes": "Unlabeled raw hardware pieces (VU meters, knobs, switches, LEDs, speaker grilles, warning plates) — no per-player grid, feeds Chrome & Circuits / Steampunk Alchemy / Industrial Hardware Deck families as shared parts." },
+    "Assets (2).png": { "kind": "auxiliary-parts", "family": "GOTHIC/GLITCH", "notes": "Unlabeled chains, roses, crystals, glitch frames, neon icon buttons, WINAMP glitch logo lockups — feeds Gothic Cyber-Tech / Galactic Glitch." },
+    "Assets (3).png": { "kind": "auxiliary-parts", "family": "HOLOGRAPHIC/CHROME", "notes": "Unlabeled blob-shaped chrome/holographic/pearl frames, planet/star/bubble decorations, OMITRON + WINAMP logo lockups — feeds Holographic Prism (Handheld/Faceted) / Chrome & Circuits." },
+    "Assets (4).png": { "kind": "auxiliary-parts", "family": "GEL/Y2K (kawaii)", "notes": "Unlabeled pastel kawaii frames (5 variants: star, wave, butterfly, heart, cloud-rainbow), shared button/slider row, charm decorations, 'Bubble Bliss'/'Aqua Flow'/'Floral Aero' logo lockups — related to but distinct from the Assets(6) Aqua Flow Stream design." },
+    "Assets (5).png": { "kind": "overview-legend", "notes": "Compact 3x5 grid, 15 named players (screen pair + button row each, no recolor swatches, lower extraction fidelity than Assets 6-8) — same 15 names as Assets(6)/(7) top rows continue here: Bubble Gum Pop, Acid Jelly, Trans-Tech Jelly, Aqua Flow Stream, Aqua Glow Bubbles, Ocean Depths Aqua, Cosmic Cyber-Space, Cyberpunk Croma, Chrome & Circuits, Floral Aero, Retro Tech Y2K, Galactic Glitch, Glossy Noir, Plasma Glow, Glitter Bomb." },
+    "Assets (6).png": { "kind": "detailed-breakdown", "family": "GEL/Y2K liquid", "players": ["Y2K Bubblegum Gloss (r0c0)", "Cyber-Acid Jelly (r0c1)", "Trans-Tech Jelly (r0c2)", "Aqua Flow Stream (r1c0)", "Aqua Glow Bubbles (r1c1)", "Ocean Depths Aqua (r1c2)"], "notes": "2x3 grid, each cell has: screen(x2)+mini-transport, 5 labeled pill buttons, 5 unused icon buttons, slider track+thumb, decorative bubbles, RECOLOR MASK/ACCENT swatch legend (4 colors). Highest-fidelity sheet of the set." },
+    "Assets (7).png": { "kind": "detailed-breakdown", "family": "mixed (space/synthwave/brutalist/steampunk/crystal/glossy/ornate/minimal/cassette/industrial)", "players": ["Cosmic Cyber-Space", "Retro Futurist Synthwave", "Brutalist Neon-Concrete", "Steampunk Alchemy", "Bio-Organic Crystal Tech", "Over-Saturated Glossy Surface", "Intricate Details", "Clean Minimal Social Audio", "Event Horizon", "Cassette Future (Variant 1)", "Cassette Future (Variant 2)", "Raw Material / Brutalist Red-Black"], "notes": "3x4 grid, wide Winamp-style bar layout (screen + button row + slider), no recolor-swatch legend, no labeled-pill row (icon-only buttons)." },
+    "Assets (8).png": { "kind": "detailed-breakdown", "family": "mixed (brutalist/vaporwave/handheld/gothic/pixel/holographic)", "players": ["Neo-Brutalist Chroma", "Vaporwave Glitch Box", "Brutalist Chrome Orb", "Industrial Hardware Deck", "2000s TranslucentY2K", "2000s Translucent Y2K (variant)", "Gothic Cyber-Tech", "High-Gloss Acid Pop", "Raw Concrete Neo-Brutalism", "Pixel Art Dungeon", "Holographic Prism (Handheld)", "Holographic Prism (Faceted)"], "notes": "3x4 grid, GAME-BOY-style handheld form factor (d-pad + face buttons + top screen) — structurally different from the wide bar layout in sheets 5-7." }
+  },
+  "goldenMasters": {
+    "bubblegum-gloss": {
+      "status": "extracted, manifested, reconstructed, validated (overlay pixel-aligned, contours verified)",
+      "sourceSheet": "Assets (6).png",
+      "sourceRegion": [0, 0, 483, 560],
+      "outputDir": "frontend/web/src/assets/profilePlayers/bubblegum-gloss/"
+    },
+    "cyber-acid-jelly": { "status": "not started — next per pipeline order (Fase 23)" },
+    "trans-tech-jelly": { "status": "not started — after cyber-acid-jelly per pipeline order" }
+  }
+}
