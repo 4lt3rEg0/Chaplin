@@ -3,11 +3,30 @@
   "label": "Galactic Glitch",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r0c2",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/galactic-glitch/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.6702,
+  "maxWidth": 460,
+  "notes": "El arte del hueco de portada es un planeta generico (sin persona real), se deja intacto, no requiere sustitucion dinamica. Prev/Next usan los iconos reales de doble flecha (los unicos de este tipo en el diseno); los 4 botones circulares grandes solo aportan Play/Pause (los otros dos son variantes de pausa/shuffle decorativas). No hay control de volumen, favorito ni profile-listen reconocible en este diseno (Fase 21: no se inventan). Los dos paneles de espectro de barras y el zigzag inferior quedan decorativos por ahora; no se implemento aun un visualizador Canvas real.",
+  "controls": {
+    "previous": { "x": 0.1066, "y": 0.5236, "w": 0.0501, "h": 0.0654 },
+    "next": { "x": 0.2273, "y": 0.5236, "w": 0.0517, "h": 0.0654 },
+    "playPause": { "x": 0.0909, "y": 0.7068, "w": 0.0940, "h": 0.1571 },
+    "progress": { "x": 0.1066, "y": 0.6283, "w": 0.4106, "h": 0.0393, "color": "#ff5ce0" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.3213, "y": 0.1571, "w": 0.3135, "h": 0.1833,
+      "align": "flex-start", "justify": "center",
+      "color": "#f0d8ff",
+      "font": "'Trebuchet MS', sans-serif",
+      "lines": [
+        { "field": "title", "size": "clamp(9px,1.9vw,13px)", "weight": 700 },
+        { "field": "artist", "size": "clamp(7px,1.5vw,10px)", "weight": 500, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {

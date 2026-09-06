@@ -3,11 +3,30 @@
   "label": "Y2K Graffiti",
   "sourceSheet": "ij1a1r",
   "sourceCell": "r1c0",
-  "status": "raw-extracted",
+  "status": "ready",
   "asset": "/assets/profile-players/generated/y2k-graffiti/base.png",
-  "aspectRatio": null,
-  "controls": {},
-  "displayRegions": [],
+  "aspectRatio": 1.4321,
+  "maxWidth": 440,
+  "notes": "Este diseno no tiene un icono de play ni de anterior legibles (los 5 botones bajos son: stop, stop, siguiente con icono real >>|, pausa, shuffle). Se asigna por convencion de posicion izquierda-a-derecha: boton1=Previous, boton2=Play/Pause, boton3=Next (este ultimo si coincide con su icono real >>|). Los botones 4 y 5 (pausa/shuffle) quedan sin mapear porque duplicarian Play/Pause o no tienen una funcion real que representar. No hay volumen, favorito ni profile-listen reconocible en el arte.",
+  "controls": {
+    "previous": { "x": 0.0902, "y": 0.6459, "w": 0.0933, "h": 0.1336 },
+    "playPause": { "x": 0.2069, "y": 0.6459, "w": 0.0933, "h": 0.1336 },
+    "next": { "x": 0.3235, "y": 0.6459, "w": 0.0933, "h": 0.1336 },
+    "progress": { "x": 0.1057, "y": 0.5568, "w": 0.5008, "h": 0.0445, "color": "#7dd8ff" }
+  },
+  "displayRegions": [
+    {
+      "id": "mainDisplay",
+      "x": 0.1057, "y": 0.4343, "w": 0.2597, "h": 0.0891,
+      "align": "flex-start", "justify": "center",
+      "color": "#a8ff5a",
+      "font": "'Consolas', monospace",
+      "lines": [
+        { "field": "title", "size": "clamp(7px,1.5vw,9px)", "weight": 700 },
+        { "field": "time", "size": "clamp(6px,1.2vw,7.5px)", "weight": 600, "opacity": 0.85 }
+      ]
+    }
+  ],
   "ledRegions": [],
   "colorRegions": [],
   "capabilities": {
