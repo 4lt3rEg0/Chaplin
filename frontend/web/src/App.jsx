@@ -57,6 +57,7 @@ import Inbox from "./pages/Inbox";
 import Explore from "./pages/Explore";
 import RegisterCyber from "./components/RegisterCyber";
 const PlayerLab = (import.meta.env.DEV || window.location.hostname === "localhost") ? React.lazy(() => import("./dev/PlayerLab/PlayerLab")) : null;
+const SkinStudio = (import.meta.env.DEV || window.location.hostname === "localhost") ? React.lazy(() => import("./dev/SkinStudio/SkinStudio")) : null;
 
 const MOBILE_PREVIEW_FLAG = "chaplin_mobile_preview";
 const ALL_PAGES_FLAG = "chaplin_all_pages_enabled";
@@ -409,6 +410,27 @@ const AppShell = () => {
                   </React.Suspense>
                 }
               />
+            )}
+
+            {(import.meta.env.DEV || window.location.hostname === "localhost") && (
+              <>
+                <Route
+                  path="/dev/skin-studio"
+                  element={
+                    <React.Suspense fallback={null}>
+                      <SkinStudio />
+                    </React.Suspense>
+                  }
+                />
+                <Route
+                  path="/dev/skin-studio/:playerId"
+                  element={
+                    <React.Suspense fallback={null}>
+                      <SkinStudio />
+                    </React.Suspense>
+                  }
+                />
+              </>
             )}
 
             <Route path="*" element={<Navigate to="/login" replace />} />
