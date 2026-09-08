@@ -214,6 +214,11 @@ export default function SkinStudio() {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [newPlayerName, setNewPlayerName] = useState('');
+  // Baseline size the resize SLIDER scales from (100%) — recaptured only
+  // when the SELECTION changes, so dragging the slider back and forth
+  // (or editing Width/Height directly in between) always scales relative
+  // to a stable reference instead of compounding drift.
+  const [sizeBase, setSizeBase] = useState(null);
 
   const dragRef = useRef(null);
   const audioRef = useRef(null);
@@ -250,6 +255,13 @@ export default function SkinStudio() {
   }, []);
 
   useEffect(() => { if (playerId) loadPlayer(playerId); }, [playerId, loadPlayer]);
+
+  useEffect(() => {
+    if (!selectedId || !manifest) { setSizeBase(null); return; }
+    const a = manifest.assets.find((x) => x.id === selectedId);
+    if (a) setSizeBase({ width: a.width, height: a.height });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
   const pushHistory = useCallback((next) => {
     setHistory((h) => {
@@ -573,6 +585,23 @@ export default function SkinStudio() {
               <Field>Width<Input type="number" value={selected.width} onChange={(e) => patchSelected({ width: Number(e.target.value) })} /></Field>
               <Field>Height<Input type="number" value={selected.height} onChange={(e) => patchSelected({ height: Number(e.target.value) })} /></Field>
             </div>
+            {sizeBase && (
+              <Field>
+                Tamaño ({Math.round((selected.width / Math.max(1, sizeBase.width)) * 100)}%)
+                <input
+                  type="range" min="10" max="400" step="1"
+                  value={Math.round((selected.width / Math.max(1, sizeBase.width)) * 100)}
+                  onChange={(e) => {
+                    const pct = Number(e.target.value);
+                    patchSelected({
+                      width: Math.max(2, Math.round(sizeBase.width * (pct / 100))),
+                      height: Math.max(2, Math.round(sizeBase.height * (pct / 100))),
+                    });
+                  }}
+                  style={{ width: '100%' }}
+                />
+              </Field>
+            )}
             <Field>Z-index
               <div style={{ display: 'flex', gap: 6 }}>
                 <Input type="number" value={selected.zIndex || 0} onChange={(e) => patchSelected({ zIndex: Number(e.target.value) })} />

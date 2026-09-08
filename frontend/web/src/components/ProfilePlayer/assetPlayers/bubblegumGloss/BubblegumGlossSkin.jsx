@@ -152,6 +152,21 @@ const SliderTrack = styled.div`
   background-size: 100% 100%;
 `;
 
+// The track PNG's own highlight is baked in at one fixed spot (wherever
+// the thumb sat in the reference screenshot it was cropped from), so as
+// soon as the thumb is dragged elsewhere the art no longer matches — it
+// reads as a "hole" at the thumb's real position. This fill bridges the
+// track's start to the thumb's live position with the player's own
+// accent color, so the lit portion always tracks the thumb instead of
+// staying frozen where the source screenshot happened to have it.
+const SliderFill = styled.div`
+  position: absolute;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, ${(p) => p.$color}55, ${(p) => p.$color});
+  box-shadow: 0 0 6px ${(p) => p.$color}99;
+`;
+
 const SliderThumb = styled.img`
   position: absolute;
   width: ${(p) => p.$size}%;
@@ -277,6 +292,15 @@ export default function BubblegumGlossSkin({
         onPointerMove={(e) => { if (dragging) setVolFromClientX(e.clientX); }}
         onPointerUp={() => setDragging(false)}
         onPointerCancel={() => setDragging(false)}
+      />
+      <SliderFill
+        $color={manifest.palette?.gelBlue || '#29d0f7'}
+        style={{
+          left: pct(pos(sliderTrack).x + sliderTrack.trackInsetX, CW),
+          top: pct(pos(sliderTrack).y + sliderTrack.height * 0.34, CH),
+          width: pct(Math.max(0, volume * (sliderTrack.width - sliderTrack.trackInsetX * 2)), CW),
+          height: pct(sliderTrack.height * 0.32, CH),
+        }}
       />
       <SliderThumb
         src={ASSET_MODULES['slider-thumb']} alt="" $size={(sliderThumb.width / CW) * 100}
