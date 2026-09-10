@@ -33,7 +33,7 @@ function Stop-PortProcesses([int]$Port) {
       Write-Host "[OK] Puerto $Port liberado (PID $processId detenido)."
     }
     catch {
-      Write-Warning "No se pudo detener PID $processId en puerto $Port: $($_.Exception.Message)"
+      Write-Warning "No se pudo detener PID $processId en puerto ${Port}: $($_.Exception.Message)"
     }
   }
 }
