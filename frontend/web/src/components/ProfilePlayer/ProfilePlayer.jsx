@@ -37,7 +37,7 @@ const Wrapper = styled.div`
  * audio without handing playback back to the global player — only the ear
  * control fully engages/disengages the handoff.
  */
-export default function ProfilePlayer({ username, avatarUrl }) {
+export default function ProfilePlayer({ username, avatarUrl, skinIdOverride }) {
   const {
     current: globalCurrent,
     playing: globalPlaying,
@@ -46,7 +46,9 @@ export default function ProfilePlayer({ username, avatarUrl }) {
     play: playGlobal,
     setVolume: setGlobalVolume
   } = usePlayer();
-  const { playerSkinId, playerColorMode, playerCustomPalettes, appTheme } = useSkin();
+  const { playerSkinId: configuredSkinId, playerColorMode, playerCustomPalettes, appTheme } = useSkin();
+  const playerSkinId = skinIdOverride || configuredSkinId;
+  const usesSavedPlaylist = Boolean(PLAYER_SKINS[playerSkinId]?.livePlayback);
   const { user: authUser } = useAuth();
   const isOwner = Boolean(authUser?.username) && authUser.username === username;
 
@@ -57,41 +59,126 @@ export default function ProfilePlayer({ username, avatarUrl }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
+  const [playbackOrder, setPlaybackOrder] = useState('ordered');
+  const [playbackError, setPlaybackError] = useState('');
+  const cyclePlaybackOrder = () => setPlaybackOrder(previous => {
+    const orders = ['ordered', 'one', 'all', 'shuffle'];
+    return orders[(orders.indexOf(previous) + 1) % orders.length];
+  });
 
   const audioElRef = useRef(null);
   if (!audioElRef.current && typeof window !== 'undefined') {
     audioElRef.current = new Audio();
     audioElRef.current.preload = 'none';
     audioElRef.current.volume = 0.8;
+    // Required for createMediaElementSource() below to yield real (non-zeroed)
+    // AnalyserNode data when the media route is cross-origin (5173 -> 8000 in
+    // dev) — without it the browser silently zeroes analyser output as an
+    // anti-fingerprinting measure, even though playback itself works fine.
+    audioElRef.current.crossOrigin = 'anonymous';
   }
 
   const previousPlaybackSnapshotRef = useRef(null);
   const isActiveRef = useRef(false);
   isActiveRef.current = isActive;
 
+  // Real Web Audio analyser, built lazily off the profile's own <audio>
+  // element so skins can drive a genuine frequency-reactive visualizer
+  // instead of a fake independent animation. Created at most once per
+  // mount (an HTMLMediaElement can only ever get one
+  // MediaElementAudioSourceNode) and resumed on every play — AudioContext
+  // starts 'suspended' until a user gesture, and play() is always reached
+  // from one (click/keyboard on the transport). Must route through to
+  // ctx.destination or audio would go silent, since createMediaElementSource
+  // detaches the element from its default output.
+  const audioCtxRef = useRef(null);
+  const analyserRef = useRef(null);
+  const getAnalyser = useCallback(() => {
+    if (typeof window === 'undefined') return null;
+    const audio = audioElRef.current;
+    if (!audio) return null;
+    if (!analyserRef.current) {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        const ctx = new Ctx();
+        const source = ctx.createMediaElementSource(audio);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 64;
+        analyser.smoothingTimeConstant = 0.8;
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        audioCtxRef.current = ctx;
+        analyserRef.current = analyser;
+      } catch {
+        return null;
+      }
+    }
+    if (audioCtxRef.current?.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+    return analyserRef.current;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setSource(null);
     setTrackIndex(0);
-
-    api.get(`/users/${encodeURIComponent(username)}/profile-playback`)
+    setPlaybackError('');
+    // Rendered skins play the saved personal playlist, not an unrelated
+    // list of uploaded public tracks. Keep the existing visitor contract.
+    const ownerMode = authUser?.profile_playback_mode || 'all';
+    const ownSavedPlaylist = usesSavedPlaylist && isOwner;
+    const endpoint = ownSavedPlaylist
+      ? (ownerMode === 'radio' ? '/playlists/chaplin-radio' : '/playlists/mine/personal')
+      : `/users/${encodeURIComponent(username)}/profile-playback`;
+    api.get(endpoint)
       .then(({ data }) => {
-        if (!cancelled) setSource(data);
+        if (cancelled) return;
+        if (ownSavedPlaylist) {
+          const ownerTracks = data.tracks || [];
+          setSource({ mode: ownerMode, owner_username: username, tracks: ownerMode === 'favorites' ? ownerTracks.filter(t => t.is_favorited) : ownerTracks });
+        } else setSource(data);
       })
       .catch(() => {
-        if (!cancelled) setSource({ mode: 'all', owner_username: username, tracks: [] });
+        if (!cancelled) {
+          setSource({ mode: 'all', owner_username: username, tracks: [] });
+          setPlaybackError('No se pudo cargar la música. Comprueba tu sesión y la conexión.');
+        }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [username]);
+  }, [username, usesSavedPlaylist, isOwner, authUser?.profile_playback_mode]);
 
   const tracks = source?.tracks || [];
   const track = tracks[trackIndex] || null;
   const mode = source?.mode || 'all';
   const modeLabel = MODE_LABELS[mode] || MODE_LABELS.all;
   const hasQueue = tracks.length > 1;
+
+  // Update the mounted player after successful playlist edits.
+  useEffect(() => {
+    const updatePlaylist = (event) => {
+      if (!usesSavedPlaylist || !isOwner) return;
+      const ownerMode = authUser?.profile_playback_mode || 'all';
+      if (event.detail?.kind !== (ownerMode === 'radio' ? 'radio' : 'personal')) return;
+      const incoming = event.detail.tracks || [];
+      const nextTracks = ownerMode === 'favorites' ? incoming.filter(t => t.is_favorited) : incoming;
+      const nextIndex = nextTracks.findIndex(t => t.id === track?.id);
+      if (nextIndex < 0) {
+        audioElRef.current?.pause();
+        setIsPlaying(false);
+        setCurrentTime(0);
+        setDuration(0);
+      }
+      setTrackIndex(Math.max(0, nextIndex));
+      setSource({ mode: ownerMode, owner_username: username, tracks: nextTracks });
+    };
+    window.addEventListener('chaplin-playlist-updated', updatePlaylist);
+    return () => window.removeEventListener('chaplin-playlist-updated', updatePlaylist);
+  }, [usesSavedPlaylist, isOwner, username, authUser?.profile_playback_mode, track?.id]);
 
   const stopOwnAudio = useCallback(() => {
     const audio = audioElRef.current;
@@ -117,14 +204,21 @@ export default function ProfilePlayer({ username, avatarUrl }) {
     const target = tracks[index];
     const audio = audioElRef.current;
     if (!target || !audio) return;
-    const resolvedSrc = normalizeTrackSrc(target.media_url);
+    const resolvedSrc = normalizeTrackSrc(target.media_url || target.src);
+    if (!resolvedSrc) { setPlaybackError('Esta canción no tiene un archivo de audio disponible.'); return; }
+    setPlaybackError('');
     if (!areSameSrc(audio.src, resolvedSrc)) {
+      setCurrentTime(0);
+      setDuration(0);
       audio.src = resolvedSrc;
       audio.load();
     }
-    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    getAnalyser();
+    audio.play().then(() => setIsPlaying(true)).catch(() => {
+      setIsPlaying(false); setPlaybackError('No se pudo reproducir el archivo. Pulsa play para reintentar.');
+    });
     setTrackIndex(index);
-  }, [tracks]);
+  }, [tracks, getAnalyser]);
 
   const activate = useCallback(() => {
     if (isActiveRef.current || tracks.length === 0) return;
@@ -135,6 +229,7 @@ export default function ProfilePlayer({ username, avatarUrl }) {
       volume: globalVolume
     };
     pauseGlobal({ silent: true });
+    isActiveRef.current = true;
     setIsActive(true);
     playOwnTrackAt(trackIndex);
   }, [tracks.length, globalCurrent, globalPlaying, globalVolume, pauseGlobal, playOwnTrackAt, trackIndex]);
@@ -165,21 +260,26 @@ export default function ProfilePlayer({ username, avatarUrl }) {
     const audio = audioElRef.current;
     if (!audio) return;
     if (audio.paused) {
-      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+      getAnalyser();
+      if (audio.ended) audio.currentTime = 0;
+      setPlaybackError('');
+      audio.play().then(() => setIsPlaying(true)).catch(() => setPlaybackError('No se pudo reanudar el audio.'));
     } else {
       audio.pause();
       setIsPlaying(false);
     }
-  }, [activate]);
+  }, [activate, getAnalyser]);
 
   const goToOffset = useCallback((offset) => {
     if (tracks.length === 0) return;
-    const nextIndex = (trackIndex + offset + tracks.length) % tracks.length;
+    const nextIndex = usesSavedPlaylist && playbackOrder === 'shuffle' && tracks.length > 1
+      ? (trackIndex + 1 + Math.floor(Math.random() * (tracks.length - 1))) % tracks.length
+      : (trackIndex + offset + tracks.length) % tracks.length;
     setTrackIndex(nextIndex);
     if (isActiveRef.current) {
       playOwnTrackAt(nextIndex);
     }
-  }, [tracks.length, trackIndex, playOwnTrackAt]);
+  }, [tracks.length, trackIndex, playOwnTrackAt, usesSavedPlaylist, playbackOrder]);
 
   // Absolute jump — backs any skin's real queue/playlist UI (e.g. a disc
   // player's eject-to-open-queue) rather than only relative prev/next.
@@ -193,9 +293,10 @@ export default function ProfilePlayer({ username, avatarUrl }) {
 
   const handleSeek = useCallback((time) => {
     const audio = audioElRef.current;
-    if (!audio || !Number.isFinite(time)) return;
-    audio.currentTime = time;
-    setCurrentTime(time);
+    if (!audio || !Number.isFinite(time) || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const target = Math.max(0, Math.min(time, audio.duration));
+    audio.currentTime = target;
+    setCurrentTime(target);
   }, []);
 
   const handleVolumeChange = useCallback((next) => {
@@ -236,12 +337,36 @@ export default function ProfilePlayer({ username, avatarUrl }) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username]);
+  }, [username, usesSavedPlaylist, isOwner, authUser?.profile_playback_mode]);
+
+  // Preload only metadata so the seek slider can be used before first play.
+  // Legacy skins retain their original loading policy.
+  useEffect(() => {
+    if (!usesSavedPlaylist) return;
+    const audio = audioElRef.current;
+    const src = normalizeTrackSrc(track?.media_url || track?.src);
+    if (!audio || !src || areSameSrc(audio.src, src)) return;
+    audio.preload = 'metadata';
+    audio.src = src;
+    setCurrentTime(0); setDuration(0);
+    audio.load();
+  }, [usesSavedPlaylist, track?.media_url, track?.src]);
 
   useEffect(() => {
     const audio = audioElRef.current;
     if (!audio) return undefined;
     const onEnded = () => {
+      if (usesSavedPlaylist) {
+        if (playbackOrder === 'one') {
+          audio.currentTime = 0; playOwnTrackAt(trackIndex); return;
+        }
+        if (playbackOrder === 'all') {
+          audio.currentTime = 0; goToOffset(1); return;
+        }
+        if (playbackOrder === 'shuffle' && tracks.length > 1) { goToOffset(1); return; }
+        if (trackIndex < tracks.length - 1) { goToOffset(1); return; }
+        setIsPlaying(false); return;
+      }
       if (tracks.length <= 1) {
         setIsPlaying(false);
         return;
@@ -250,21 +375,31 @@ export default function ProfilePlayer({ username, avatarUrl }) {
     };
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
     const onLoadedMetadata = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+    const onPlaying = () => setIsPlaying(true);
+    const onPause = () => setIsPlaying(false);
+    const onError = () => { setIsPlaying(false); setPlaybackError('El archivo de audio no está disponible.'); };
+    audio.addEventListener('playing', onPlaying);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('error', onError);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     return () => {
+      audio.removeEventListener('playing', onPlaying);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('error', onError);
       audio.removeEventListener('ended', onEnded);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tracks.length, goToOffset]);
+  }, [tracks.length, goToOffset, usesSavedPlaylist, playbackOrder, playOwnTrackAt, trackIndex]);
 
   // Full teardown on real unmount (component leaving the tree entirely) —
   // guards against the audio element surviving via a stale ref.
   useEffect(() => () => {
     audioElRef.current?.pause();
+    audioCtxRef.current?.close().catch(() => {});
   }, []);
 
   const ariaLabel = useMemo(() => (
@@ -311,6 +446,10 @@ export default function ProfilePlayer({ username, avatarUrl }) {
         queueIndex={trackIndex}
         onSelectTrack={selectTrack}
         palette={palette}
+        getAnalyser={getAnalyser}
+        playbackOrder={playbackOrder}
+        onCyclePlaybackOrder={cyclePlaybackOrder}
+        playbackError={playbackError}
       />
     </Wrapper>
   );

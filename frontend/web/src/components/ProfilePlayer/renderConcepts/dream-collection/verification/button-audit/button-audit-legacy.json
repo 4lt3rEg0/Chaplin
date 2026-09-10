@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "reports": [
+    {
+      "id": "aqua-flow",
+      "passed": true
+    },
+    {
+      "id": "aero-amp",
+      "passed": true
+    },
+    {
+      "id": "bubblegum-gloss",
+      "passed": true
+    }
+  ]
+}

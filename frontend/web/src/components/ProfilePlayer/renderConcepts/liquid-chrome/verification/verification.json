@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "checks": [
+    "real PCM playback",
+    "audio-driven spectrum",
+    "LED play/pause",
+    "seek",
+    "volume",
+    "next",
+    "previous",
+    "source switch",
+    "mute",
+    "shuffle",
+    "repeat",
+    "mobile overflow"
+  ],
+  "note": "Playlist API responses intercepted with fixtures; real backend playlists verified separately."
+}

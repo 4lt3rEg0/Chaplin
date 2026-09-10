@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "checks": [
+    "profile renders registered skin",
+    "seek before initial play",
+    "play/pause",
+    "next/previous",
+    "volume",
+    "repeat one on ended",
+    "repeat queue wraps",
+    "shuffle skips current track",
+    "ordered stops at queue end",
+    "settings preview plays real PCM",
+    "radio preference loads radio",
+    "old demo redirects to profile"
+  ],
+  "note": "All API/auth data isolated fixtures; HTMLAudioElement and Web Audio use decoded PCM."
+}

@@ -1,0 +1,69 @@
+{
+  "passed": true,
+  "skins": [
+    {
+      "id": "candy-circuit-gel",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "pearl-drift-ui",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "mermaid-glass-pod",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "starfoam-cassette",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "cupid-crystal-deck",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "frozen-lollipop-player",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "liquid-pearl-wave",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "plush-nebula-screen",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "mirror-gel-orbit",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "ice-candy-chrome",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "dream-aquarium-mini",
+      "passed": true,
+      "spectrum": true
+    },
+    {
+      "id": "frosted-aurora-pod",
+      "passed": true,
+      "spectrum": true
+    }
+  ],
+  "settingsCatalog": 12,
+  "liveSettingsPreview": true,
+  "radio": true,
+  "note": "Isolated API/auth fixtures. Real HTMLAudioElement and Web Audio decode PCM; user account not accessed."
+}

@@ -10,6 +10,7 @@ import { useVortex } from '../context/VortexContext';
 import api, { uploadProfileMusic } from '../services/api';
 import { updateTheme } from '../services/themeService';
 import { PLAYER_SKINS, PLAYER_SKIN_LIST, DEFAULT_PLAYER_SKIN } from '../components/ProfilePlayer/reconstructed';
+import ProfilePlayer from '../components/ProfilePlayer/ProfilePlayer';
 import AppearanceDemo from '../components/AppearanceStudio/AppearanceDemo';
 import LayoutThumb from '../components/AppearanceStudio/LayoutThumb';
 import BackgroundThumb from '../components/AppearanceStudio/BackgroundThumb';
@@ -462,6 +463,7 @@ const CAROUSEL_DEMO_TRACK = { title: 'Así suena tu perfil', owner_username: 'tu
 const CAROUSEL_DEMO_QUEUE = [CAROUSEL_DEMO_TRACK];
 
 function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
+  const { user } = useAuth();
   const activeIndex = Math.max(0, PLAYER_SKIN_LIST.findIndex((s) => s.id === draft.playerSkinId));
   const option = PLAYER_SKIN_LIST[activeIndex] || PLAYER_SKIN_LIST[0];
   if (!option) return null;
@@ -481,7 +483,7 @@ function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
 
         <CarouselStage>
           <CarouselPlayerWrap>
-            <SkinComp
+            {user?.username ? <ProfilePlayer username={user.username} avatarUrl={user.avatar_url} skinIdOverride={option.id} /> : <SkinComp
               manifest={option}
               avatarUrl={undefined}
               track={CAROUSEL_DEMO_TRACK}
@@ -507,7 +509,7 @@ function PlayerSkinCarousel({ draft, selectPlayerSkin }) {
               queueIndex={0}
               onSelectTrack={() => {}}
               palette={option.defaultPalette}
-            />
+            />}
           </CarouselPlayerWrap>
         </CarouselStage>
 
