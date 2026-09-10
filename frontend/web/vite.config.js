@@ -143,6 +143,10 @@ export default defineConfig({
     host: viteHost,
     port: vitePort,
     strictPort,
+    // Lets the dev server answer through the ngrok tunnel used for
+    // out-of-home mobile testing (see tools/ngrok setup) - Vite 5+ rejects
+    // any Host header not on this list as a DNS-rebinding protection.
+    allowedHosts: ['sleet-graveness-pebble.ngrok-free.dev'],
     proxy: {
       '/api': {
         target: apiTarget,
