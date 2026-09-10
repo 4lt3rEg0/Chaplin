@@ -98,11 +98,37 @@ function skinStudioDevApi() {
   };
 }
 
+// Vite's static file server has no MIME entry for .apk, so it serves the
+// file with an empty Content-Type. An APK is a ZIP container under the
+// hood, and browsers sniff the byte signature when the header is missing -
+// Chrome saw the ZIP magic bytes and saved the download as .zip instead of
+// .apk. This just sets the real Android install MIME type before the
+// static middleware runs.
+function apkContentType() {
+  return {
+    name: 'apk-content-type',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && req.url.split('?')[0].endsWith('.apk')) {
+          res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+          // The first (broken, empty-Content-Type) response got cached by
+          // phones that already tried this URL - a conditional revalidation
+          // (304) carries no Content-Type at all, so a cached client keeps
+          // reusing the bad one forever. Never let this response be cached.
+          res.setHeader('Cache-Control', 'no-store');
+        }
+        next();
+      });
+    }
+  };
+}
+
 export default defineConfig({
   root: '.',
   plugins: [
     react(),
     skinStudioDevApi(),
+    apkContentType(),
     VitePWA({
       // 'prompt' + no skipWaiting/clientsClaim below = a new service worker
       // installs and waits; it only takes control once every open tab has

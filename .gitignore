@@ -25,3 +25,4 @@ backups/
 # Large binary background-visualizer assets (some >100MB, over GitHub's hard
 # limit) — not source, just large local assets. Keep them on disk, never in git.
 frontend/web/public/visualizers/
+frontend/web/public/*.apk
