@@ -44,6 +44,7 @@ export default function ProfilePlayer({ username, avatarUrl, skinIdOverride }) {
     volume: globalVolume,
     pause: pauseGlobal,
     play: playGlobal,
+    seek: seekGlobal,
     setVolume: setGlobalVolume
   } = usePlayer();
   const { playerSkinId: configuredSkinId, playerColorMode, playerCustomPalettes, appTheme } = useSkin();
@@ -154,6 +155,8 @@ export default function ProfilePlayer({ username, avatarUrl, skinIdOverride }) {
 
   const tracks = source?.tracks || [];
   const track = tracks[trackIndex] || null;
+  const trackRef = useRef(track);
+  trackRef.current = track;
   const mode = source?.mode || 'all';
   const modeLabel = MODE_LABELS[mode] || MODE_LABELS.all;
   const hasQueue = tracks.length > 1;
@@ -327,13 +330,30 @@ export default function ProfilePlayer({ username, avatarUrl, skinIdOverride }) {
 
   // Leaving the profile (unmount) or switching to a different profile
   // (username change) must never leave the profile audio "ghosting" in the
-  // background — always tear down and hand playback control back globally.
+  // background. Previously this always called restoreGlobalPlayback(),
+  // which only resumes whatever was playing globally BEFORE the ear was
+  // engaged — usually nothing, so navigating away while a profile track
+  // was actively playing just killed the music outright. Now: if the
+  // profile's own audio was really playing at the moment of teardown, hand
+  // that exact track/position off to the global player instead, so it
+  // keeps going across navigation like any normal persistent player.
   useEffect(() => {
     return () => {
       if (isActiveRef.current) {
+        const audio = audioElRef.current;
+        const wasPlaying = Boolean(audio && !audio.paused && !audio.ended);
+        const ownTrack = trackRef.current;
+        const ownSrc = audio?.src || null;
+        const ownTime = audio?.currentTime || 0;
         stopOwnAudio();
         setIsActive(false);
-        restoreGlobalPlayback();
+        if (wasPlaying && ownTrack && ownSrc) {
+          playGlobal(ownSrc, ownTrack, { silent: true }).then((ok) => {
+            if (ok) seekGlobal(ownTime, { silent: true });
+          });
+        } else {
+          restoreGlobalPlayback();
+        }
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -364,8 +384,12 @@ export default function ProfilePlayer({ username, avatarUrl, skinIdOverride }) {
           audio.currentTime = 0; goToOffset(1); return;
         }
         if (playbackOrder === 'shuffle' && tracks.length > 1) { goToOffset(1); return; }
-        if (trackIndex < tracks.length - 1) { goToOffset(1); return; }
-        setIsPlaying(false); return;
+        // 'ordered' (the default): keep advancing through the list and
+        // loop back to the start instead of stopping dead after the last
+        // track — a profile player should keep playing on its own, not
+        // require the visitor to press play again every time it reaches
+        // the end of the list.
+        goToOffset(1); return;
       }
       if (tracks.length <= 1) {
         setIsPlaying(false);

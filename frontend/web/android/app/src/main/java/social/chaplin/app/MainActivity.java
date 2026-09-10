@@ -8,6 +8,10 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        // Must be registered before super.onCreate() — that call is what
+        // actually builds the Bridge from bridgeBuilder, so anything added
+        // after it is too late to take effect.
+        registerPlugin(MediaNotificationPlugin.class);
         super.onCreate(savedInstanceState);
         // The dev server sits behind a free ngrok tunnel, which shows a
         // "you are about to visit" interstitial instead of the real page
