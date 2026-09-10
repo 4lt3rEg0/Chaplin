@@ -3,7 +3,7 @@
   "appName": "Chaplin",
   "webDir": "dist",
   "server": {
-    "url": "http://10.5.0.2:5173",
+    "url": "https://sleet-graveness-pebble.ngrok-free.dev",
     "cleartext": true
   },
   "android": {
