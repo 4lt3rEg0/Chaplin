@@ -49,28 +49,21 @@ const VideoEl = styled.video`
   pointer-events: none;
 `;
 
-/* Real decoded frame from the actual asset file. Only the currently selected
-   background actually plays (loops); every other card — even once mounted —
-   just shows one static seeked frame, so at most one video ever decodes at a
-   time no matter how many cards the catalog lists. */
-function VideoThumb({ src, active }) {
+/* The demo sandbox (the one real autoPlay instance) actually plays the
+   video. Every grid card shows ONLY its pre-extracted poster frame
+   (visualizers/posters/*.jpg, a few KB) with no `src` set at all — not
+   even a metadata fetch — so browsing a catalog of dozens of these (some
+   files run well over 100MB) never touches the network for anything but
+   the poster, no matter how many cards are on screen. The real file for
+   a style only ever loads once that style is actually selected/active. */
+function VideoThumb({ src, poster, autoPlay }) {
   const ref = useRef(null);
 
-  if (active) {
-    return <VideoEl ref={ref} src={src} muted loop playsInline preload="metadata" autoPlay />;
+  if (autoPlay) {
+    return <VideoEl ref={ref} src={src} poster={poster} muted loop playsInline preload="metadata" autoPlay />;
   }
 
-  return (
-    <VideoEl
-      ref={ref}
-      src={src}
-      muted
-      loop
-      playsInline
-      preload="metadata"
-      onLoadedMetadata={(e) => { e.currentTarget.currentTime = 1; }}
-    />
-  );
+  return <VideoEl ref={ref} poster={poster} muted loop playsInline preload="none" />;
 }
 
 const waveMove = keyframes`
@@ -262,7 +255,7 @@ export default function BackgroundThumb({ id, autoPlay = false }) {
   if (entry.kind === 'video') {
     return (
       <Frame ref={ref}>
-        <VideoThumb src={entry.src} autoPlay={autoPlay} />
+        <VideoThumb src={entry.src} poster={entry.poster} autoPlay={autoPlay} />
       </Frame>
     );
   }
