@@ -1,6 +1,7 @@
 package social.chaplin.app;
 
 import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
@@ -40,7 +41,10 @@ public class MediaPlaybackService extends Service {
     public void onCreate() {
         super.onCreate();
         NotificationManagerCompat.from(this).createNotificationChannel(
-            new NotificationChannelCompat.Builder(CHANNEL_ID, NotificationChannelCompat.IMPORTANCE_LOW)
+            // NotificationManager.IMPORTANCE_LOW (the raw platform constant,
+            // available since API 24 = this app's minSdk) rather than
+            // guessing at an AndroidX compat re-export of it.
+            new NotificationChannelCompat.Builder(CHANNEL_ID, NotificationManager.IMPORTANCE_LOW)
                 .setName("Reproductor")
                 .setDescription("Controles de reproducción de Chaplin")
                 .build()
