@@ -688,7 +688,7 @@ def extract_tags(text: str) -> str:
     return "#" + "# #".join(unique_tags) + "#" if unique_tags else ""
 
 
-ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".mp4", ".mp3", ".wav"}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mp3", ".wav"}
 MAX_UPLOAD_SIZE_BYTES = int(os.getenv("CHAPLIN_MAX_UPLOAD_MB", "50")) * 1024 * 1024
 MAX_PREFERENCES_BYTES = 32 * 1024
 ONLINE_WINDOW_SECONDS = 120
@@ -749,7 +749,7 @@ async def _save_uploaded_file(file: UploadFile, owner_id: int) -> str:
 
 
 def _media_type_for_ext(ext: str) -> Optional[str]:
-    if ext in ('.jpg', '.jpeg', '.png', '.gif'):
+    if ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp'):
         return 'image'
     if ext in ('.mp4', '.avi', '.mov'):
         return 'video'
@@ -2289,14 +2289,31 @@ async def update_user(
     return _serialize_user(current_user, db)
 
 
+AVATAR_CONTENT_TYPE_TO_EXT = {
+    "image/jpeg": ".jpg",
+    "image/jpg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+}
+
+
 @api_router.post("/users/me/avatar", response_model=UserResponse)
 async def upload_avatar(
         file: UploadFile = File(...),
         db: Session = Depends(get_db),
         current_user: User = Depends(get_current_user)
 ):
-    if Path(file.filename).suffix.lower() not in (".jpg", ".jpeg", ".png", ".gif"):
-        raise HTTPException(status_code=400, detail="La foto de perfil debe ser una imagen (jpg/png/gif)")
+    if Path(file.filename or "").suffix.lower() not in (".jpg", ".jpeg", ".png", ".gif", ".webp"):
+        # Mobile gallery/file pickers (Android in particular) often hand the
+        # browser a File with no usable extension - or the wrong one - even
+        # though the image itself is fine. The multipart Content-Type is
+        # what the browser/WebView determined from the real file, so fall
+        # back to that before rejecting a genuinely valid photo.
+        fallback_ext = AVATAR_CONTENT_TYPE_TO_EXT.get((file.content_type or "").lower())
+        if not fallback_ext:
+            raise HTTPException(status_code=400, detail="La foto de perfil debe ser una imagen (jpg/png/gif/webp)")
+        file.filename = f"avatar{fallback_ext}"
 
     avatar_url = await _save_uploaded_file(file, current_user.id)
     current_user.avatar_url = avatar_url
