@@ -81,7 +81,12 @@ export const VISUALIZER_VIDEO_OPTIONS = [
     return {
       id: `video${number}`,
       label: `Visualizer ${number}`,
-      src: `/visualizers/visualizer${number}.mp4`
+      src: `/visualizers/visualizer${number}.mp4`,
+      // A real extracted frame (a few KB), not a re-encode of the video
+      // itself — lets the picker grid show every option instantly without
+      // fetching any byte of the actual (up to ~170MB) file until one is
+      // actually selected. See BackgroundThumb.jsx.
+      poster: `/visualizers/posters/visualizer${number}.jpg`
     };
   })
 ];

@@ -5,8 +5,8 @@ import { VISUALIZER_VIDEO_OPTIONS } from '../../context/VortexContext';
 // procedural/generative styles are mapped to one of a handful of reusable CSS
 // pattern renderers (BackgroundThumb) chosen to resemble what that background
 // actually looks like, so the catalog never shows a blank/text-only card.
-const VIDEO_ENTRIES = VISUALIZER_VIDEO_OPTIONS.map(({ id, label, src }) => ({
-  id, label, kind: 'video', src
+const VIDEO_ENTRIES = VISUALIZER_VIDEO_OPTIONS.map(({ id, label, src, poster }) => ({
+  id, label, kind: 'video', src, poster
 }));
 
 const CSS_ENTRIES = [
