@@ -320,7 +320,7 @@ export default function ProfilePlaylistCard() {
       const { data } = selected
         ? await api.delete(`/playlists/${personalPlaylist.id}/items/${track.id}`)
         : await api.post(`/playlists/${personalPlaylist.id}/items`, { track_id: track.id });
-      setPersonalPlaylistLocal(data);
+      setPersonalPlaylistLocal(data); window.dispatchEvent(new CustomEvent('chaplin-playlist-updated', { detail: { kind: 'personal', tracks: data.tracks || [] } }));
     } finally {
       setBusyTrackId(null);
     }
@@ -334,7 +334,7 @@ export default function ProfilePlaylistCard() {
       const { data } = selected
         ? await api.delete(`/playlists/${chaplinPlaylist.id}/items/${track.id}`)
         : await api.post(`/playlists/${chaplinPlaylist.id}/items`, { track_id: track.id });
-      setChaplinPlaylistLocal(data);
+      setChaplinPlaylistLocal(data); window.dispatchEvent(new CustomEvent('chaplin-playlist-updated', { detail: { kind: 'radio', tracks: data.tracks || [] } }));
     } finally {
       setBusyTrackId(null);
     }

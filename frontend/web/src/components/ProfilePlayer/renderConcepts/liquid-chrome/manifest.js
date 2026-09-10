@@ -1,0 +1,14 @@
+import LiquidChromeSkin from './LiquidChromeSkin';
+import reference from './liquid-chrome-concept-v1.png';
+export const id = 'liquid-chrome';
+export const label = 'Liquid Chrome';
+export const component = LiquidChromeSkin;
+export const referenceWidth = 1774;
+export const referenceHeight = 887;
+export const aspectRatio = 2;
+export const maxWidth = 1000;
+export const referenceImage = reference;
+export const sourceFile = 'liquid-chrome-concept-v1.png';
+export const colorSchema = [];
+export const defaultPalette = {};
+export const themeMapping = () => ({});

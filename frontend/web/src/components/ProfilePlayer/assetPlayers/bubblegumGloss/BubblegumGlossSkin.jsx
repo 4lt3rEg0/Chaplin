@@ -205,10 +205,19 @@ export default function BubblegumGlossSkin({
 }) {
   const playing = isActive && isPlaying;
   const [volumeOpen, setVolumeOpen] = useState(false);
-  const volRef = useRef(null);
-  const [dragging, setDragging] = useState(false);
+  const seekRef = useRef(null);
+  const [seeking, setSeeking] = useState(false);
 
-  const setVolFromClientX = (clientX) => onVolumeChange(ratioFromClientX(volRef, clientX));
+  // slider-track/slider-thumb sit directly under the transport row — the
+  // "song duration" bar the manifest itself calls out (action:
+  // "seekVolumeTrack") — not a second volume control. Volume already has
+  // its own dedicated popover (the "volume" pill button above), so this
+  // pair drives currentTime/duration via onSeek instead.
+  const progress = duration > 0 ? Math.min(1, currentTime / duration) : 0;
+  const seekFromClientX = (clientX) => {
+    if (!duration) return;
+    onSeek(ratioFromClientX(seekRef, clientX) * duration);
+  };
 
   // manifest.screen (text-safe area) is defined as a fixed offset from
   // screen-fused's OWN sourceSheetPosition — re-derive it relative to
@@ -285,27 +294,27 @@ export default function BubblegumGlossSkin({
       </div>
 
       <SliderTrack
-        ref={volRef}
-        role="slider" aria-label="Volumen" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(volume * 100)}
+        ref={seekRef}
+        role="slider" aria-label="Progreso de la canción" aria-valuemin={0} aria-valuemax={duration || 0} aria-valuenow={currentTime}
         style={box(sliderTrack)}
-        onPointerDown={(e) => { setDragging(true); safeSetPointerCapture(e.currentTarget, e.pointerId); setVolFromClientX(e.clientX); }}
-        onPointerMove={(e) => { if (dragging) setVolFromClientX(e.clientX); }}
-        onPointerUp={() => setDragging(false)}
-        onPointerCancel={() => setDragging(false)}
+        onPointerDown={(e) => { setSeeking(true); safeSetPointerCapture(e.currentTarget, e.pointerId); seekFromClientX(e.clientX); }}
+        onPointerMove={(e) => { if (seeking) seekFromClientX(e.clientX); }}
+        onPointerUp={() => setSeeking(false)}
+        onPointerCancel={() => setSeeking(false)}
       />
       <SliderFill
         $color={manifest.palette?.gelBlue || '#29d0f7'}
         style={{
           left: pct(pos(sliderTrack).x + sliderTrack.trackInsetX, CW),
           top: pct(pos(sliderTrack).y + sliderTrack.height * 0.34, CH),
-          width: pct(Math.max(0, volume * (sliderTrack.width - sliderTrack.trackInsetX * 2)), CW),
+          width: pct(Math.max(0, progress * (sliderTrack.width - sliderTrack.trackInsetX * 2)), CW),
           height: pct(sliderTrack.height * 0.32, CH),
         }}
       />
       <SliderThumb
         src={ASSET_MODULES['slider-thumb']} alt="" $size={(sliderThumb.width / CW) * 100}
         style={{
-          left: pct(pos(sliderTrack).x + sliderTrack.trackInsetX + volume * (sliderTrack.width - sliderTrack.trackInsetX * 2), CW),
+          left: pct(pos(sliderTrack).x + sliderTrack.trackInsetX + progress * (sliderTrack.width - sliderTrack.trackInsetX * 2), CW),
           top: pct(pos(sliderThumb).y + sliderThumb.height / 2, CH),
         }}
       />

@@ -16,12 +16,16 @@
  */
 import * as aquaFlow from './aquaFlow/manifest';
 import * as bubblegumGloss from '../assetPlayers/bubblegumGloss/manifest';
+import * as aeroAmp from './aeroAmp/manifest';
 
-const SKIN_MODULES = [aquaFlow, bubblegumGloss];
+import * as liquidChrome from '../renderConcepts/liquid-chrome/manifest';
+import { DREAM_SKINS } from '../renderConcepts/dream-collection';
+const SKIN_MODULES = [aquaFlow, bubblegumGloss, aeroAmp, liquidChrome, ...DREAM_SKINS];
 
 export const PLAYER_SKINS = SKIN_MODULES.reduce((acc, mod) => {
   acc[mod.id] = {
     id: mod.id,
+    livePlayback: Boolean(mod.livePlayback || mod.id === 'liquid-chrome'),
     label: mod.label,
     component: mod.component,
     aspectRatio: mod.aspectRatio,

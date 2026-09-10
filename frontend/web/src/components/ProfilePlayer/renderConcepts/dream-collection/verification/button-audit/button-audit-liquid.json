@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "skins": [
+    {
+      "id": "liquid-chrome",
+      "passed": true,
+      "spectrum": true,
+      "actualAudioVolume": true,
+      "actualAudioSeek": true,
+      "naturalRepeatOne": true,
+      "naturalRepeatList": true,
+      "naturalShuffle": true,
+      "orderedStop": true
+    }
+  ],
+  "scope": "First player only; awaiting user review",
+  "note": "Isolated API/auth fixtures. Real HTMLAudioElement and Web Audio decode PCM; user account not accessed."
+}

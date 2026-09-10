@@ -93,6 +93,36 @@ export function GlassSheenGradient({ id, opacity = 0.28 }) {
   );
 }
 
+// Soft specular highlight blob — the bright, out-of-focus glass/plastic
+// reflection real glossy toy shells show near their "light source" corner.
+// A highlight is inherently white regardless of the material's own hue, so
+// unlike the gradients above this one is never palette-driven — only size
+// (via the shape that uses it) and opacity are parametrized. Pair with a
+// feGaussianBlur filter and `mixBlendMode: 'screen'` on the shape for the
+// most convincing "light passing through curved plastic" result.
+export function GlossHighlight({ id, opacity = 0.85 }) {
+  return (
+    <radialGradient id={id} cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stopColor="#ffffff" stopOpacity={opacity} />
+      <stop offset="45%" stopColor="#ffffff" stopOpacity={opacity * 0.35} />
+      <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+    </radialGradient>
+  );
+}
+
+// Faint fractal grain to break up an otherwise-perfect vector fill — the
+// small visual irregularity that reads as real injection-molded plastic
+// instead of a flawless CSS div. Deliberately near-invisible (0.05 alpha
+// slope): composite at low opacity over a shape, never used alone.
+export function FrostGrainFilter({ id, seed = 4 }) {
+  return (
+    <filter id={id} x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed={seed} result="grain" />
+      <feColorMatrix in="grain" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0" />
+    </filter>
+  );
+}
+
 // Procedural water/ocean tile — feTurbulence shaped into horizontal bands
 // so liquid-themed skins get a real animated-capable texture instead of a
 // raster photo of water baked into the asset.

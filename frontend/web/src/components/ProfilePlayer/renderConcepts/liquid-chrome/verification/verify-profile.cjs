@@ -1,0 +1,35 @@
+const {chromium,expect}=require('C:/Users/MaxJokerExtrem/Desktop/Chaplin/frontend/web/node_modules/@playwright/test');
+const fs=require('fs'),path=require('path');
+const rate=22050,secs=12,wav=Buffer.alloc(44+rate*secs*2);
+wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(rate,24);wav.writeUInt32LE(rate*2,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(wav.length-44,40);for(let i=0;i<rate*secs;i++)wav.writeInt16LE(Math.round(Math.sin(i/rate*Math.PI*880)*4000),44+i*2);
+const user={id:98765,username:'liquid_fixture',display_name:'Liquid test',profile_public:true,profile_playback_mode:'all',bio:'Prueba aislada de controles',preferences:JSON.stringify({player_skin_id:'liquid-chrome',animated_background:'none'})};
+const tracks=[{id:1,title:'Liquid Dreams',media_url:'/lc-fixture/one.wav',owner_username:'Liquid artist',is_favorited:true},{id:2,title:'Blue reflections',media_url:'/lc-fixture/two.wav',owner_username:'Liquid artist'}];
+(async()=>{const browser=await chromium.launch({channel:'msedge',headless:true});const errors=[];try{
+const page=await browser.newPage({viewport:{width:1440,height:1200}});page.on('pageerror',e=>errors.push(e.message));
+await page.addInitScript(()=>{localStorage.setItem('token','isolated-fixture-not-a-real-token');localStorage.setItem('chaplin_player_skin_id','liquid-chrome')});
+await page.route('**/api/v1/**',r=>{const u=new URL(r.request().url());if(u.pathname==='/api/v1/users/me')return r.fulfill({json:user});if(u.pathname.includes('/playlists/'))return r.fulfill({json:{id:8,name:'Fixture',tracks:u.pathname.includes('chaplin-radio')?[{...tracks[0],title:'Radio fixture'}]:tracks}});if(u.pathname.endsWith('/profile-playback'))return r.fulfill({json:{mode:'all',tracks,owner_username:user.username}});return r.fulfill({json:[]})});
+await page.route('**/lc-fixture/*.wav',r=>{const range=r.request().headers().range;if(range){const m=/bytes=(\d+)-(\d*)/.exec(range),a=+m[1],b=m[2]?Math.min(+m[2],wav.length-1):wav.length-1;return r.fulfill({status:206,contentType:'audio/wav',headers:{'Accept-Ranges':'bytes','Content-Range':`bytes ${a}-${b}/${wav.length}`},body:wav.subarray(a,b+1)})}return r.fulfill({contentType:'audio/wav',headers:{'Accept-Ranges':'bytes'},body:wav})});
+await page.goto('http://127.0.0.1:5173/profile');
+const player=page.locator('[data-profile-player] [data-liquid-chrome]');await player.waitFor();
+const seek=player.getByRole('slider',{name:'Posición de reproducción'});await expect(seek).toBeEnabled();await seek.fill('3');await expect(player.locator('.lc-time')).toHaveText('0:03 / 0:12');
+await player.getByRole('button',{name:'Reproducir',exact:true}).click();await expect(player.getByRole('button',{name:'Pausar',exact:true})).toBeVisible();await page.waitForTimeout(500);await expect(player.locator('.lc-led')).toHaveClass(/is-on/);
+await player.getByRole('button',{name:'Pausar',exact:true}).click();await seek.fill('6');await expect(player.locator('.lc-time')).toHaveText('0:06 / 0:12');
+await player.getByRole('slider',{name:'Volumen',exact:true}).fill('0.2');await expect(player.getByRole('slider',{name:'Volumen',exact:true})).toHaveValue('0.2');
+await player.getByRole('button',{name:'Canción siguiente'}).click();await expect(player.locator('.lc-title')).toHaveText('Blue reflections');
+await player.getByRole('button',{name:'Canción anterior'}).click();await expect(player.locator('.lc-title')).toHaveText('Liquid Dreams');
+await player.getByRole('button',{name:'Modo de reproducción: Orden normal',exact:true}).click();await expect(seek).toBeEnabled();await seek.fill('11.7');await page.waitForTimeout(900);await expect(player.locator('.lc-title')).toHaveText('Liquid Dreams');await expect(player.getByRole('button',{name:'Pausar',exact:true})).toBeVisible();
+await player.getByRole('button',{name:'Modo de reproducción: Repetir canción',exact:true}).click();await player.getByRole('button',{name:'Canción siguiente'}).click();await expect(player.locator('.lc-title')).toHaveText('Blue reflections');await expect(seek).toBeEnabled();await seek.fill('11.7');await page.waitForTimeout(900);await expect(player.locator('.lc-title')).toHaveText('Liquid Dreams');
+await player.getByRole('button',{name:'Modo de reproducción: Repetir lista',exact:true}).click();await player.getByRole('button',{name:'Canción siguiente'}).click();await expect(player.locator('.lc-title')).toHaveText('Blue reflections');
+await player.getByRole('button',{name:'Modo de reproducción: Aleatorio',exact:true}).click();await expect(seek).toBeEnabled();await seek.fill('11.7');await expect(player.getByRole('button',{name:'Reproducir',exact:true})).toBeVisible({timeout:4000});await expect(player.locator('.lc-title')).toHaveText('Blue reflections');
+await page.screenshot({path:path.join(__dirname,'profile-desktop.png'),fullPage:true});
+await page.setViewportSize({width:390,height:844});await player.scrollIntoViewIfNeeded();await page.screenshot({path:path.join(__dirname,'profile-mobile.png')});
+// The production Settings carousel must play real media rather than no-op callbacks.
+await page.setViewportSize({width:1440,height:1200});await page.goto('http://127.0.0.1:5173/settings');
+await page.getByRole('button',{name:'Ir a Liquid Chrome',exact:true}).click();
+const preview=page.locator('[data-profile-player] [data-liquid-chrome]');await preview.waitFor();await preview.getByRole('button',{name:'Reproducir',exact:true}).click();await expect(preview.getByRole('button',{name:'Pausar',exact:true})).toBeVisible();
+await page.screenshot({path:path.join(__dirname,'settings-live.png'),fullPage:true});
+user.profile_playback_mode='radio';await page.goto('http://127.0.0.1:5173/profile');await expect(player.locator('.lc-title')).toHaveText('Radio fixture');await player.getByRole('button',{name:'Reproducir',exact:true}).click();await expect(player.getByRole('button',{name:'Pausar',exact:true})).toBeVisible();
+await page.goto('http://127.0.0.1:5173/dev/liquid-chrome');await expect(page).toHaveURL(/\/profile$/);
+if(errors.length)throw Error(errors.join('\n'));
+fs.writeFileSync(path.join(__dirname,'profile-verification.json'),JSON.stringify({passed:true,checks:['profile renders registered skin','seek before initial play','play/pause','next/previous','volume','repeat one on ended','repeat queue wraps','shuffle skips current track','ordered stops at queue end','settings preview plays real PCM','radio preference loads radio','old demo redirects to profile'],note:'All API/auth data isolated fixtures; HTMLAudioElement and Web Audio use decoded PCM.'},null,2));console.log('PASS profile, settings, seek, transport, all four playback modes, radio');
+}catch(e){console.error(e);process.exitCode=1}finally{await browser.close()}})();

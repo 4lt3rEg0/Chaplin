@@ -1,0 +1,484 @@
+[
+  {
+    "name": "Candy Circuit Gel",
+    "id": "candy-circuit-gel",
+    "style": "Translucent hot pink candy gel, chrome pink bevels, embedded turquoise circuit ribbons, small dangling heart charms and glossy stars. Preserve the cute pink electronic jewelry character.",
+    "source": "exec-db76dc93-82a0-43fa-a61a-64524a24ac88.png",
+    "screen": [
+      390,
+      288,
+      832,
+      164
+    ],
+    "keys": [
+      [
+        417,
+        670,
+        73
+      ],
+      [
+        625,
+        670,
+        73
+      ],
+      [
+        833,
+        670,
+        73
+      ],
+      [
+        1018,
+        672,
+        49
+      ],
+      [
+        1250,
+        655,
+        99
+      ]
+    ],
+    "accent": "#ff8de5"
+  },
+  {
+    "name": "Pearl Drift UI",
+    "id": "pearl-drift-ui",
+    "style": "Lustrous ivory mother-of-pearl shell with gentle nacre rainbow reflections, large sculpted scallop and luminous pearl at upper left, tiny silver star accents.",
+    "source": "exec-2fad6054-bfb2-4de0-a458-1693e45fe32a.png",
+    "screen": [
+      540,
+      284,
+      680,
+      191
+    ],
+    "keys": [
+      [
+        494,
+        651,
+        70
+      ],
+      [
+        694,
+        651,
+        70
+      ],
+      [
+        895,
+        651,
+        70
+      ],
+      [
+        1071,
+        650,
+        44
+      ],
+      [
+        1277,
+        663,
+        103
+      ]
+    ],
+    "accent": "#bbdfff"
+  },
+  {
+    "name": "Mermaid Glass Pod",
+    "id": "mermaid-glass-pod",
+    "style": "Thick clear turquoise glass housing, water-like curved edges, iridescent scallop with a pearl at upper left, small coral pink starfish below left, delicate air bubbles.",
+    "source": "exec-294906cd-3f94-44b3-ad09-1fbceaf89c22.png",
+    "screen": [
+      530,
+      325,
+      780,
+      151
+    ],
+    "keys": [
+      [
+        481,
+        657,
+        64
+      ],
+      [
+        672,
+        657,
+        64
+      ],
+      [
+        865,
+        657,
+        64
+      ],
+      [
+        1030,
+        658,
+        42
+      ],
+      [
+        1259,
+        664,
+        87
+      ]
+    ],
+    "accent": "#75f4ff"
+  },
+  {
+    "name": "Starfoam Cassette",
+    "id": "starfoam-cassette",
+    "style": "Pearlescent lavender compact cassette player, two realistic cassette spools with a cosmic transparent tape window below the screen, lilac soft cloud accents and small yellow stars.",
+    "source": "exec-7e470136-9cfe-411b-affc-3e618573b900.png",
+    "screen": [
+      450,
+      207,
+      669,
+      144
+    ],
+    "keys": [
+      [
+        410,
+        724,
+        74
+      ],
+      [
+        617,
+        724,
+        74
+      ],
+      [
+        822,
+        724,
+        74
+      ],
+      [
+        1004,
+        725,
+        50
+      ],
+      [
+        1204,
+        722,
+        93
+      ]
+    ],
+    "accent": "#c8b6ff"
+  },
+  {
+    "name": "Cupid Crystal Deck",
+    "id": "cupid-crystal-deck",
+    "style": "Romantic pink crystal heart-shaped housing with two symmetrical translucent crystal wings extending at both sides, chrome pink frame, dangling faceted pink heart gems.",
+    "source": "exec-babe71fb-22ce-4633-8170-1e423d88efec.png",
+    "screen": [
+      430,
+      255,
+      678,
+      150
+    ],
+    "keys": [
+      [
+        473,
+        662,
+        53
+      ],
+      [
+        635,
+        662,
+        53
+      ],
+      [
+        793,
+        662,
+        53
+      ],
+      [
+        930,
+        664,
+        42
+      ],
+      [
+        1079,
+        661,
+        60
+      ]
+    ],
+    "accent": "#ff9bd3"
+  },
+  {
+    "name": "Frozen Lollipop Player",
+    "id": "frozen-lollipop-player",
+    "style": "Frozen clear ice-blue player with frosted outer ridges, realistic icicles below, a glossy pink spiral lollipop attached to upper right, blue glass controls.",
+    "source": "exec-8329dca6-0c41-43ab-9edd-437f751bddf3.png",
+    "screen": [
+      443,
+      215,
+      553,
+      150
+    ],
+    "keys": [
+      [
+        383,
+        653,
+        75
+      ],
+      [
+        584,
+        653,
+        75
+      ],
+      [
+        789,
+        653,
+        75
+      ],
+      [
+        980,
+        663,
+        48
+      ],
+      [
+        1175,
+        664,
+        82
+      ]
+    ],
+    "accent": "#81e4ff"
+  },
+  {
+    "name": "Liquid Pearl Wave",
+    "id": "liquid-pearl-wave",
+    "style": "Sculptural fluid silver mother of pearl frame, rippling molten contours, a very large luminous spherical pearl at left, smaller silver droplets on lower rim.",
+    "source": "exec-02c1474d-fb14-49ca-b75d-e64f473e9b5e.png",
+    "screen": [
+      570,
+      369,
+      700,
+      137
+    ],
+    "keys": [
+      [
+        571,
+        664,
+        62
+      ],
+      [
+        749,
+        664,
+        62
+      ],
+      [
+        927,
+        664,
+        62
+      ],
+      [
+        1097,
+        664,
+        39
+      ],
+      [
+        1266,
+        663,
+        72
+      ]
+    ],
+    "accent": "#afe6ff"
+  },
+  {
+    "name": "Plush Nebula Screen",
+    "id": "plush-nebula-screen",
+    "style": "Soft fluffy lavender plush rectangular toy player, realistic dense microfiber fur, a small sleeping cat plush ornament at left, yellow star embroidery, fabric-covered rounded tactile buttons.",
+    "source": "exec-927ece7d-613a-4e04-9384-d95a31ea8b37.png",
+    "screen": [
+      492,
+      346,
+      779,
+      166
+    ],
+    "keys": [
+      [
+        293,
+        741,
+        77
+      ],
+      [
+        553,
+        741,
+        77
+      ],
+      [
+        809,
+        741,
+        77
+      ],
+      [
+        1048,
+        741,
+        50
+      ],
+      [
+        1275,
+        730,
+        91
+      ]
+    ],
+    "accent": "#efb0ff",
+    "ink": "#403056"
+  },
+  {
+    "name": "Mirror Gel Orbit",
+    "id": "mirror-gel-orbit",
+    "style": "Mirrored silver elliptical orbital player with glossy chrome spheres and a thin encircling orbital ring, iridescent reflections and a chrome star hanging at right.",
+    "source": "exec-87b4b8ed-226f-4a5b-968d-2e7c5d5190ad.png",
+    "screen": [
+      340,
+      339,
+      820,
+      147
+    ],
+    "keys": [
+      [
+        254,
+        731,
+        102
+      ],
+      [
+        531,
+        686,
+        69
+      ],
+      [
+        741,
+        686,
+        69
+      ],
+      [
+        950,
+        685,
+        51
+      ],
+      [
+        1147,
+        678,
+        70
+      ]
+    ],
+    "accent": "#b1e7ff"
+  },
+  {
+    "name": "Ice Candy Chrome",
+    "id": "ice-candy-chrome",
+    "style": "Holographic iridescent clear ice chassis, faceted elongated crystal at left, chrome chain with pink heart charm at upper right, refractive pastel highlights.",
+    "source": "exec-b30f1e0f-292b-4bc1-b37c-ee6c8516b7e0.png",
+    "screen": [
+      505,
+      304,
+      560,
+      145
+    ],
+    "keys": [
+      [
+        449,
+        677,
+        62
+      ],
+      [
+        637,
+        677,
+        62
+      ],
+      [
+        816,
+        677,
+        62
+      ],
+      [
+        975,
+        683,
+        44
+      ],
+      [
+        1156,
+        681,
+        71
+      ]
+    ],
+    "accent": "#b5e6ff"
+  },
+  {
+    "name": "Dream Aquarium Mini",
+    "id": "dream-aquarium-mini",
+    "style": "A LITERAL TINY REAL AQUARIUM THAT IS AN MP3 PLAYER. Thick optically clear aquarium glass with visible edges and a visible waterline, extremely transparent realistic clear water (not opaque blue gel), believable refraction through water, suspended tiny bubbles, a little sand and miniature aquatic plants at bottom, tiny fish and translucent jellyfish behind the electronics. Water and tank have actual physical depth. The dark glass screen is a slim waterproof module suspended in front of the transparent water, NOT an aquarium picture printed on a flat player. Back of the glass tank is visible through water. Chrome/aqua transport controls on a waterproof strip along lower front. Beautiful studio aquarium product photography realism, tiny caustic highlights.",
+    "source": "exec-4369fcae-2e5e-4377-baa4-7dc5a6c46f08.png",
+    "screen": [
+      589,
+      343,
+      497,
+      146
+    ],
+    "keys": [
+      [
+        493,
+        770,
+        51
+      ],
+      [
+        648,
+        770,
+        51
+      ],
+      [
+        803,
+        770,
+        51
+      ],
+      [
+        940,
+        772,
+        35
+      ],
+      [
+        1076,
+        773,
+        55
+      ]
+    ],
+    "accent": "#92f1ff",
+    "cleanIcons": true
+  },
+  {
+    "name": "Frosted Aurora Pod",
+    "id": "frosted-aurora-pod",
+    "style": "Frosted translucent aurora glass housing in icy lavender cyan and pastel pink, floating iridescent planet with a thin ring at upper right, small silver star decorations, frosted glass edges and prismatic rainbow refraction.",
+    "source": "exec-f11fec46-6a80-4651-b4e1-59764f4aa157.png",
+    "screen": [
+      482,
+      341,
+      535,
+      147
+    ],
+    "keys": [
+      [
+        389,
+        740,
+        63
+      ],
+      [
+        583,
+        740,
+        63
+      ],
+      [
+        776,
+        740,
+        63
+      ],
+      [
+        945,
+        740,
+        45
+      ],
+      [
+        1134,
+        740,
+        76
+      ]
+    ],
+    "accent": "#c9c5ff"
+  }
+]
