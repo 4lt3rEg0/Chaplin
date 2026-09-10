@@ -1,5 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { normalizeTrackSrc, areSameSrc } from "../utils/mediaUrl";
+
+// Native bridge to MediaPlaybackService (android/.../MediaNotificationPlugin.java).
+// The Web Media Session API alone (below) only reaches browsers that host
+// their own "now playing" surface, like a real Chrome tab — a WebView
+// embedded inside another app (this Capacitor app) has none of that by
+// itself, so on Android this is what actually keeps the track alive and
+// shown once the app is minimized. resolves to a harmless no-op object
+// outside native Android (web/dev), since every call site below is
+// already gated on Capacitor.isNativePlatform().
+const MediaNotification = registerPlugin("MediaNotification");
 
 const PlayerContext = createContext(null);
 
@@ -745,6 +756,101 @@ export const PlayerProvider = ({ children }) => {
       broadcastCommand("CYCLE_REPEAT");
     }
   }, [broadcastCommand]);
+
+  // System-level "now playing" surface (Android notification shade, lock
+  // screen, Bluetooth/headset controls, desktop OS media keys). This is the
+  // real, standard Media Session Web API — Chromium's WebView (which the
+  // Capacitor app runs on) surfaces it exactly like a Chrome tab would, no
+  // native plugin or extra permission required. Action handlers are
+  // (re)registered whenever the underlying callback identity changes;
+  // metadata/playback-state are pushed on every track/play-state change.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return undefined;
+    navigator.mediaSession.setActionHandler("play", () => {
+      const audio = audioRef.current;
+      if (audio?.src) audio.play().catch(() => {});
+    });
+    navigator.mediaSession.setActionHandler("pause", () => pause());
+    navigator.mediaSession.setActionHandler("previoustrack", () => previous());
+    navigator.mediaSession.setActionHandler("nexttrack", () => next());
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (typeof details.seekTime === "number") seek(details.seekTime);
+    });
+    navigator.mediaSession.setActionHandler("stop", () => pause());
+    return () => {
+      try {
+        navigator.mediaSession.setActionHandler("play", null);
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("previoustrack", null);
+        navigator.mediaSession.setActionHandler("nexttrack", null);
+        navigator.mediaSession.setActionHandler("seekto", null);
+        navigator.mediaSession.setActionHandler("stop", null);
+      } catch {
+        // Some handlers are unsupported on some browsers - setting them to
+        // null can itself throw there. Never let cleanup crash the app.
+      }
+    };
+  }, [pause, previous, next, seek]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator) || !current) return;
+    navigator.mediaSession.metadata = new window.MediaMetadata({
+      title: current.title || "Chaplin",
+      artist: current.artist || "",
+      artwork: current.artworkUrl
+        ? [{ src: current.artworkUrl, sizes: "512x512", type: "image/png" }]
+        : []
+    });
+  }, [current]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+  }, [playing]);
+
+  // Native counterpart of the above, for the actual installed Android app:
+  // calling MediaNotification.* on plain web (no native implementation
+  // registered) throws, so every call site here is gated on
+  // isNativePlatform() — this must never run for the real chaplin.* website.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return undefined;
+    const handle = MediaNotification.addListener("action", ({ action }) => {
+      switch (action) {
+        case "play": {
+          const audio = audioRef.current;
+          if (audio?.src) audio.play().catch(() => {});
+          break;
+        }
+        case "pause":
+          pause();
+          break;
+        case "next":
+          next();
+          break;
+        case "previous":
+          previous();
+          break;
+        default:
+          break;
+      }
+    });
+    return () => {
+      handle.then((h) => h.remove()).catch(() => {});
+    };
+  }, [pause, next, previous]);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (!current) {
+      MediaNotification.hide().catch(() => {});
+      return;
+    }
+    MediaNotification.show({
+      title: current.title || "Chaplin",
+      artist: current.artist || "",
+      playing
+    }).catch(() => {});
+  }, [current, playing]);
 
   const value = useMemo(() => ({
     current,
