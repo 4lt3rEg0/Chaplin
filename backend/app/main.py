@@ -98,6 +98,24 @@ MEDIA_FOLDER = Path(os.getenv("CHAPLIN_MEDIA_ROOT") or os.getenv("MEDIA_FOLDER")
 INVITATION_CODES = ["CHA2024", "Y2KFM", "SPIRAL01", "CHA2024INV"]
 DEFAULT_TAGS = ["Musica", "Arte", "Gaming", "Pelis", "Series", "Deporte", "Anime", "Moda", "Reflexiones"]
 
+# Professional/creative identity chosen at signup (Fase 1 of the roles
+# system — see frontend/web/src/constants/roles.js, which MUST stay in
+# sync with this list). "user"/"artist" are the original two cosmetic
+# values kept valid so existing accounts never need a data migration;
+# "artist" is treated as a legacy alias of "musico", not migrated in
+# place. No permission is gated on any of these yet — still purely a
+# profile identity, same as the original comment on User.role said.
+ROLE_OPTIONS = {
+    "user", "artist",
+    "casual", "musico", "escritor", "dibujante_tatuador", "fotografia_cine",
+    "moda", "comedia", "periodismo", "ciencia", "it", "gaming", "sanidad",
+    "farmaceutica", "psicologia", "veterinaria", "derecho", "politica",
+    "seguridad", "magisterio", "negocios", "finanzas",
+    "arquitectura_construccion", "automocion", "agricultura",
+    "belleza_estetica", "deporte", "gastronomia", "espiritualidad",
+    "modelos", "modelos_adultos", "otro",
+}
+
 # ========== BASE DE DATOS ==========
 engine_kwargs = {}
 if DATABASE_URL.startswith("sqlite"):
@@ -128,6 +146,9 @@ class User(Base):
     # music/video/images already works for every authenticated user). It just
     # lets the profile UI show an "artist" identity/badge.
     role = Column(String, default="user", nullable=False)
+    # Free text, only meaningful when role == "otro" — lets someone whose
+    # profession isn't in ROLE_OPTIONS yet self-identify anyway.
+    role_other = Column(String, nullable=True)
     # Touched (throttled) on authenticated requests — powers a simple
     # "online now" indicator without a WebSocket presence system.
     last_seen = Column(DateTime(timezone=True), nullable=True)
@@ -367,6 +388,8 @@ class UserCreate(UserBase):
     password: str
     social_goal: str
     invitation_code: Optional[str] = None
+    role: str = "casual"
+    role_other: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -376,6 +399,7 @@ class UserResponse(UserBase):
     bio: Optional[str]
     avatar_url: Optional[str] = None
     role: str = "user"
+    role_other: Optional[str] = None
     preferences: Optional[str] = None
     profile_playback_mode: str = "all"
     follower_count: int = 0
@@ -404,6 +428,7 @@ class PublicUserResponse(BaseModel):
     bio: Optional[str] = None
     avatar_url: Optional[str] = None
     role: str = "user"
+    role_other: Optional[str] = None
     profile_playback_mode: str = "all"
     follower_count: int = 0
     following_count: int = 0
@@ -813,6 +838,7 @@ def _serialize_user(user: "User", db: Session) -> UserResponse:
         bio=user.bio,
         avatar_url=user.avatar_url,
         role=user.role,
+        role_other=user.role_other,
         preferences=user.preferences,
         profile_playback_mode=user.profile_playback_mode,
         follower_count=_follower_count(db, user.id),
@@ -837,6 +863,7 @@ def _serialize_public_user(user: "User", viewer: Optional["User"], db: Session) 
         bio=user.bio,
         avatar_url=user.avatar_url,
         role=user.role,
+        role_other=user.role_other,
         profile_playback_mode=user.profile_playback_mode,
         follower_count=_follower_count(db, user.id),
         following_count=_following_count(db, user.id),
@@ -953,6 +980,9 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             detail="Código de invitación inválido"
         )
 
+    if user_data.role not in ROLE_OPTIONS:
+        raise HTTPException(status_code=422, detail=f"role debe ser uno de {sorted(ROLE_OPTIONS)}")
+
     # Verificar si existe
     existing_user = db.query(User).filter(
         (User.email == user_data.email) | (User.username == user_data.username)
@@ -973,6 +1003,8 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         birth_date=user_data.birth_date,
         hashed_password=get_password_hash(user_data.password),
         social_goal=user_data.social_goal,
+        role=user_data.role,
+        role_other=user_data.role_other if user_data.role == "otro" else None,
         is_invited=True,
         invitation_code=user_data.invitation_code
     )
@@ -2244,6 +2276,7 @@ async def update_user(
         radio_public: Optional[bool] = Form(None),
         preferences: Optional[str] = Form(None),
         role: Optional[str] = Form(None),
+        role_other: Optional[str] = Form(None),
         presence_status: Optional[str] = Form(None),
         profile_playback_mode: Optional[str] = Form(None),
         db: Session = Depends(get_db),
@@ -2260,9 +2293,12 @@ async def update_user(
             raise HTTPException(status_code=422, detail=f"presence_status debe ser uno de {VALID_PRESENCE_STATUSES}")
         current_user.presence_status = presence_status
     if role is not None:
-        if role not in ("user", "artist"):
-            raise HTTPException(status_code=422, detail="role debe ser 'user' o 'artist'")
+        if role not in ROLE_OPTIONS:
+            raise HTTPException(status_code=422, detail=f"role debe ser uno de {sorted(ROLE_OPTIONS)}")
         current_user.role = role
+        current_user.role_other = role_other if role == "otro" else None
+    elif role_other is not None:
+        current_user.role_other = role_other
     if profile_playback_mode is not None:
         if profile_playback_mode not in ("all", "favorites", "radio"):
             raise HTTPException(status_code=422, detail="profile_playback_mode debe ser 'all', 'favorites' o 'radio'")
@@ -2458,6 +2494,7 @@ def startup():
         _ensure_column(connection, "users", "preferences", "TEXT")
         _ensure_column(connection, "users", "avatar_url", "VARCHAR")
         _ensure_column(connection, "users", "role", "VARCHAR NOT NULL DEFAULT 'user'")
+        _ensure_column(connection, "users", "role_other", "VARCHAR")
         _ensure_column(connection, "users", "last_seen", "DATETIME")
         _ensure_column(connection, "posts", "track_id", "INTEGER")
         _ensure_column(connection, "users", "presence_status", "VARCHAR NOT NULL DEFAULT 'online'")

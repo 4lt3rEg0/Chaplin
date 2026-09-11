@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BlenderWindow, CyberButton } from './CyberCoreUI';
+import { ROLE_OPTIONS, OTHER_ROLE_ID } from '../constants/roles';
 
 const RegisterCyber = ({ onClose, onRegister }) => {
     const [formData, setFormData] = useState({
@@ -10,7 +11,9 @@ const RegisterCyber = ({ onClose, onRegister }) => {
         birthDate: '',
         password: '',
         socialGoal: '',
-        invitationCode: 'CHA2024' // Código por defecto para primeros usuarios
+        invitationCode: 'CHA2024', // Código por defecto para primeros usuarios
+        role: 'casual',
+        roleOther: ''
     });
 
     const handleSubmit = (e) => {
@@ -121,6 +124,50 @@ const RegisterCyber = ({ onClose, onRegister }) => {
                                 rows="3"
                                 placeholder="¿Qué buscas en una red social?"
                             />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="cyber-label">TU_ROL_EN_CHAPLIN</label>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: '6px',
+                                    maxHeight: '180px',
+                                    overflowY: 'auto',
+                                    padding: '4px'
+                                }}
+                            >
+                                {ROLE_OPTIONS.map((option) => (
+                                    <button
+                                        key={option.id}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, role: option.id })}
+                                        className="cyber-input"
+                                        style={{
+                                            cursor: 'pointer',
+                                            padding: '6px 10px',
+                                            fontSize: '0.8em',
+                                            background: formData.role === option.id ? 'var(--cyber-accent, #0ff)' : undefined,
+                                            color: formData.role === option.id ? '#000' : undefined
+                                        }}
+                                    >
+                                        {option.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {formData.role === OTHER_ROLE_ID && (
+                                <input
+                                    type="text"
+                                    name="roleOther"
+                                    className="cyber-input"
+                                    value={formData.roleOther}
+                                    onChange={handleChange}
+                                    required
+                                    placeholder="¿No aparece tu rol? Escríbenos aquí"
+                                    style={{ marginTop: '8px' }}
+                                />
+                            )}
                         </div>
 
                         <div className="form-group">

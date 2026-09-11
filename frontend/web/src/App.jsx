@@ -183,7 +183,9 @@ const RegisterRoute = () => {
         birth_date: formData.birthDate,
         password: formData.password,
         social_goal: formData.socialGoal,
-        invitation_code: formData.invitationCode
+        invitation_code: formData.invitationCode,
+        role: formData.role,
+        role_other: formData.roleOther || null
       });
       navigate("/login");
     } catch (err) {

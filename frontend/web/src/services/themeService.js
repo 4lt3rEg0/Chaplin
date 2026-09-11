@@ -130,6 +130,9 @@ export const updateTheme = async (payload) => {
     if (typeof rest.role !== "undefined") {
       form.append("role", rest.role);
     }
+    if (typeof rest.role_other !== "undefined") {
+      form.append("role_other", rest.role_other ?? "");
+    }
 
     if (Object.keys(incomingPreferences).length > 0) {
       const { preferences: currentPreferences } = splitPreferences(current);
