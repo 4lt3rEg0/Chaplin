@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Hash, MessageSquare, Music, Pause, Play, Search } from "lucide-react";
+import { ArrowLeft, Hash, MessageSquare, Music, Pause, Play, Search, Zap } from "lucide-react";
 import api from "../services/api";
 
 const Wrapper = styled.div`
@@ -362,6 +362,10 @@ export default function Explore() {
 
         <ForumLink type="button" onClick={() => navigate('/forum')}>
           <MessageSquare size={16} /> Ir al Foro — hilos y debates por categoría
+        </ForumLink>
+
+        <ForumLink type="button" onClick={() => navigate('/battles')}>
+          <Zap size={16} /> Batallas de Freestyle — eventos e instrumentales
         </ForumLink>
 
         <TabBar>
