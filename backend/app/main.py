@@ -97,6 +97,11 @@ DATABASE_URL = os.getenv(
 MEDIA_FOLDER = Path(os.getenv("CHAPLIN_MEDIA_ROOT") or os.getenv("MEDIA_FOLDER") or str(PROJECT_ROOT / "media"))
 INVITATION_CODES = ["CHA2024", "Y2KFM", "SPIRAL01", "CHA2024INV"]
 DEFAULT_TAGS = ["Musica", "Arte", "Gaming", "Pelis", "Series", "Deporte", "Anime", "Moda", "Reflexiones"]
+# Same vocabulary as DEFAULT_TAGS on purpose (one shared set of categories
+# across the app) plus "General" for threads that don't fit a specific
+# interest. Unlike Post.tags (free-text, auto-extracted, multi-tag), a
+# Thread picks exactly ONE of these — validated, not extracted.
+FORUM_CATEGORIES = DEFAULT_TAGS + ["General"]
 
 # Professional/creative identity chosen at signup (Fase 1 of the roles
 # system — see frontend/web/src/constants/roles.js, which MUST stay in
@@ -350,6 +355,48 @@ class CommentLike(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+# ========== FORO (Thread / ThreadReply / ThreadLike) ==========
+# Replies get their own flat model instead of reusing Comment - Comment is
+# wired to post_id everywhere in its own endpoints (create_comment,
+# get_comments), and mixing thread replies into that risks contaminating
+# existing Post-comment queries. Same reasoning as Track getting its own
+# model instead of overloading Post.
+class Thread(Base):
+    __tablename__ = "threads"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    category = Column(String, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ThreadReply(Base):
+    __tablename__ = "thread_replies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(Integer, ForeignKey("threads.id"), nullable=False, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class ThreadLike(Base):
+    __tablename__ = "thread_likes"
+    __table_args__ = (UniqueConstraint("thread_id", "user_id", name="uq_thread_like"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    thread_id = Column(Integer, ForeignKey("threads.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # ========== SEGUIR USUARIOS (Follow) ==========
 # Deliberately a simple, one-directional follow (like Twitter/Instagram) —
 # no accept/reject request state machine, which is a much bigger feature
@@ -539,6 +586,44 @@ class CommentResponse(CommentCreate):
     created_at: datetime
     like_count: int = 0
     liked_by_me: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class ThreadCreate(BaseModel):
+    title: str
+    content: str
+    category: str
+
+
+class ThreadResponse(BaseModel):
+    id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    title: str
+    content: str
+    category: str
+    created_at: datetime
+    reply_count: int = 0
+    like_count: int = 0
+    liked_by_me: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class ThreadReplyCreate(BaseModel):
+    content: str
+
+
+class ThreadReplyResponse(BaseModel):
+    id: int
+    thread_id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    content: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -1018,6 +1103,38 @@ def _serialize_comment(comment: "Comment", current_user: Optional["User"], db: S
     )
 
 
+def _serialize_thread(thread: "Thread", current_user: Optional["User"], db: Session) -> ThreadResponse:
+    like_count = db.query(ThreadLike).filter(ThreadLike.thread_id == thread.id).count()
+    liked_by_me = (
+        current_user is not None
+        and db.query(ThreadLike).filter(ThreadLike.thread_id == thread.id, ThreadLike.user_id == current_user.id).first() is not None
+    )
+    reply_count = db.query(ThreadReply).filter(ThreadReply.thread_id == thread.id).count()
+    return ThreadResponse(
+        id=thread.id,
+        owner_id=thread.owner_id,
+        owner_username=thread.owner.username if thread.owner else None,
+        title=thread.title,
+        content=thread.content,
+        category=thread.category,
+        created_at=thread.created_at,
+        reply_count=reply_count,
+        like_count=like_count,
+        liked_by_me=liked_by_me,
+    )
+
+
+def _serialize_thread_reply(reply: "ThreadReply") -> ThreadReplyResponse:
+    return ThreadReplyResponse(
+        id=reply.id,
+        thread_id=reply.thread_id,
+        owner_id=reply.owner_id,
+        owner_username=reply.owner.username if reply.owner else None,
+        content=reply.content,
+        created_at=reply.created_at
+    )
+
+
 def _content_matches_extension(head: bytes, ext: str) -> bool:
     """Light magic-byte sniff — not a virus scanner, just enough to catch a
     renamed .txt/.exe pretending to be media via its extension. Only checks
@@ -1429,6 +1546,100 @@ async def toggle_comment_like(
         db.add(CommentLike(comment_id=comment_id, user_id=current_user.id))
     db.commit()
     return _serialize_comment(comment, current_user, db)
+
+
+# ========== ENDPOINTS DE FORO (Thread / ThreadReply) ==========
+@api_router.get("/forum/categories")
+async def get_forum_categories():
+    return FORUM_CATEGORIES
+
+
+@api_router.get("/forum/threads", response_model=List[ThreadResponse])
+async def list_threads(
+        category: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 50,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    query = db.query(Thread)
+    if category:
+        query = query.filter(Thread.category == category)
+    threads = query.order_by(Thread.created_at.desc()).offset(skip).limit(limit).all()
+    return [_serialize_thread(t, current_user, db) for t in threads]
+
+
+@api_router.post("/forum/threads", response_model=ThreadResponse)
+async def create_thread(payload: ThreadCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if payload.category not in FORUM_CATEGORIES:
+        raise HTTPException(status_code=422, detail=f"category debe ser una de {FORUM_CATEGORIES}")
+    clean_title = payload.title.strip()[:200]
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="El título es obligatorio")
+    thread = Thread(owner_id=current_user.id, title=clean_title, content=payload.content, category=payload.category)
+    db.add(thread)
+    db.commit()
+    db.refresh(thread)
+    return _serialize_thread(thread, current_user, db)
+
+
+@api_router.get("/forum/threads/{thread_id}", response_model=ThreadResponse)
+async def get_thread(thread_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_current_user)):
+    thread = db.query(Thread).filter(Thread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Hilo no encontrado")
+    return _serialize_thread(thread, current_user, db)
+
+
+@api_router.delete("/forum/threads/{thread_id}")
+async def delete_thread(thread_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    thread = db.query(Thread).filter(Thread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Hilo no encontrado")
+    if thread.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    db.query(ThreadReply).filter(ThreadReply.thread_id == thread_id).delete()
+    db.query(ThreadLike).filter(ThreadLike.thread_id == thread_id).delete()
+    db.delete(thread)
+    db.commit()
+    return {"detail": "Hilo eliminado"}
+
+
+@api_router.post("/forum/threads/{thread_id}/like", response_model=ThreadResponse)
+async def toggle_thread_like(thread_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    thread = db.query(Thread).filter(Thread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Hilo no encontrado")
+    existing = db.query(ThreadLike).filter(ThreadLike.thread_id == thread_id, ThreadLike.user_id == current_user.id).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(ThreadLike(thread_id=thread_id, user_id=current_user.id))
+    db.commit()
+    return _serialize_thread(thread, current_user, db)
+
+
+@api_router.get("/forum/threads/{thread_id}/replies", response_model=List[ThreadReplyResponse])
+async def get_thread_replies(thread_id: int, db: Session = Depends(get_db)):
+    thread = db.query(Thread).filter(Thread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Hilo no encontrado")
+    replies = db.query(ThreadReply).filter(ThreadReply.thread_id == thread_id).order_by(ThreadReply.created_at.asc()).all()
+    return [_serialize_thread_reply(r) for r in replies]
+
+
+@api_router.post("/forum/threads/{thread_id}/replies", response_model=ThreadReplyResponse)
+async def create_thread_reply(thread_id: int, payload: ThreadReplyCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    thread = db.query(Thread).filter(Thread.id == thread_id).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="Hilo no encontrado")
+    if not payload.content.strip():
+        raise HTTPException(status_code=422, detail="La respuesta no puede estar vacía")
+    reply = ThreadReply(thread_id=thread_id, owner_id=current_user.id, content=payload.content)
+    db.add(reply)
+    db.commit()
+    db.refresh(reply)
+    return _serialize_thread_reply(reply)
 
 
 # ========== ENDPOINTS DE MÚSICA (Track / Playlist) ==========
