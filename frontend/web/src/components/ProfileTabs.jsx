@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { Heart, Music, Pause, Pin, PinOff, Play, Radio, Star, Upload, Video, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpen, Heart, Music, Pause, Pin, PinOff, Play, Radio, Star, Upload, Video, X } from 'lucide-react';
 import { useSkin } from '../context/SkinContext';
 import api from '../services/api';
 import { Z_INDEX } from '../styles/zIndexScale';
@@ -168,6 +169,56 @@ const StatusPill = styled.span`
   )};
 `;
 
+const BookRow = styled.button`
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid ${({ $borderColor }) => $borderColor};
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: ${({ theme }) => theme.card?.bg || 'rgba(255,255,255,0.04)'};
+  cursor: pointer;
+  text-align: left;
+`;
+
+const BookCover = styled.div`
+  width: 44px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+
+  img { width: 100%; height: 100%; object-fit: cover; display: block; }
+`;
+
+const BookInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+`;
+
+const BookTitle = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+const BookMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+`;
+
 const PinBtn = styled.button`
   border: none;
   background: none;
@@ -312,10 +363,18 @@ const LightboxContent = styled.p`
 
 const ProfileTabs = ({ user, isOwnProfile }) => {
   const { skinData, appTheme } = useSkin();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('publicaciones');
   const [mediaPosts, setMediaPosts] = useState([]);
   const [textPosts, setTextPosts] = useState([]);
   const [tracks, setTracks] = useState([]);
+  const [books, setBooks] = useState([]);
+  const [newBookOpen, setNewBookOpen] = useState(false);
+  const [newBookTitle, setNewBookTitle] = useState('');
+  const [newBookSynopsis, setNewBookSynopsis] = useState('');
+  const [newBookGenre, setNewBookGenre] = useState('');
+  const [newBookBusy, setNewBookBusy] = useState(false);
+  const [newBookError, setNewBookError] = useState('');
   const [loaded, setLoaded] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
   const [playingTrackId, setPlayingTrackId] = useState(null);
@@ -342,6 +401,7 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
     setMediaPosts([]);
     setTextPosts([]);
     setTracks([]);
+    setBooks([]);
   }, [user?.username]);
 
   useEffect(() => {
@@ -377,8 +437,41 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
           .catch(() => setTracks([]))
           .finally(markLoaded);
       }
+    } else if (activeTab === 'libros') {
+      const request = isOwnProfile ? api.get('/books/mine') : api.get(`/books/by-user/${user.username}`);
+      request
+        .then(({ data }) => setBooks(data))
+        .catch(() => setBooks([]))
+        .finally(markLoaded);
     }
   }, [activeTab, user?.username, loaded, isOwnProfile]);
+
+  const submitNewBook = async (event) => {
+    event.preventDefault();
+    if (!newBookTitle.trim()) {
+      setNewBookError('Escribe un título para tu libro.');
+      return;
+    }
+    setNewBookBusy(true);
+    setNewBookError('');
+    try {
+      const { data: newBook } = await api.post('/books', {
+        title: newBookTitle.trim(),
+        synopsis: newBookSynopsis.trim() || null,
+        genre: newBookGenre.trim() || null
+      });
+      setBooks((prev) => [newBook, ...prev]);
+      setNewBookTitle('');
+      setNewBookSynopsis('');
+      setNewBookGenre('');
+      setNewBookOpen(false);
+      navigate(`/books/${newBook.id}`);
+    } catch (err) {
+      setNewBookError(err?.response?.data?.detail || 'No se pudo crear el libro. Inténtalo de nuevo.');
+    } finally {
+      setNewBookBusy(false);
+    }
+  };
 
   const pinnedTrackIds = new Set((profilePlaylist?.tracks || []).map((t) => t.id));
 
@@ -474,6 +567,9 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
         </TabButton>
         <TabButton type="button" $active={activeTab === 'bitacora'} $textColor={textColor} $accentColor={accentColor} onClick={() => setActiveTab('bitacora')}>
           Bitácora
+        </TabButton>
+        <TabButton type="button" $active={activeTab === 'libros'} $textColor={textColor} $accentColor={accentColor} onClick={() => setActiveTab('libros')}>
+          <BookOpen size={13} /> Libros
         </TabButton>
       </TabBar>
 
@@ -618,6 +714,76 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
                 </TrackRow>
               ))}
               <audio ref={audioRef} onEnded={() => setPlayingTrackId(null)} style={{ display: 'none' }} />
+            </BitacoraList>
+          )}
+        </>
+      )}
+
+      {activeTab === 'libros' && (
+        <>
+          {isOwnProfile && (
+            <>
+              <UploadToggleBtn type="button" $accentColor={accentColor} onClick={() => setNewBookOpen((prev) => !prev)}>
+                <BookOpen size={14} />
+                {newBookOpen ? 'Cerrar' : 'Nuevo libro'}
+              </UploadToggleBtn>
+
+              {newBookOpen && (
+                <UploadForm $borderColor={borderColor} onSubmit={submitNewBook}>
+                  <UploadInput
+                    type="text"
+                    placeholder="Título del libro"
+                    value={newBookTitle}
+                    onChange={(e) => setNewBookTitle(e.target.value)}
+                    $borderColor={borderColor}
+                  />
+                  <UploadInput
+                    as="textarea"
+                    rows={2}
+                    placeholder="Sinopsis (opcional)"
+                    value={newBookSynopsis}
+                    onChange={(e) => setNewBookSynopsis(e.target.value)}
+                    $borderColor={borderColor}
+                  />
+                  <UploadInput
+                    type="text"
+                    placeholder="Género (opcional)"
+                    value={newBookGenre}
+                    onChange={(e) => setNewBookGenre(e.target.value)}
+                    $borderColor={borderColor}
+                  />
+                  {newBookError && <EmptyState>{newBookError}</EmptyState>}
+                  <UploadToggleBtn type="submit" $accentColor={accentColor} disabled={newBookBusy}>
+                    {newBookBusy ? 'Creando...' : 'Crear libro (empieza en borrador)'}
+                  </UploadToggleBtn>
+                </UploadForm>
+              )}
+            </>
+          )}
+
+          {books.length === 0 && loaded.libros ? (
+            <EmptyState>{isOwnProfile ? 'Todavía no creaste ningún libro.' : 'Sin libros publicados todavía.'}</EmptyState>
+          ) : (
+            <BitacoraList>
+              {books.map((book) => (
+                <BookRow key={book.id} type="button" $borderColor={borderColor} onClick={() => navigate(`/books/${book.id}`)}>
+                  <BookCover>
+                    {book.cover_url ? <img src={book.cover_url} alt="" /> : <BookOpen size={18} opacity={0.5} />}
+                  </BookCover>
+                  <BookInfo>
+                    <BookTitle>{book.title}</BookTitle>
+                    <BookMeta>
+                      {book.genre && <span>{book.genre}</span>}
+                      <span>{book.chapter_count} {book.chapter_count === 1 ? 'capítulo' : 'capítulos'}</span>
+                      {isOwnProfile && (
+                        <StatusPill $tone={book.is_published ? 'approved' : 'pending'}>
+                          {book.is_published ? 'Publicado' : 'Borrador'}
+                        </StatusPill>
+                      )}
+                    </BookMeta>
+                  </BookInfo>
+                </BookRow>
+              ))}
             </BitacoraList>
           )}
         </>
