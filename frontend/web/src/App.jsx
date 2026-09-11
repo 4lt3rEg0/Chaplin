@@ -51,6 +51,7 @@ import Feed from "./pages/Feed";
 import Editor from "./pages/Editor";
 import Publish from "./pages/Publish";
 import Profile from "./pages/Profile";
+import BookEditor from "./pages/BookEditor";
 import Settings from "./pages/Settings";
 import Radio from "./pages/Radio";
 import Inbox from "./pages/Inbox";
@@ -370,6 +371,15 @@ const AppShell = () => {
               element={
                 <PrivateRoute>
                   <Settings />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/books/:bookId"
+              element={
+                <PrivateRoute>
+                  <BookEditor />
                 </PrivateRoute>
               }
             />

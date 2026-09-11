@@ -250,6 +250,48 @@ class Track(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+# ========== MODELOS DE LIBROS (Book / Chapter) ==========
+# Same shape as Track above: a creative-content type gets its own real
+# model + endpoints instead of overloading Post (which has no series/
+# chapter concept). Two draft levels on purpose: a Book stays invisible
+# (even its own title/synopsis/cover) to everyone but its owner until
+# is_published=True, and each Chapter is then published independently —
+# covers "one chapter" and "several chapters" with a single flow instead
+# of two.
+class Book(Base):
+    __tablename__ = "books"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    title = Column(String, nullable=False)
+    synopsis = Column(Text, nullable=True)
+    genre = Column(String, nullable=True)
+    cover_url = Column(String, nullable=True)
+    is_published = Column(Boolean, default=False, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    chapters = relationship("Chapter", back_populates="book", cascade="all, delete-orphan", order_by="Chapter.order")
+
+
+class Chapter(Base):
+    __tablename__ = "chapters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    book_id = Column(Integer, ForeignKey("books.id"), nullable=False)
+    book = relationship("Book", back_populates="chapters")
+
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False)
+    order = Column(Integer, default=0, nullable=False)
+    is_published = Column(Boolean, default=False, nullable=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 class Playlist(Base):
     __tablename__ = "playlists"
 
@@ -573,6 +615,64 @@ class TrackUpdate(BaseModel):
     duration: Optional[int] = None
     visibility: Optional[str] = None
     is_favorited: Optional[bool] = None
+
+
+class ChapterResponse(BaseModel):
+    id: int
+    book_id: int
+    title: str
+    content: str
+    order: int
+    is_published: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ChapterCreate(BaseModel):
+    title: str
+    content: str
+
+
+class ChapterUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    order: Optional[int] = None
+    is_published: Optional[bool] = None
+
+
+class BookResponse(BaseModel):
+    id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    title: str
+    synopsis: Optional[str] = None
+    genre: Optional[str] = None
+    cover_url: Optional[str] = None
+    is_published: bool
+    chapter_count: int = 0
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BookDetailResponse(BookResponse):
+    chapters: List[ChapterResponse] = []
+
+
+class BookCreate(BaseModel):
+    title: str
+    synopsis: Optional[str] = None
+    genre: Optional[str] = None
+
+
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    synopsis: Optional[str] = None
+    genre: Optional[str] = None
+    is_published: Optional[bool] = None
 
 
 class PlaylistResponse(BaseModel):
@@ -1355,6 +1455,39 @@ def _serialize_track(track: "Track") -> TrackResponse:
     )
 
 
+def _serialize_chapter(chapter: "Chapter") -> ChapterResponse:
+    return ChapterResponse(
+        id=chapter.id,
+        book_id=chapter.book_id,
+        title=chapter.title,
+        content=chapter.content,
+        order=chapter.order,
+        is_published=chapter.is_published,
+        created_at=chapter.created_at
+    )
+
+
+def _serialize_book(book: "Book") -> BookResponse:
+    return BookResponse(
+        id=book.id,
+        owner_id=book.owner_id,
+        owner_username=book.owner.username if book.owner else None,
+        title=book.title,
+        synopsis=book.synopsis,
+        genre=book.genre,
+        cover_url=book.cover_url,
+        is_published=book.is_published,
+        chapter_count=len(book.chapters),
+        created_at=book.created_at
+    )
+
+
+def _serialize_book_detail(book: "Book", include_drafts: bool) -> BookDetailResponse:
+    chapters = book.chapters if include_drafts else [c for c in book.chapters if c.is_published]
+    base = _serialize_book(book)
+    return BookDetailResponse(**base.dict(), chapters=[_serialize_chapter(c) for c in chapters])
+
+
 def _serialize_playlist(playlist: "Playlist", only_public_tracks: bool = False) -> PlaylistResponse:
     ordered_items = sorted(playlist.items, key=lambda item: item.position)
     if only_public_tracks:
@@ -1615,6 +1748,163 @@ async def delete_track(
     db.delete(track)
     db.commit()
     return {"detail": "Track eliminado (el archivo de medios original no se ha tocado)"}
+
+
+# ========== ENDPOINTS DE LIBROS (Book / Chapter) ==========
+# No permission is gated on User.role here, same criterion as /tracks/* —
+# "escritor" is a profile identity, not a requirement to use this.
+@api_router.get("/books/mine", response_model=List[BookResponse])
+async def list_my_books(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    books = db.query(Book).filter(Book.owner_id == current_user.id).order_by(Book.created_at.desc()).all()
+    return [_serialize_book(b) for b in books]
+
+
+@api_router.get("/books/by-user/{username}", response_model=List[BookResponse])
+async def list_user_public_books(username: str, db: Session = Depends(get_db)):
+    owner = db.query(User).filter(User.username == username, User.profile_public == True).first()
+    if not owner:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    books = (
+        db.query(Book)
+        .filter(Book.owner_id == owner.id, Book.is_published == True)
+        .order_by(Book.created_at.desc())
+        .all()
+    )
+    return [_serialize_book(b) for b in books]
+
+
+@api_router.get("/books/{book_id}", response_model=BookDetailResponse)
+async def get_book(
+        book_id: int,
+        db: Session = Depends(get_db),
+        current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    is_owner = current_user is not None and book is not None and book.owner_id == current_user.id
+    if not book or (not book.is_published and not is_owner):
+        raise HTTPException(status_code=404, detail="Libro no encontrado")
+    return _serialize_book_detail(book, include_drafts=is_owner)
+
+
+@api_router.post("/books", response_model=BookResponse)
+async def create_book(payload: BookCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    clean_title = payload.title.strip()[:200]
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="El título es obligatorio")
+    book = Book(
+        owner_id=current_user.id,
+        title=clean_title,
+        synopsis=payload.synopsis,
+        genre=payload.genre
+    )
+    db.add(book)
+    db.commit()
+    db.refresh(book)
+    return _serialize_book(book)
+
+
+@api_router.put("/books/{book_id}", response_model=BookResponse)
+async def update_book(book_id: int, payload: BookUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Libro no encontrado")
+    if book.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    if payload.title is not None:
+        clean_title = payload.title.strip()[:200]
+        if not clean_title:
+            raise HTTPException(status_code=422, detail="El título es obligatorio")
+        book.title = clean_title
+    if payload.synopsis is not None:
+        book.synopsis = payload.synopsis
+    if payload.genre is not None:
+        book.genre = payload.genre
+    if payload.is_published is not None:
+        book.is_published = payload.is_published
+
+    db.commit()
+    db.refresh(book)
+    return _serialize_book(book)
+
+
+@api_router.post("/books/{book_id}/cover", response_model=BookResponse)
+async def upload_book_cover(
+        book_id: int,
+        file: UploadFile = File(...),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Libro no encontrado")
+    if book.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    if not file.filename or _media_type_for_ext(Path(file.filename).suffix.lower()) != "image":
+        raise HTTPException(status_code=400, detail="La portada debe ser una imagen válida")
+
+    book.cover_url = await _save_uploaded_file(file, current_user.id)
+    db.commit()
+    db.refresh(book)
+    return _serialize_book(book)
+
+
+@api_router.post("/books/{book_id}/chapters", response_model=ChapterResponse)
+async def create_chapter(book_id: int, payload: ChapterCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    book = db.query(Book).filter(Book.id == book_id).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Libro no encontrado")
+    if book.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    clean_title = payload.title.strip()[:200]
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="El título del capítulo es obligatorio")
+    next_order = (max((c.order for c in book.chapters), default=-1)) + 1
+
+    chapter = Chapter(book_id=book.id, title=clean_title, content=payload.content, order=next_order)
+    db.add(chapter)
+    db.commit()
+    db.refresh(chapter)
+    return _serialize_chapter(chapter)
+
+
+@api_router.put("/books/{book_id}/chapters/{chapter_id}", response_model=ChapterResponse)
+async def update_chapter(book_id: int, chapter_id: int, payload: ChapterUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id, Chapter.book_id == book_id).first()
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Capítulo no encontrado")
+    if chapter.book.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    if payload.title is not None:
+        clean_title = payload.title.strip()[:200]
+        if not clean_title:
+            raise HTTPException(status_code=422, detail="El título del capítulo es obligatorio")
+        chapter.title = clean_title
+    if payload.content is not None:
+        chapter.content = payload.content
+    if payload.order is not None:
+        chapter.order = payload.order
+    if payload.is_published is not None:
+        chapter.is_published = payload.is_published
+
+    db.commit()
+    db.refresh(chapter)
+    return _serialize_chapter(chapter)
+
+
+@api_router.delete("/books/{book_id}/chapters/{chapter_id}")
+async def delete_chapter(book_id: int, chapter_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    chapter = db.query(Chapter).filter(Chapter.id == chapter_id, Chapter.book_id == book_id).first()
+    if not chapter:
+        raise HTTPException(status_code=404, detail="Capítulo no encontrado")
+    if chapter.book.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No autorizado")
+
+    db.delete(chapter)
+    db.commit()
+    return {"detail": "Capítulo eliminado"}
 
 
 def _get_or_create_playlist(db: Session, owner: User, kind: str, default_name: str, visibility: str) -> "Playlist":
