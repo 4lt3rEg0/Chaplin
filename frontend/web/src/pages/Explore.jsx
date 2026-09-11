@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Hash, Music, Pause, Play, Search } from "lucide-react";
+import { ArrowLeft, Hash, MessageSquare, Music, Pause, Play, Search } from "lucide-react";
 import api from "../services/api";
 
 const Wrapper = styled.div`
@@ -61,6 +61,23 @@ const SearchInput = styled.input`
   &::placeholder {
     color: ${({ theme }) => theme.colors.textSecondary};
   }
+`;
+
+const ForumLink = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.card?.bg || "rgba(255,255,255,0.04)"};
+  color: ${({ theme }) => theme.colors.text};
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 `;
 
 const TabBar = styled.div`
@@ -342,6 +359,10 @@ export default function Explore() {
             />
           </SearchBox>
         </HeaderRow>
+
+        <ForumLink type="button" onClick={() => navigate('/forum')}>
+          <MessageSquare size={16} /> Ir al Foro — hilos y debates por categoría
+        </ForumLink>
 
         <TabBar>
           {TABS.map((tab) => (

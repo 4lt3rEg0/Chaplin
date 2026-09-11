@@ -52,6 +52,8 @@ import Editor from "./pages/Editor";
 import Publish from "./pages/Publish";
 import Profile from "./pages/Profile";
 import BookEditor from "./pages/BookEditor";
+import Forum from "./pages/Forum";
+import ThreadDetail from "./pages/ThreadDetail";
 import Settings from "./pages/Settings";
 import Radio from "./pages/Radio";
 import Inbox from "./pages/Inbox";
@@ -380,6 +382,24 @@ const AppShell = () => {
               element={
                 <PrivateRoute>
                   <BookEditor />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/forum"
+              element={
+                <PrivateRoute>
+                  <Forum />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/forum/threads/:threadId"
+              element={
+                <PrivateRoute>
+                  <ThreadDetail />
                 </PrivateRoute>
               }
             />
