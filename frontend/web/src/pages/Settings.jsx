@@ -16,6 +16,7 @@ import LayoutThumb from '../components/AppearanceStudio/LayoutThumb';
 import BackgroundThumb from '../components/AppearanceStudio/BackgroundThumb';
 import { BACKGROUND_CATALOG } from '../components/AppearanceStudio/backgroundCatalog';
 import { resolveWidgetRadius } from '../styles/hudTokens';
+import { ROLE_OPTIONS, OTHER_ROLE_ID } from '../constants/roles';
 
 const Wrapper = styled.div`
   background: ${({ theme }) => theme.gradients.page};
@@ -919,12 +920,26 @@ function CuentaTab() {
   const { user, refreshUser, logout } = useAuth();
   const navigate = useNavigate();
   const [roleSaving, setRoleSaving] = useState(false);
-  const isArtist = user?.role === 'artist';
+  // "artist" is the original cosmetic value, kept valid for existing
+  // accounts (see ROLE_OPTIONS in backend/app/main.py) — display it as
+  // "musico", the modern equivalent, without touching stored data.
+  const [selectedRole, setSelectedRole] = useState('casual');
+  const [roleOtherText, setRoleOtherText] = useState('');
 
-  const toggleArtist = async () => {
+  // `user` loads asynchronously (useAuth fetches it after mount), so the
+  // useState() initializers above only ever see it as null on first
+  // render — re-sync once the real value arrives instead of getting stuck
+  // on the fallback forever.
+  useEffect(() => {
+    if (!user) return;
+    setSelectedRole(user.role === 'artist' ? 'musico' : (user.role || 'casual'));
+    setRoleOtherText(user.role_other || '');
+  }, [user]);
+
+  const saveRole = async () => {
     setRoleSaving(true);
     try {
-      await updateTheme({ role: isArtist ? 'user' : 'artist' });
+      await updateTheme({ role: selectedRole, role_other: selectedRole === OTHER_ROLE_ID ? roleOtherText : '' });
       await refreshUser();
     } finally {
       setRoleSaving(false);
@@ -943,14 +958,33 @@ function CuentaTab() {
       <SectionSub>Conectado como @{user?.username}.</SectionSub>
 
       <FieldGroup>
-        <Label>Tipo de cuenta</Label>
-        <SectionSub>
-          {isArtist
-            ? 'Cuenta de artista activa — tu perfil se muestra como creador.'
-            : 'Cuenta normal. Cambiar a artista es una identidad visual; no cambia lo que puedes subir.'}
-        </SectionSub>
-        <Btn type="button" onClick={toggleArtist} disabled={roleSaving}>
-          {roleSaving ? 'Guardando...' : isArtist ? 'Volver a cuenta normal' : 'Cambiar a cuenta de artista'}
+        <Label>Tu rol en Chaplin</Label>
+        <SectionSub>Es una identidad de perfil — no cambia lo que puedes subir ni publicar.</SectionSub>
+        {ROLE_OPTIONS.map((option) => (
+          <RadioOptionRow key={option.id} $active={selectedRole === option.id}>
+            <input
+              type="radio"
+              name="account-role"
+              checked={selectedRole === option.id}
+              onChange={() => setSelectedRole(option.id)}
+            />
+            <RadioOptionText>
+              <strong>{option.label}</strong>
+              <span>{option.group}</span>
+            </RadioOptionText>
+          </RadioOptionRow>
+        ))}
+        {selectedRole === OTHER_ROLE_ID && (
+          <Input
+            type="text"
+            value={roleOtherText}
+            onChange={(e) => setRoleOtherText(e.target.value)}
+            placeholder="¿No aparece tu rol? Escríbenos aquí"
+            style={{ marginTop: '8px' }}
+          />
+        )}
+        <Btn type="button" onClick={saveRole} disabled={roleSaving} style={{ marginTop: '10px' }}>
+          {roleSaving ? 'Guardando...' : 'Guardar rol'}
         </Btn>
       </FieldGroup>
 

@@ -31,10 +31,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const mergeRole = (profile) => {
-    const role = localStorage.getItem("chaplin_role") || "user";
-    return profile ? { ...profile, role } : null;
-  };
+  // Trust the server's `role`/`role_other` as-is — this used to force
+  // whatever was cached under "chaplin_role" (a leftover from the old
+  // client-only artist/user toggle) over the real profile on every
+  // refresh, which silently clobbered the real role back to "user" even
+  // right after successfully saving a different one server-side.
+  const mergeRole = (profile) => profile;
 
   const refreshUser = async () => {
     const token = localStorage.getItem("token");
