@@ -103,6 +103,30 @@ DEFAULT_TAGS = ["Musica", "Arte", "Gaming", "Pelis", "Series", "Deporte", "Anime
 # Thread picks exactly ONE of these — validated, not extracted.
 FORUM_CATEGORIES = DEFAULT_TAGS + ["General"]
 
+# Freestyle training word bank (Batallas). Global and fixed on purpose -
+# the frontend cycles a random word from this list every N seconds
+# (10s/5s/2s per difficulty mode) while an Instrumental plays; the word
+# is never tied to which instrumental was chosen.
+FREESTYLE_WORD_BANK = [
+    "fuego", "espejo", "camino", "silencio", "tormenta", "ciudad", "raíz",
+    "cristal", "sombra", "estrella", "puente", "veneno", "corona", "abismo",
+    "semilla", "trueno", "oceano", "ceniza", "laberinto", "espina", "lluvia",
+    "acero", "humo", "montaña", "desierto", "cadena", "espada", "arena",
+    "cielo", "sangre", "herida", "vuelo", "raíces", "ancla", "brasa",
+    "niebla", "torre", "marea", "eco", "cicatriz", "diamante", "fantasma",
+    "horizonte", "isla", "jaula", "lava", "luna", "mapa", "nudo", "oro",
+    "pluma", "quimera", "relámpago", "sal", "trono", "umbral", "vacío",
+    "whisky", "yunque", "zafiro", "batalla", "espejismo", "furia", "gigante",
+    "hielo", "imperio", "jungla", "karma", "latido", "muralla", "navaja",
+    "odisea", "profecía", "quebranto", "rugido", "sirena", "templo",
+    "universo", "victoria", "guerra", "paz", "libertad", "destino", "alma",
+    "fe", "duda", "espera", "revancha", "orgullo", "rabia", "calma",
+    "tormento", "gloria", "condena", "milagro", "abrazo", "distancia",
+    "memoria", "olvido", "promesa", "traición", "lealtad", "coraje",
+    "miedo", "valentía", "caos", "orden", "río", "roca", "viento",
+    "chispa", "vértigo", "espesor", "cumbre", "raiz", "espiral", "mascara"
+]
+
 # Professional/creative identity chosen at signup (Fase 1 of the roles
 # system — see frontend/web/src/constants/roles.js, which MUST stay in
 # sync with this list). "user"/"artist" are the original two cosmetic
@@ -397,6 +421,45 @@ class ThreadLike(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+# ========== BATALLAS DE FREESTYLE (BattleEvent / BattleRSVP / Instrumental) ==========
+# Not gated by role, same criterion as the forum - "musico"/"escritor"
+# etc. are profile identities, not permissions.
+class BattleEvent(Base):
+    __tablename__ = "battle_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    title = Column(String, nullable=False)
+    scheduled_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class BattleRSVP(Base):
+    __tablename__ = "battle_rsvps"
+    __table_args__ = (UniqueConstraint("event_id", "user_id", name="uq_battle_rsvp"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(Integer, ForeignKey("battle_events.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# A shared practice library, not personal like Track - anyone can browse
+# and train with any Instrumental, so there is no visibility field.
+class Instrumental(Base):
+    __tablename__ = "instrumentals"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    owner = relationship("User")
+
+    title = Column(String, nullable=False)
+    audio_url = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # ========== SEGUIR USUARIOS (Follow) ==========
 # Deliberately a simple, one-directional follow (like Twitter/Instagram) —
 # no accept/reject request state machine, which is a much bigger feature
@@ -623,6 +686,37 @@ class ThreadReplyResponse(BaseModel):
     owner_id: int
     owner_username: Optional[str] = None
     content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BattleEventCreate(BaseModel):
+    title: str
+    scheduled_at: datetime
+
+
+class BattleEventResponse(BaseModel):
+    id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    title: str
+    scheduled_at: datetime
+    created_at: datetime
+    attendee_count: int = 0
+    attending_by_me: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class InstrumentalResponse(BaseModel):
+    id: int
+    owner_id: int
+    owner_username: Optional[str] = None
+    title: str
+    audio_url: str
     created_at: datetime
 
     class Config:
@@ -1135,6 +1229,35 @@ def _serialize_thread_reply(reply: "ThreadReply") -> ThreadReplyResponse:
     )
 
 
+def _serialize_battle_event(event: "BattleEvent", current_user: Optional["User"], db: Session) -> BattleEventResponse:
+    attendee_count = db.query(BattleRSVP).filter(BattleRSVP.event_id == event.id).count()
+    attending_by_me = (
+        current_user is not None
+        and db.query(BattleRSVP).filter(BattleRSVP.event_id == event.id, BattleRSVP.user_id == current_user.id).first() is not None
+    )
+    return BattleEventResponse(
+        id=event.id,
+        owner_id=event.owner_id,
+        owner_username=event.owner.username if event.owner else None,
+        title=event.title,
+        scheduled_at=event.scheduled_at,
+        created_at=event.created_at,
+        attendee_count=attendee_count,
+        attending_by_me=attending_by_me,
+    )
+
+
+def _serialize_instrumental(instrumental: "Instrumental") -> InstrumentalResponse:
+    return InstrumentalResponse(
+        id=instrumental.id,
+        owner_id=instrumental.owner_id,
+        owner_username=instrumental.owner.username if instrumental.owner else None,
+        title=instrumental.title,
+        audio_url=instrumental.audio_url,
+        created_at=instrumental.created_at
+    )
+
+
 def _content_matches_extension(head: bytes, ext: str) -> bool:
     """Light magic-byte sniff — not a virus scanner, just enough to catch a
     renamed .txt/.exe pretending to be media via its extension. Only checks
@@ -1640,6 +1763,79 @@ async def create_thread_reply(thread_id: int, payload: ThreadReplyCreate, db: Se
     db.commit()
     db.refresh(reply)
     return _serialize_thread_reply(reply)
+
+
+# ========== ENDPOINTS DE BATALLAS (BattleEvent / Instrumental) ==========
+@api_router.get("/battles/events", response_model=List[BattleEventResponse])
+async def list_battle_events(db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_current_user)):
+    events = db.query(BattleEvent).order_by(BattleEvent.scheduled_at.asc()).all()
+    return [_serialize_battle_event(e, current_user, db) for e in events]
+
+
+@api_router.post("/battles/events", response_model=BattleEventResponse)
+async def create_battle_event(payload: BattleEventCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    clean_title = payload.title.strip()[:200]
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="El título es obligatorio")
+    event = BattleEvent(owner_id=current_user.id, title=clean_title, scheduled_at=payload.scheduled_at)
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return _serialize_battle_event(event, current_user, db)
+
+
+@api_router.get("/battles/events/{event_id}", response_model=BattleEventResponse)
+async def get_battle_event(event_id: int, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_optional_current_user)):
+    event = db.query(BattleEvent).filter(BattleEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+    return _serialize_battle_event(event, current_user, db)
+
+
+@api_router.post("/battles/events/{event_id}/rsvp", response_model=BattleEventResponse)
+async def toggle_battle_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    event = db.query(BattleEvent).filter(BattleEvent.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Evento no encontrado")
+    existing = db.query(BattleRSVP).filter(BattleRSVP.event_id == event_id, BattleRSVP.user_id == current_user.id).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(BattleRSVP(event_id=event_id, user_id=current_user.id))
+    db.commit()
+    return _serialize_battle_event(event, current_user, db)
+
+
+@api_router.get("/battles/instrumentals", response_model=List[InstrumentalResponse])
+async def list_instrumentals(db: Session = Depends(get_db)):
+    instrumentals = db.query(Instrumental).order_by(Instrumental.created_at.desc()).all()
+    return [_serialize_instrumental(i) for i in instrumentals]
+
+
+@api_router.post("/battles/instrumentals/upload", response_model=InstrumentalResponse)
+async def upload_instrumental(
+        file: UploadFile = File(...),
+        title: str = Form(...),
+        db: Session = Depends(get_db),
+        current_user: User = Depends(get_current_user)
+):
+    if not file.filename or _media_type_for_ext(Path(file.filename).suffix.lower()) != "audio":
+        raise HTTPException(status_code=400, detail="El archivo debe ser un audio válido (mp3/wav)")
+    clean_title = title.strip()[:120]
+    if not clean_title:
+        raise HTTPException(status_code=422, detail="El título es obligatorio")
+
+    audio_url = await _save_uploaded_file(file, current_user.id)
+    instrumental = Instrumental(owner_id=current_user.id, title=clean_title, audio_url=audio_url)
+    db.add(instrumental)
+    db.commit()
+    db.refresh(instrumental)
+    return _serialize_instrumental(instrumental)
+
+
+@api_router.get("/battles/words")
+async def get_freestyle_words():
+    return FREESTYLE_WORD_BANK
 
 
 # ========== ENDPOINTS DE MÚSICA (Track / Playlist) ==========
