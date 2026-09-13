@@ -169,9 +169,12 @@ def test_avatar_upload_rejects_non_image(client):
 # Role (cosmetic user/artist)
 # ---------------------------------------------------------------------------
 
-def test_role_defaults_to_user_and_can_switch_to_artist(client):
+def test_role_defaults_to_casual_and_can_switch_to_artist(client):
+    # "casual" has been the real registration default since the role-selector
+    # feature shipped (UserCreate.role default) - this test predates that and
+    # was still asserting the old "user" default, silently broken since.
     user, headers = _user(client, "roleUser")
-    assert user["role"] == "user"
+    assert user["role"] == "casual"
 
     resp = client.put("/api/v1/users/me", headers=headers, data={"role": "artist"})
     assert resp.status_code == 200

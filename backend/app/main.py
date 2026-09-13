@@ -16,6 +16,8 @@ import time as _time
 from collections import defaultdict
 import shutil
 import json
+import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import re
 import secrets
@@ -59,6 +61,37 @@ CHAPLIN_ENV = os.getenv("CHAPLIN_ENV", "development").strip().lower()
 SECRET_KEY = os.getenv("CHAPLIN_SECRET_KEY") or os.getenv("SECRET_KEY")
 _DEV_SECRET_FILE = PROJECT_ROOT / ".chaplin_dev_secret"
 
+# ========== LOGGING ==========
+# Replaces ad-hoc print() calls: those only ever reached whatever console
+# happened to be attached and vanished the moment the process restarted —
+# exactly the information you want most right after a crash. This writes
+# the same messages to the console (so `npm run runchaplin` keeps showing
+# them live, unchanged) AND to a rotating file that survives restarts.
+_LOG_DIR = PROJECT_ROOT / "logs"
+_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+logger = logging.getLogger("chaplin")
+logger.setLevel(logging.DEBUG if CHAPLIN_ENV == "development" else logging.INFO)
+
+if not logger.handlers:
+    _log_formatter = logging.Formatter(
+        "%(asctime)s %(levelname)s [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    _console_handler = logging.StreamHandler()
+    _console_handler.setFormatter(_log_formatter)
+    logger.addHandler(_console_handler)
+
+    # 5MB x 3 backups is plenty for a single-process dev/beta deployment —
+    # revisit if/when this runs behind a real log aggregator instead.
+    _file_handler = RotatingFileHandler(
+        _LOG_DIR / "chaplin.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    )
+    _file_handler.setFormatter(_log_formatter)
+    logger.addHandler(_file_handler)
+
+    logger.propagate = False
+
 if not SECRET_KEY:
     if CHAPLIN_ENV in ("beta", "production", "prod"):
         raise RuntimeError(
@@ -77,8 +110,8 @@ if not SECRET_KEY:
             _DEV_SECRET_FILE.write_text(SECRET_KEY)
         except OSError:
             pass
-    print(
-        f"[AVISO] CHAPLIN_SECRET_KEY no configurada - usando un secreto de desarrollo "
+    logger.warning(
+        "CHAPLIN_SECRET_KEY no configurada - usando un secreto de desarrollo "
         f"persistido en {_DEV_SECRET_FILE.name} (no se sube a git, estable entre "
         "reinicios). Configura CHAPLIN_SECRET_KEY en el entorno antes de desplegar una "
         "beta real (CHAPLIN_ENV=beta exige esto explicitamente)."
@@ -1343,6 +1376,50 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ========== TRAZABILIDAD ==========
+# Every request gets a short correlation ID, logged on entry/exit and echoed
+# back as X-Request-ID. With no external tracing tool (Sentry, etc.) this is
+# the cheapest way to answer "what happened for THIS specific failing
+# request" from the log file instead of guessing from a bare stack trace.
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = uuid.uuid4().hex[:12]
+    request.state.request_id = request_id
+    start = _time.time()
+    try:
+        response = await call_next(request)
+    except Exception:
+        duration_ms = (_time.time() - start) * 1000
+        logger.exception(
+            f"[{request_id}] {request.method} {request.url.path} -> "
+            f"EXCEPCION NO MANEJADA ({duration_ms:.0f}ms)"
+        )
+        raise
+    duration_ms = (_time.time() - start) * 1000
+    log_fn = logger.warning if response.status_code >= 500 else logger.info
+    log_fn(
+        f"[{request_id}] {request.method} {request.url.path} -> "
+        f"{response.status_code} ({duration_ms:.0f}ms)"
+    )
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    # The middleware above already logged the full traceback with the same
+    # request_id - this only guarantees the client still gets a clean,
+    # non-leaking 500 (FastAPI's default behavior) instead of whatever a
+    # future custom handler might accidentally expose.
+    request_id = getattr(request.state, "request_id", "unknown")
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Error interno del servidor", "request_id": request_id},
+        headers={"X-Request-ID": request_id},
+    )
 
 # Router principal
 api_router = APIRouter()
@@ -3159,7 +3236,7 @@ async def health_check(db: Session = Depends(get_db)):
         db_status = "unhealthy"
 
     payload = {
-        "status": "running",
+        "status": "running" if db_status == "healthy" else "degraded",
         "database": db_status,
         "timestamp": datetime.now().isoformat(),
         "version": app.version,
@@ -3193,7 +3270,7 @@ def _ensure_column(connection, table: str, column: str, ddl_type: str):
     existing = {row[1] for row in connection.execute(text(f"PRAGMA table_info({table})")).fetchall()}
     if column not in existing:
         connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {ddl_type}"))
-        print(f"[OK] Migracion: columna '{column}' anadida a '{table}'")
+        logger.info(f"Migracion: columna '{column}' anadida a '{table}'")
 
 
 def _ensure_index(connection, index_name: str, table: str, column: str):
@@ -3242,9 +3319,9 @@ def startup():
     # Canonical paths, logged once at every boot — this is the single source of
     # truth for "which DB/media copy is actually live", precisely to avoid ever
     # again wondering whether a root-level or backend/-level copy is in use.
-    print(f"[PATH] Chaplin DB canonica:    {DEFAULT_SQLITE_PATH if not _chaplin_db_path else Path(_chaplin_db_path).resolve()}")
-    print(f"[PATH] Chaplin media canonica: {MEDIA_FOLDER.resolve()}")
-    print(f"[PATH] Project root:           {PROJECT_ROOT}")
+    logger.info(f"Chaplin DB canonica:    {DEFAULT_SQLITE_PATH if not _chaplin_db_path else Path(_chaplin_db_path).resolve()}")
+    logger.info(f"Chaplin media canonica: {MEDIA_FOLDER.resolve()}")
+    logger.info(f"Project root:           {PROJECT_ROOT}")
 
     Base.metadata.create_all(bind=engine)
     with engine.begin() as connection:
@@ -3266,14 +3343,14 @@ def startup():
         # additive migration needed (that's only for columns on tables that
         # already existed with data, like posts/tracks above).
     MEDIA_FOLDER.mkdir(parents=True, exist_ok=True)
-    print("[OK] Base de datos inicializada")
-    print("[OK] Carpeta media creada")
+    logger.info("Base de datos inicializada")
+    logger.info("Carpeta media creada")
 
     migration_db = SessionLocal()
     try:
         stats = backfill_tracks_from_audio_posts(migration_db)
-        print(
-            f"[OK] Migracion Track: {stats['audio_posts_detected']} audio posts detectados, "
+        logger.info(
+            f"Migracion Track: {stats['audio_posts_detected']} audio posts detectados, "
             f"{stats['tracks_created']} tracks nuevos creados"
         )
     finally:
@@ -3364,14 +3441,14 @@ if _FRONTEND_DIST.is_dir():
 if __name__ == "__main__":
     import uvicorn
 
-    print("=" * 50)
-    print("CHAPLIN SOCIAL NETWORK - Y2K Edition")
-    print("=" * 50)
-    print("Servidor: http://localhost:8000")
-    print("Documentacion: http://localhost:8000/docs")
-    print("Radio: http://localhost:8000/api/v1/radio/stations")
-    print("Codigos de invitacion:", ", ".join(INVITATION_CODES))
-    print("=" * 50)
+    logger.info("=" * 50)
+    logger.info("CHAPLIN SOCIAL NETWORK - Y2K Edition")
+    logger.info("=" * 50)
+    logger.info("Servidor: http://localhost:8000")
+    logger.info("Documentacion: http://localhost:8000/docs")
+    logger.info("Radio: http://localhost:8000/api/v1/radio/stations")
+    logger.info("Codigos de invitacion: " + ", ".join(INVITATION_CODES))
+    logger.info("=" * 50)
 
     # Ejecutar el módulo real de la app para modo local con reload
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
