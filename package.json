@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "prerunchaplin": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/free-chaplin-ports.ps1",
+    "runchaplin": "concurrently -k -n BACKEND,FRONTEND -c cyan.bold,magenta.bold \"set PYTHONUTF8=1&& set PYTHONIOENCODING=utf-8&& cd backend && ..\\.venv-1\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload\" \"cd frontend/web && npm run dev -- --host 127.0.0.1 --port 5173\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "framer-motion": "^12.34.3"
+  }
+}
