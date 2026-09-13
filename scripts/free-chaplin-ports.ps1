@@ -28,6 +28,21 @@ function Test-ProcessAlive([int]$ProcessId) {
   return [bool](Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)
 }
 
+# uvicorn --reload on Windows runs a reloader process that spawns a separate
+# worker child holding the actual listening socket. Killing only the PID
+# netstat reports (often the reloader) without its children can leave that
+# worker alive, silently serving stale code forever - seen live this session
+# as a "Reloading..." log line that never completes. `taskkill /T` kills the
+# whole process tree, not just the one PID.
+function Stop-ProcessTree([int]$ProcessId) {
+  try {
+    & taskkill /F /T /PID $ProcessId 2>&1 | Out-Null
+  }
+  catch {
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+  }
+}
+
 foreach ($port in $Ports) {
   $listeningPids = Get-ListeningPids -Port $port
   if (-not $listeningPids) {
@@ -37,8 +52,8 @@ foreach ($port in $Ports) {
 
   foreach ($procId in $listeningPids) {
     if (Test-ProcessAlive -ProcessId $procId) {
-      Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
-      Write-Host "[OK] Puerto $port liberado (PID $procId detenido)."
+      Stop-ProcessTree -ProcessId $procId
+      Write-Host "[OK] Puerto $port liberado (PID $procId y su arbol de procesos detenidos)."
     }
   }
 
