@@ -121,7 +121,13 @@ export default function GlobalMobileDock() {
         inbox
       </DockButton>
 
-      <PublishDockButton type="button" onClick={() => navigate(makePathWithFlags(getCreationDestination(user?.role)))}>
+      <PublishDockButton
+        type="button"
+        onClick={() => {
+          const destination = getCreationDestination(user?.role);
+          navigate(makePathWithFlags(destination.path, destination.params));
+        }}
+      >
         <PlusSquare size={14} />
         publicar
       </PublishDockButton>
