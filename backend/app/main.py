@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -12,6 +12,8 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 import os
+import time as _time
+from collections import defaultdict
 import shutil
 import json
 from pathlib import Path
@@ -95,6 +97,36 @@ DATABASE_URL = os.getenv(
     else f"sqlite:///{DEFAULT_SQLITE_PATH.as_posix()}"
 )
 MEDIA_FOLDER = Path(os.getenv("CHAPLIN_MEDIA_ROOT") or os.getenv("MEDIA_FOLDER") or str(PROJECT_ROOT / "media"))
+# In-memory brute-force throttle for login/register. Deliberately simple
+# (a dict of timestamps, no Redis) since Redis is defined in docker-compose
+# but never actually connected-to anywhere in this app - this only protects
+# a single process/worker, not a real multi-instance deployment; a real
+# production rollout needs a shared store (Redis) for this to hold across
+# workers/restarts.
+_LOGIN_MAX_ATTEMPTS = 8
+_LOGIN_WINDOW_SECONDS = 15 * 60
+_login_attempts: dict = defaultdict(list)
+
+_REGISTER_MAX_ATTEMPTS = 5
+_REGISTER_WINDOW_SECONDS = 60 * 60
+_register_attempts: dict = defaultdict(list)
+
+
+def _enforce_rate_limit(store: dict, key: str, max_attempts: int, window_seconds: int) -> None:
+    now = _time.time()
+    recent = [t for t in store[key] if now - t < window_seconds]
+    store[key] = recent
+    if len(recent) >= max_attempts:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos. Espera unos minutos e inténtalo de nuevo."
+        )
+
+
+def _record_attempt(store: dict, key: str) -> None:
+    store[key].append(_time.time())
+
+
 INVITATION_CODES = ["CHA2024", "Y2KFM", "SPIRAL01", "CHA2024INV"]
 DEFAULT_TAGS = ["Musica", "Arte", "Gaming", "Pelis", "Series", "Deporte", "Anime", "Moda", "Reflexiones"]
 # Same vocabulary as DEFAULT_TAGS on purpose (one shared set of categories
@@ -1281,12 +1313,18 @@ def _content_matches_extension(head: bytes, ext: str) -> bool:
 
 
 # ========== APLICACIÓN FASTAPI ==========
+# Swagger/ReDoc expose the entire API surface with no auth gate of their
+# own - fine while iterating locally, an unnecessary information leak once
+# real users exist. Same CHAPLIN_ENV check already used for the secret-key
+# requirement above.
+_docs_enabled = CHAPLIN_ENV not in ("beta", "production", "prod")
 app = FastAPI(
     title="Chaplin Social Network",
     description="Y2K Futurist Social Network without Algorithms",
     version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/docs" if _docs_enabled else None,
+    redoc_url="/redoc" if _docs_enabled else None,
+    openapi_url="/openapi.json" if _docs_enabled else None
 )
 
 # CORS — dev default stays permissive (localhost/any origin) for local work, but
@@ -1312,7 +1350,11 @@ api_router = APIRouter()
 
 # ========== ENDPOINTS DE AUTENTICACIÓN ==========
 @api_router.post("/auth/register", response_model=UserResponse)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(request: Request, user_data: UserCreate, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    _enforce_rate_limit(_register_attempts, client_ip, _REGISTER_MAX_ATTEMPTS, _REGISTER_WINDOW_SECONDS)
+    _record_attempt(_register_attempts, client_ip)
+
     # Verificar invitación
     if user_data.invitation_code not in INVITATION_CODES:
         raise HTTPException(
@@ -1322,6 +1364,13 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
     if user_data.role not in ROLE_OPTIONS:
         raise HTTPException(status_code=422, detail=f"role debe ser uno de {sorted(ROLE_OPTIONS)}")
+
+    # No complexity/character-class rule on purpose (those push users toward
+    # predictable patterns more than they stop guessing) - just a length
+    # floor, the one length-based check that actually matters against
+    # brute-force/dictionary attacks.
+    if len(user_data.password) < 8:
+        raise HTTPException(status_code=422, detail="La contraseña debe tener al menos 8 caracteres")
 
     # Verificar si existe
     existing_user = db.query(User).filter(
@@ -1356,17 +1405,28 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @api_router.post("/auth/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown"
+    # Keyed by IP+username (not username alone) so this can't be used to
+    # lock a real user out just by repeatedly failing their login from
+    # anywhere - only throttles a specific attacker/source hammering one
+    # target account.
+    rate_key = f"{client_ip}:{form_data.username.strip().lower()}"
+    _enforce_rate_limit(_login_attempts, rate_key, _LOGIN_MAX_ATTEMPTS, _LOGIN_WINDOW_SECONDS)
+
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user:
         user = db.query(User).filter(User.username == form_data.username).first()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
+        _record_attempt(_login_attempts, rate_key)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    _login_attempts.pop(rate_key, None)
 
     access_token = create_access_token(data={"sub": str(user.id)})
     return {
