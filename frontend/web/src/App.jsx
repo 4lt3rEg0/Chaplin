@@ -52,6 +52,8 @@ import Editor from "./pages/Editor";
 import Publish from "./pages/Publish";
 import Profile from "./pages/Profile";
 import BookEditor from "./pages/BookEditor";
+import NewBook from "./pages/NewBook";
+import CreateTrack from "./pages/CreateTrack";
 import Forum from "./pages/Forum";
 import ThreadDetail from "./pages/ThreadDetail";
 import Battles from "./pages/Battles";
@@ -379,10 +381,28 @@ const AppShell = () => {
             />
 
             <Route
+              path="/books/new"
+              element={
+                <PrivateRoute>
+                  <NewBook />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
               path="/books/:bookId"
               element={
                 <PrivateRoute>
                   <BookEditor />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/create/track"
+              element={
+                <PrivateRoute>
+                  <CreateTrack />
                 </PrivateRoute>
               }
             />

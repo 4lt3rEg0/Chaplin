@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
 import { Home, Inbox, PlusSquare, Radio, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { getCreationDestination } from "../constants/roleCreationTools";
 
 const Dock = styled.nav`
   position: fixed;
@@ -53,6 +55,7 @@ export default function GlobalMobileDock() {
   const navigate = useNavigate();
   const location = useLocation();
   const dockRef = useRef(null);
+  const { user } = useAuth();
 
   // The dock is `position: fixed` at the viewport bottom and reserves no
   // document-flow space, so on a short viewport (e.g. phone landscape) it can
@@ -118,7 +121,7 @@ export default function GlobalMobileDock() {
         inbox
       </DockButton>
 
-      <PublishDockButton type="button" onClick={() => navigate(makePathWithFlags("/editor"))}>
+      <PublishDockButton type="button" onClick={() => navigate(makePathWithFlags(getCreationDestination(user?.role)))}>
         <PlusSquare size={14} />
         publicar
       </PublishDockButton>

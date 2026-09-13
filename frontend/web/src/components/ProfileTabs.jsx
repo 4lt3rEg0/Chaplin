@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
-import { BookOpen, Heart, Music, Pause, Pin, PinOff, Play, Radio, Star, Upload, Video, X } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { BookOpen, Heart, Music, Pause, Pin, PinOff, Play, Star, Upload, Video, X } from 'lucide-react';
 import { useSkin } from '../context/SkinContext';
 import api from '../services/api';
 import { Z_INDEX } from '../styles/zIndexScale';
+import TrackUploadForm from './TrackUploadForm';
+import NewBookForm from './NewBookForm';
 
 const Wrapper = styled.div`
   display: flex;
@@ -264,54 +266,6 @@ const UploadToggleBtn = styled.button`
   margin-bottom: 12px;
 `;
 
-const UploadForm = styled.form`
-  border: 1px dashed ${({ $borderColor }) => $borderColor};
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
-`;
-
-const UploadInput = styled.input`
-  border: 1px solid ${({ $borderColor }) => $borderColor};
-  background: rgba(0, 0, 0, 0.3);
-  color: inherit;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 13px;
-`;
-
-const UploadCheckRow = styled.label`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-`;
-
-const UploadSubmitBtn = styled.button`
-  border: 1px solid ${({ $accentColor }) => $accentColor};
-  background: ${({ $accentColor }) => $accentColor};
-  color: #05070b;
-  border-radius: 8px;
-  padding: 9px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-`;
-
-const UploadError = styled.p`
-  margin: 0;
-  font-size: 12px;
-  color: #ff6b6b;
-`;
-
 const Lightbox = styled.div`
   position: fixed;
   inset: 0;
@@ -364,17 +318,13 @@ const LightboxContent = styled.p`
 const ProfileTabs = ({ user, isOwnProfile }) => {
   const { skinData, appTheme } = useSkin();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('publicaciones');
   const [mediaPosts, setMediaPosts] = useState([]);
   const [textPosts, setTextPosts] = useState([]);
   const [tracks, setTracks] = useState([]);
   const [books, setBooks] = useState([]);
   const [newBookOpen, setNewBookOpen] = useState(false);
-  const [newBookTitle, setNewBookTitle] = useState('');
-  const [newBookSynopsis, setNewBookSynopsis] = useState('');
-  const [newBookGenre, setNewBookGenre] = useState('');
-  const [newBookBusy, setNewBookBusy] = useState(false);
-  const [newBookError, setNewBookError] = useState('');
   const [loaded, setLoaded] = useState({});
   const [selectedPost, setSelectedPost] = useState(null);
   const [playingTrackId, setPlayingTrackId] = useState(null);
@@ -383,12 +333,6 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
   const [pinBusyId, setPinBusyId] = useState(null);
   const [favBusyId, setFavBusyId] = useState(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploadTitle, setUploadTitle] = useState('');
-  const [uploadFile, setUploadFile] = useState(null);
-  const [uploadArtwork, setUploadArtwork] = useState(null);
-  const [uploadToRadio, setUploadToRadio] = useState(false);
-  const [uploadBusy, setUploadBusy] = useState(false);
-  const [uploadError, setUploadError] = useState('');
 
   const textColor = appTheme.colors?.text || '#fff';
   const accentColor = skinData?.accent || '#ff00ff';
@@ -396,7 +340,12 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
 
   useEffect(() => {
     if (!user?.username) return;
-    setActiveTab('publicaciones');
+    // Lets a caller land directly on a tab (e.g. CreateTrack.jsx returning
+    // here after a successful upload) via ?tab=musica — falls back to the
+    // original default when absent, same as before this was added.
+    const requestedTab = new URLSearchParams(location.search).get('tab');
+    const validTabs = ['publicaciones', 'bitacora', 'musica', 'libros'];
+    setActiveTab(validTabs.includes(requestedTab) ? requestedTab : 'publicaciones');
     setLoaded({});
     setMediaPosts([]);
     setTextPosts([]);
@@ -446,33 +395,6 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
     }
   }, [activeTab, user?.username, loaded, isOwnProfile]);
 
-  const submitNewBook = async (event) => {
-    event.preventDefault();
-    if (!newBookTitle.trim()) {
-      setNewBookError('Escribe un título para tu libro.');
-      return;
-    }
-    setNewBookBusy(true);
-    setNewBookError('');
-    try {
-      const { data: newBook } = await api.post('/books', {
-        title: newBookTitle.trim(),
-        synopsis: newBookSynopsis.trim() || null,
-        genre: newBookGenre.trim() || null
-      });
-      setBooks((prev) => [newBook, ...prev]);
-      setNewBookTitle('');
-      setNewBookSynopsis('');
-      setNewBookGenre('');
-      setNewBookOpen(false);
-      navigate(`/books/${newBook.id}`);
-    } catch (err) {
-      setNewBookError(err?.response?.data?.detail || 'No se pudo crear el libro. Inténtalo de nuevo.');
-    } finally {
-      setNewBookBusy(false);
-    }
-  };
-
   const pinnedTrackIds = new Set((profilePlaylist?.tracks || []).map((t) => t.id));
 
   const togglePin = async (track) => {
@@ -497,34 +419,6 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
       setTracks((prev) => prev.map((t) => (t.id === track.id ? data : t)));
     } finally {
       setFavBusyId(null);
-    }
-  };
-
-  const submitUpload = async (event) => {
-    event.preventDefault();
-    if (!uploadFile || !uploadTitle.trim()) {
-      setUploadError('Elige un archivo de audio y escribe un título.');
-      return;
-    }
-    setUploadBusy(true);
-    setUploadError('');
-    try {
-      const form = new FormData();
-      form.append('file', uploadFile);
-      form.append('title', uploadTitle.trim());
-      form.append('target', uploadToRadio ? 'radio' : 'personal');
-      if (uploadArtwork) form.append('artwork', uploadArtwork);
-      const { data: newTrack } = await api.post('/tracks/upload', form, { timeout: 60000 });
-      setTracks((prev) => [newTrack, ...prev]);
-      setUploadTitle('');
-      setUploadFile(null);
-      setUploadArtwork(null);
-      setUploadToRadio(false);
-      setUploadOpen(false);
-    } catch (err) {
-      setUploadError(err?.response?.data?.detail || 'No se pudo subir la canción. Inténtalo de nuevo.');
-    } finally {
-      setUploadBusy(false);
     }
   };
 
@@ -623,47 +517,12 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
               </UploadToggleBtn>
 
               {uploadOpen && (
-                <UploadForm onSubmit={submitUpload} $borderColor={borderColor}>
-                  <UploadInput
-                    type="text"
-                    placeholder="Título de la canción"
-                    value={uploadTitle}
-                    onChange={(e) => setUploadTitle(e.target.value)}
-                    $borderColor={borderColor}
-                    disabled={uploadBusy}
-                  />
-                  <UploadInput
-                    type="file"
-                    accept="audio/*"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                    $borderColor={borderColor}
-                    disabled={uploadBusy}
-                  />
-                  <div>
-                    <StatusPill $tone="idle">Portada (opcional)</StatusPill>
-                  </div>
-                  <UploadInput
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setUploadArtwork(e.target.files?.[0] || null)}
-                    $borderColor={borderColor}
-                    disabled={uploadBusy}
-                  />
-                  <UploadCheckRow>
-                    <input
-                      type="checkbox"
-                      checked={uploadToRadio}
-                      onChange={(e) => setUploadToRadio(e.target.checked)}
-                      disabled={uploadBusy}
-                    />
-                    <Radio size={14} />
-                    Enviar también a Radio Chaplin (queda pendiente de revisión)
-                  </UploadCheckRow>
-                  {uploadError && <UploadError>{uploadError}</UploadError>}
-                  <UploadSubmitBtn type="submit" $accentColor={accentColor} disabled={uploadBusy}>
-                    {uploadBusy ? 'Subiendo...' : 'Publicar canción'}
-                  </UploadSubmitBtn>
-                </UploadForm>
+                <TrackUploadForm
+                  onSuccess={(newTrack) => {
+                    setTracks((prev) => [newTrack, ...prev]);
+                    setUploadOpen(false);
+                  }}
+                />
               )}
             </>
           )}
@@ -729,34 +588,13 @@ const ProfileTabs = ({ user, isOwnProfile }) => {
               </UploadToggleBtn>
 
               {newBookOpen && (
-                <UploadForm $borderColor={borderColor} onSubmit={submitNewBook}>
-                  <UploadInput
-                    type="text"
-                    placeholder="Título del libro"
-                    value={newBookTitle}
-                    onChange={(e) => setNewBookTitle(e.target.value)}
-                    $borderColor={borderColor}
-                  />
-                  <UploadInput
-                    as="textarea"
-                    rows={2}
-                    placeholder="Sinopsis (opcional)"
-                    value={newBookSynopsis}
-                    onChange={(e) => setNewBookSynopsis(e.target.value)}
-                    $borderColor={borderColor}
-                  />
-                  <UploadInput
-                    type="text"
-                    placeholder="Género (opcional)"
-                    value={newBookGenre}
-                    onChange={(e) => setNewBookGenre(e.target.value)}
-                    $borderColor={borderColor}
-                  />
-                  {newBookError && <EmptyState>{newBookError}</EmptyState>}
-                  <UploadToggleBtn type="submit" $accentColor={accentColor} disabled={newBookBusy}>
-                    {newBookBusy ? 'Creando...' : 'Crear libro (empieza en borrador)'}
-                  </UploadToggleBtn>
-                </UploadForm>
+                <NewBookForm
+                  onSuccess={(newBook) => {
+                    setBooks((prev) => [newBook, ...prev]);
+                    setNewBookOpen(false);
+                    navigate(`/books/${newBook.id}`);
+                  }}
+                />
               )}
             </>
           )}
