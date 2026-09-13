@@ -63,6 +63,15 @@ def client(test_engine, tmp_path, monkeypatch):
     test_media_folder.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(chaplin_main, "MEDIA_FOLDER", test_media_folder)
 
+    # The login/register rate limiters are module-level dicts keyed by client
+    # IP - TestClient always reports the same fake host ("testclient"), so
+    # without resetting these between tests, whichever test runs 5th/9th in
+    # the whole pytest session would start getting real 429s meant for actual
+    # attackers, not test traffic. Same reasoning as the DB/media isolation
+    # above: each test must start from a clean slate.
+    chaplin_main._login_attempts.clear()
+    chaplin_main._register_attempts.clear()
+
     try:
         yield TestClient(chaplin_main.app)
     finally:
