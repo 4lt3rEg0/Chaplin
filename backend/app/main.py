@@ -1360,14 +1360,26 @@ app = FastAPI(
     openapi_url="/openapi.json" if _docs_enabled else None
 )
 
-# CORS — dev default stays permissive (localhost/any origin) for local work, but
-# a beta/production deployment must set CHAPLIN_ALLOWED_ORIGINS explicitly.
-# `allow_origins=["*"]` combined with `allow_credentials=True` is invalid per the
-# CORS spec (browsers should refuse to send credentials to a wildcard origin) —
-# harmless for local dev where no real cross-origin credentialed traffic exists,
-# but not something to carry into a real deployment.
+# CORS — explicit allow-list even in dev, not a wildcard. `allow_origins=["*"]`
+# combined with `allow_credentials=True` is invalid per the CORS spec anyway
+# (browsers refuse to send credentials to a wildcard origin), so it bought
+# nothing here: the actual mobile-testing flow (ngrok -> Vite -> Vite's own
+# /api proxy to this backend, see vite.config.js) is already same-origin from
+# the browser's point of view — Vite's proxy makes the hop to the backend
+# server-side, outside the browser's CORS enforcement entirely. A beta/
+# production deployment must still set CHAPLIN_ALLOWED_ORIGINS explicitly
+# once there's a real domain.
+_DEFAULT_DEV_ORIGINS = [
+    "http://localhost:5173", "http://127.0.0.1:5173",
+    "http://localhost:5174", "http://127.0.0.1:5174",
+    "http://localhost:5175", "http://127.0.0.1:5175",
+    "https://sleet-graveness-pebble.ngrok-free.dev",
+]
 _allowed_origins_env = os.getenv("CHAPLIN_ALLOWED_ORIGINS")
-_cors_origins = [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()] if _allowed_origins_env else ["*"]
+_cors_origins = (
+    [origin.strip() for origin in _allowed_origins_env.split(",") if origin.strip()]
+    if _allowed_origins_env else _DEFAULT_DEV_ORIGINS
+)
 
 app.add_middleware(
     CORSMiddleware,
