@@ -54,6 +54,7 @@ import Profile from "./pages/Profile";
 import BookEditor from "./pages/BookEditor";
 import NewBook from "./pages/NewBook";
 import CreateTrack from "./pages/CreateTrack";
+import CreateVisual from "./pages/CreateVisual";
 import Forum from "./pages/Forum";
 import ThreadDetail from "./pages/ThreadDetail";
 import Battles from "./pages/Battles";
@@ -403,6 +404,15 @@ const AppShell = () => {
               element={
                 <PrivateRoute>
                   <CreateTrack />
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/create/visual"
+              element={
+                <PrivateRoute>
+                  <CreateVisual />
                 </PrivateRoute>
               }
             />
