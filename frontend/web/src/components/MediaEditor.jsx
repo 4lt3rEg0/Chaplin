@@ -13,6 +13,7 @@ const Overlay = styled.div`
   color: #fff;
   display: grid;
   grid-template-rows: auto 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
 `;
 
 const TopBar = styled.div`
@@ -51,6 +52,7 @@ const IconBtn = styled.button`
 const Body = styled.div`
   display: grid;
   grid-template-rows: 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
   min-height: 0;
 `;
 
