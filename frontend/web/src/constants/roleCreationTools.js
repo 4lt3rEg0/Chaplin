@@ -8,6 +8,7 @@ export const ROLE_CREATION_TOOLS = Object.freeze({
   musico: { route: '/create/track', label: 'Subir canción' },
   escritor: { route: '/books/new', label: 'Nuevo libro' },
   fotografia_cine: { route: '/create/visual', label: 'Foto / Vídeo' },
+  dibujante_tatuador: { route: '/create/portfolio', label: 'Portfolio' },
 });
 
 // Para el resto de roles, que todavía no tienen herramienta propia: en vez
@@ -17,7 +18,6 @@ export const ROLE_CREATION_TOOLS = Object.freeze({
 // Publicar del feed), así que esto no es más que pasarle el parámetro
 // correcto. Puro valor de arranque, no cambia qué puede publicar nadie.
 const ROLE_DEFAULT_CONTENT_TYPE = Object.freeze({
-  dibujante_tatuador: 'photo',
   moda: 'photo',
   comedia: 'video',
   periodismo: 'diary',
