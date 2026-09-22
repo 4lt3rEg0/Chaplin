@@ -7,11 +7,13 @@ of a guessed rectangle. Output: generated/<id>/cutout.png
 """
 import json
 import os
+from pathlib import Path
 from PIL import Image
 from rembg import remove, new_session
 
-GEN = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\public\assets\profile-players\generated"
-RAW = os.path.join(GEN, "_raw")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+GEN = REPO_ROOT / "frontend" / "web" / "public" / "assets" / "profile-players" / "generated"
+RAW = GEN / "_raw"
 
 with open(os.path.join(RAW, "inventory.json"), encoding="utf-8") as f:
     inv = json.load(f)
