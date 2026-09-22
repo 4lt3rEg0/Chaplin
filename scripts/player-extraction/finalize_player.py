@@ -9,9 +9,11 @@ touches alpha/shape.
 import json
 import os
 import sys
+from pathlib import Path
 from PIL import Image, ImageFilter
 
-GEN = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\public\assets\profile-players\generated"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+GEN = REPO_ROOT / "frontend" / "web" / "public" / "assets" / "profile-players" / "generated"
 
 
 def blur_regions(im, boxes, radius=10):
