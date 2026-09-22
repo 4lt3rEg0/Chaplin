@@ -42,3 +42,15 @@ frontend/web/public/*.apk
 
 # Local AI/tooling workspace
 .claude/
+
+# Editor / OS local state
+.vscode/
+Thumbs.db
+
+# Local signing keys and certificates
+*.pem
+*.p12
+*.pfx
+*.jks
+*.keystore
+frontend/web/android/local.properties
