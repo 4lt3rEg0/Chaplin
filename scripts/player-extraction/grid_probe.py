@@ -1,8 +1,11 @@
 import sys
+from pathlib import Path
 from PIL import Image, ImageDraw
 
-SRC = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\assets-source\profile-players\source"
-OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\scripts\player-extraction\_debug"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+SRC = REPO_ROOT / "assets-source" / "profile-players" / "source"
+OUT = REPO_ROOT / "scripts" / "player-extraction" / "_debug"
+OUT.mkdir(parents=True, exist_ok=True)
 
 SHEETS = {
     "5vjode": dict(file="sheet-5vjode.png", cols=5, rows=3, top=0, bottom=0, left=0, right=0),
@@ -12,7 +15,7 @@ SHEETS = {
 }
 
 def probe(name, cfg):
-    im = Image.open(f"{SRC}\\{cfg['file']}").convert("RGB")
+    im = Image.open(SRC / cfg["file"]).convert("RGB")
     w, h = im.size
     draw = ImageDraw.Draw(im)
     left, right, top, bottom = cfg["left"], cfg["right"], cfg["top"], cfg["bottom"]
@@ -24,7 +27,7 @@ def probe(name, cfg):
     for r in range(cfg["rows"] + 1):
         y = top + r * ch
         draw.line([(0, y), (w, y)], fill=(0, 255, 0), width=4)
-    im.save(f"{OUT}\\grid-{name}.png")
+    im.save(OUT / f"grid-{name}.png")
     print(name, w, h, "cell", cw, ch)
 
 for name, cfg in SHEETS.items():
