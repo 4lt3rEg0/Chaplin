@@ -2,10 +2,6 @@
   "appId": "social.chaplin.app",
   "appName": "Chaplin",
   "webDir": "dist",
-  "server": {
-    "url": "https://sleet-graveness-pebble.ngrok-free.dev",
-    "cleartext": true
-  },
   "android": {
     "allowMixedContent": true
   }
