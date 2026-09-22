@@ -1,18 +1,18 @@
-# 🎭 Chaplin Social Network
+#  Chaplin Social Network
 
 Una red social vanilla estilo Y2K futurista sin algoritmos de recomendación.
 
-## ✨ Características
+##  Características
 
-- 🎵 **Radio comunitaria** - Estaciones globales y personales
-- 🌀 **Feed espiral** - Interfaz única con scroll en espiral
-- 🏷️ **Sistema de tags** - Clasificación con #tags#
-- 🌐 **Traducción automática** - Contenido traducido en tiempo real
-- 🎨 **Estética Y2K** - Diseño futurista con efectos CRT
-- 🔒 **Sin algoritmos** - Feed cronológico simple
-- 📱 **Multiplataforma** - Web y Android (React Native)
+-  **Radio comunitaria** - Estaciones globales y personales
+-  **Feed espiral** - Interfaz única con scroll en espiral
+-  **Sistema de tags** - Clasificación con #tags#
+-  **Traducción automática** - Contenido traducido en tiempo real
+-  **Estética Y2K** - Diseño futurista con efectos CRT
+-  **Sin algoritmos** - Feed cronológico simple
+-  **Multiplataforma** - Web y Android (React Native)
 
-## 🚀 Instalación Rápida
+##  Instalación Rápida
 
 ### 1. Requisitos
 ```bash
