@@ -1,5 +1,41 @@
 from pydantic_settings import BaseSettings
 from typing import List
+from pathlib import Path
+from dotenv import load_dotenv
+import os
+import secrets
+
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = BACKEND_ROOT.parent
+load_dotenv(BACKEND_ROOT / ".env")
+
+CHAPLIN_ENV = os.getenv("CHAPLIN_ENV", "development").strip().lower()
+
+
+def _resolve_secret_key() -> str:
+    """Resolve one stable JWT secret without ever hardcoding it in source."""
+    key = os.getenv("CHAPLIN_SECRET_KEY") or os.getenv("SECRET_KEY")
+    if key:
+        return key
+
+    if CHAPLIN_ENV in ("beta", "production", "prod"):
+        raise RuntimeError(
+            "CHAPLIN_ENV requires CHAPLIN_SECRET_KEY (or SECRET_KEY) to be set."
+        )
+
+    secret_file = PROJECT_ROOT / ".chaplin_dev_secret"
+    if secret_file.is_file():
+        existing = secret_file.read_text(encoding="utf-8").strip()
+        if existing:
+            return existing
+
+    key = secrets.token_hex(32)
+    try:
+        secret_file.write_text(key, encoding="utf-8")
+    except OSError:
+        pass
+    return key
 
 
 class Settings(BaseSettings):
@@ -11,7 +47,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./chaplin.db"
 
     # Security
-    SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+    SECRET_KEY: str = _resolve_secret_key()
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
 
@@ -33,9 +69,6 @@ class Settings(BaseSettings):
         "Musica", "Arte", "Gaming", "Pelis", "Series",
         "Deporte", "Anime", "Moda", "Reflexiones"
     ]
-
     class Config:
-        env_file = ".env"
-
-
+        env_file = str(BACKEND_ROOT / ".env")
 settings = Settings()
