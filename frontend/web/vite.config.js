@@ -9,6 +9,10 @@ const strictPort = process.env.VITE_STRICT_PORT === 'true';
 const viteHost = process.env.VITE_HOST || '127.0.0.1';
 const apiTarget = process.env.VITE_API_TARGET || 'http://localhost:8000';
 const radioTarget = process.env.VITE_RADIO_TARGET || 'http://localhost:8001';
+const allowedHosts = (process.env.VITE_ALLOWED_HOSTS || '')
+  .split(',')
+  .map((host) => host.trim())
+  .filter(Boolean);
 
 const PLAYERS_ROOT = path.resolve(__dirname, 'src/assets/profilePlayers');
 
@@ -169,10 +173,9 @@ export default defineConfig({
     host: viteHost,
     port: vitePort,
     strictPort,
-    // Lets the dev server answer through the ngrok tunnel used for
-    // out-of-home mobile testing (see tools/ngrok setup) - Vite 5+ rejects
-    // any Host header not on this list as a DNS-rebinding protection.
-    allowedHosts: ['sleet-graveness-pebble.ngrok-free.dev'],
+    // Optional comma-separated hosts for remote development tunnels.
+    // Example: VITE_ALLOWED_HOSTS=my-tunnel.example
+    allowedHosts,
     proxy: {
       '/api': {
         target: apiTarget,
