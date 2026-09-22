@@ -9,10 +9,12 @@ over thousands of raw pixels — downsampling is arc-length-uniform, not
 naive index-stride, so it doesn't lose sharp features (the curls).
 """
 import json
+from pathlib import Path
 import numpy as np
 
-GEOM_DIR = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry"
-OUT_JS = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\components\ProfilePlayer\reconstructed\aquaFlow\waveGeometry.js"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+GEOM_DIR = REPO_ROOT / "tools" / "player-reconstruction" / "geometry"
+OUT_JS = REPO_ROOT / "frontend" / "web" / "src" / "components" / "ProfilePlayer" / "reconstructed" / "aquaFlow" / "waveGeometry.js"
 
 
 def catmull_rom_to_bezier(points, closed=False):
@@ -63,7 +65,7 @@ def uniform_arclength_downsample(xs, ys, target_n):
 
 
 def build_body_path():
-    with open(f"{GEOM_DIR}\\wave_thickness.json") as f:
+    with open(GEOM_DIR / "wave_thickness.json") as f:
         d = json.load(f)
     xs, upper, lower = d["xs"], d["upper"], d["lower"]
 
@@ -77,7 +79,7 @@ def build_body_path():
 
 
 def build_highlight_paths():
-    with open(f"{GEOM_DIR}\\wave_contour.json") as f:
+    with open(GEOM_DIR / "wave_contour.json") as f:
         pieces = json.load(f)
     paths = []
     for piece in pieces:
