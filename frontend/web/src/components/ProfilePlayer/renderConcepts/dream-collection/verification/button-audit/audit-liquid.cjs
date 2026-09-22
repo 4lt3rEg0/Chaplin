@@ -1,4 +1,4 @@
-const {chromium,expect}=require('C:/Users/MaxJokerExtrem/Desktop/Chaplin/frontend/web/node_modules/@playwright/test');
+const {chromium,expect}=require('@playwright/test');
 const fs=require('fs'),path=require('path');
 const jobs=JSON.parse(fs.readFileSync(path.join(__dirname,'jobs.json'),'utf8').replace(/^\uFEFF/,''));
 const output=path.join(__dirname,'verification');fs.mkdirSync(output,{recursive:true});

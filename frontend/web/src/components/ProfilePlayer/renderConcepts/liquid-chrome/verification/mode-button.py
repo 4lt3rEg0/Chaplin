@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 root=Path(__file__).parent
-source=Path(r'C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\components\ProfilePlayer\renderConcepts\liquid-chrome\liquid-chrome-concept-v1.png')
+source=root.parent/'liquid-chrome-concept-v1.png'
 rgb=np.array(Image.open(source).convert('RGB'))
 # Reuse the original previous button's metal, bevel and lighting, only
 # removing the baked transport glyph so the mode icon can change in React.

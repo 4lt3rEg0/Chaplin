@@ -1,12 +1,15 @@
 """Renders the fitted Bezier paths (waveGeometry.js) directly over the
 reference PNG via PIL, to verify the fit visually without a browser."""
 import re
+from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-REF = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\references\aqua-flow\reference.png"
-GEOM_JS = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\components\ProfilePlayer\reconstructed\aquaFlow\waveGeometry.js"
-OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\wave_paths_fit_overlay.png"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL_ROOT = REPO_ROOT / "tools" / "player-reconstruction"
+REF = TOOL_ROOT / "references" / "aqua-flow" / "reference.png"
+GEOM_JS = REPO_ROOT / "frontend" / "web" / "src" / "components" / "ProfilePlayer" / "reconstructed" / "aquaFlow" / "waveGeometry.js"
+OUT = TOOL_ROOT / "geometry" / "wave_paths_fit_overlay.png"
 
 
 def parse_path_d(d):

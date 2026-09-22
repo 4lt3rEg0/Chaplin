@@ -1,12 +1,16 @@
 from pathlib import Path
+import os
 import cv2
 import numpy as np
 from PIL import Image
 
 root = Path(__file__).parent
-source = Path(r'C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\components\ProfilePlayer\renderConcepts\liquid-chrome\liquid-chrome-concept-v1.png')
+source = root.parent / 'liquid-chrome-concept-v1.png'
 rgb = np.array(Image.open(source).convert('RGB'))
-donor = np.array(Image.open(r'C:\Users\MaxJokerExtrem\.codex\generated_images\01a0881e-8897-73e1-be8c-dac0c839b2c7\exec-5934bf6b-3fb5-4185-874b-9ddc875d6da3.png').convert('RGB'))
+donor_path = os.getenv('CHAPLIN_LIQUID_CHROME_DONOR')
+if not donor_path:
+    raise RuntimeError('Set CHAPLIN_LIQUID_CHROME_DONOR to the local donor image before running this verification tool.')
+donor = np.array(Image.open(Path(donor_path).expanduser()).convert('RGB'))
 h, w = rgb.shape[:2]
 # A narrow uncertain band follows the external shell. Interior chrome, dark
 # reflections and display are definite foreground, never color-keyed away.

@@ -1,4 +1,4 @@
-const { chromium } = require('C:/Users/MaxJokerExtrem/Desktop/Chaplin/frontend/web/node_modules/@playwright/test');
+const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert/strict');

@@ -1373,7 +1373,6 @@ _DEFAULT_DEV_ORIGINS = [
     "http://localhost:5173", "http://127.0.0.1:5173",
     "http://localhost:5174", "http://127.0.0.1:5174",
     "http://localhost:5175", "http://127.0.0.1:5175",
-    "https://sleet-graveness-pebble.ngrok-free.dev",
 ]
 _allowed_origins_env = os.getenv("CHAPLIN_ALLOWED_ORIGINS")
 _cors_origins = (
