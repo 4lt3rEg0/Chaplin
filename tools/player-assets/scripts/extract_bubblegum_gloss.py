@@ -6,11 +6,19 @@ original RGBA (glow/antialiasing preserved), trims only fully-transparent
 outer rows/cols, and writes real production assets + manifest.json.
 """
 import json
+import os
+from pathlib import Path
 import numpy as np
 from PIL import Image
 
-SHEET = r"O:\ODriveO\OneDrive\Desktop\repros\Assets\Assets (6).png"
-OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\assets\profilePlayers\bubblegum-gloss"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SOURCE_SHEET = os.getenv("CHAPLIN_BUBBLEGUM_SOURCE")
+if not SOURCE_SHEET:
+    raise RuntimeError(
+        "Set CHAPLIN_BUBBLEGUM_SOURCE to the local source sheet before running this extraction tool."
+    )
+SHEET = Path(SOURCE_SHEET).expanduser()
+OUT = REPO_ROOT / "frontend" / "web" / "src" / "assets" / "profilePlayers" / "bubblegum-gloss"
 PAD = 5
 
 
@@ -51,7 +59,6 @@ def avg_color_hex(sheet, bbox, shrink=10):
 
 
 def main():
-    import os
     for sub in ["shell", "screen", "controls", "decoration"]:
         os.makedirs(f"{OUT}/{sub}", exist_ok=True)
 
