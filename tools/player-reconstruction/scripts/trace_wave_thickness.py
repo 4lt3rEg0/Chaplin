@@ -19,14 +19,17 @@ drifting into the differently-textured water or the bezel, because the
 search is anchored and local rather than global.
 """
 import json
+from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
-REF = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\references\aqua-flow\reference.png"
-CORE_MASK = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\wave_mask.png"
-OUT_JSON = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\wave_thickness.json"
-OUT_OVERLAY = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\wave_thickness_overlay.png"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL_ROOT = REPO_ROOT / "tools" / "player-reconstruction"
+REF = TOOL_ROOT / "references" / "aqua-flow" / "reference.png"
+CORE_MASK = TOOL_ROOT / "geometry" / "wave_mask.png"
+OUT_JSON = TOOL_ROOT / "geometry" / "wave_thickness.json"
+OUT_OVERLAY = TOOL_ROOT / "geometry" / "wave_thickness_overlay.png"
 
 ROI_Y0, ROI_Y1 = 85, 245
 MAX_WALK = 55  # px, max distance to walk from the core anchor before giving up
