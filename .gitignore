@@ -26,3 +26,12 @@ backups/
 # limit) — not source, just large local assets. Keep them on disk, never in git.
 frontend/web/public/visualizers/
 frontend/web/public/*.apk
+
+
+# IDE / local tooling
+.idea/
+*.iml
+.pytest_cache/
+.mypy_cache/
+.coverage
+.DS_Store
