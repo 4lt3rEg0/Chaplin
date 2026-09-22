@@ -8,13 +8,16 @@ appropriate classical-CV tool for real circular controls).
 Each result is verified via an overlay drawn directly on the reference.
 """
 import json
+from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
-REF = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\references\aqua-flow\reference.png"
-OUT_JSON = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\key_elements.json"
-OUT_OVERLAY = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\key_elements_overlay.png"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL_ROOT = REPO_ROOT / "tools" / "player-reconstruction"
+REF = TOOL_ROOT / "references" / "aqua-flow" / "reference.png"
+OUT_JSON = TOOL_ROOT / "geometry" / "key_elements.json"
+OUT_OVERLAY = TOOL_ROOT / "geometry" / "key_elements_overlay.png"
 
 
 def body_silhouette(gray, alpha):
