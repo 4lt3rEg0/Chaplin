@@ -1,12 +1,14 @@
 import json
 import os
 import shutil
+from pathlib import Path
 
-ROOT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\public\assets\profile-players"
-RAW = os.path.join(ROOT, "generated", "_raw")
-GEN = os.path.join(ROOT, "generated")
-MANIFEST_DIR = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\components\ProfilePlayer\pngPlayers\manifests"
-os.makedirs(MANIFEST_DIR, exist_ok=True)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+ROOT = REPO_ROOT / "frontend" / "web" / "public" / "assets" / "profile-players"
+RAW = ROOT / "generated" / "_raw"
+GEN = ROOT / "generated"
+MANIFEST_DIR = REPO_ROOT / "frontend" / "web" / "src" / "components" / "ProfilePlayer" / "pngPlayers" / "manifests"
+MANIFEST_DIR.mkdir(parents=True, exist_ok=True)
 
 with open(os.path.join(RAW, "inventory.json"), encoding="utf-8") as f:
     inv = json.load(f)
