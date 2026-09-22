@@ -7,11 +7,13 @@ invented, nothing shifted. This is the positional/proportion AUTHORITY
 for the manifest, distinct from reconstructed-from-assets.png (built
 purely from the separated asset files by render_from_manifest.py).
 """
+from pathlib import Path
 from PIL import Image
 import numpy as np
 
-REF = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-assets\references\bubblegum-gloss.png"
-OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\frontend\web\src\assets\profilePlayers\bubblegum-gloss\asset-sheet-cropped.png"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+REF = REPO_ROOT / "tools" / "player-assets" / "references" / "bubblegum-gloss.png"
+OUT = REPO_ROOT / "frontend" / "web" / "src" / "assets" / "profilePlayers" / "bubblegum-gloss" / "asset-sheet-cropped.png"
 # NOTE: this is an ASSET SHEET crop (catalog layout, metadata masked out),
 # NOT a picture of the assembled player. Do not treat its output as a
 # composition/position reference — see manifest.json's _CRITICAL_NOTE.
