@@ -225,6 +225,8 @@ VITE_API_TARGET=http://localhost:8000
 VITE_RADIO_TARGET=http://localhost:8001
 ```
 
+Para túneles o hosts de desarrollo remotos, utiliza `VITE_ALLOWED_HOSTS` en el entorno local. No se versionan dominios de túneles concretos en el repositorio.
+
 ## PWA
 
 La aplicación web incluye soporte PWA mediante `vite-plugin-pwa`.
@@ -289,6 +291,8 @@ El repositorio incluye además una configuración Docker Compose con servicios p
 - PostgreSQL
 - Redis
 - Radio server
+
+Antes de usar Docker Compose, copia `.env.example` a `.env` y sustituye los valores de ejemplo. `POSTGRES_PASSWORD` y `CHAPLIN_SECRET_KEY` deben definirse explícitamente; los valores reales no se versionan.
 
 ## Filosofía del proyecto
 
