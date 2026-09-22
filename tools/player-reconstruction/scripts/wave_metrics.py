@@ -13,14 +13,17 @@ Computes, for the wave region only:
   - Bounding Box Error: IoU of the wave's overall bounding box.
 """
 import json
+from pathlib import Path
 import cv2
 import numpy as np
 from PIL import Image
 
-REF = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\references\aqua-flow\reference.png"
-LIVE = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\screenshots\aqua-flow-live.png"
-THICKNESS_JSON = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\wave_thickness.json"
-OUT = r"C:\Users\MaxJokerExtrem\Desktop\Chaplin\tools\player-reconstruction\geometry\wave_fidelity_metrics.json"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TOOL_ROOT = REPO_ROOT / "tools" / "player-reconstruction"
+REF = TOOL_ROOT / "references" / "aqua-flow" / "reference.png"
+LIVE = TOOL_ROOT / "screenshots" / "aqua-flow-live.png"
+THICKNESS_JSON = TOOL_ROOT / "geometry" / "wave_thickness.json"
+OUT = TOOL_ROOT / "geometry" / "wave_fidelity_metrics.json"
 
 ROI_Y0, ROI_Y1 = 88, 240
 ROI_X0, ROI_X1 = 18, 616
