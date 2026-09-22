@@ -35,3 +35,6 @@ frontend/web/public/*.apk
 .mypy_cache/
 .coverage
 .DS_Store
+
+# Local AI/tooling workspace
+.claude/
